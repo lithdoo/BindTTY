@@ -4,7 +4,7 @@ import test from 'node:test';
 import { computed, createSignal, effect } from '../dist/index.js';
 
 test('signal stores values and notifies subscribers', () => {
-  // 基础 signal 应该同时支持读取、直接写入、基于旧值更新，以及显式订阅。
+  // 基础 signal 应该支持读取、写入，以及显式订阅。
   const count = createSignal(0);
   const changes = [];
 
@@ -13,7 +13,7 @@ test('signal stores values and notifies subscribers', () => {
   });
 
   count.set(1);
-  count.update((value) => value + 1);
+  count.set(count.get() + 1);
   // 设置为相同值时不应该重复通知，这能避免无意义的重算和渲染。
   count.set(2);
   unsubscribe();

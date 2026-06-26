@@ -27,7 +27,6 @@ export interface ReadableSignal<T> {
 
 export interface Signal<T> extends ReadableSignal<T> {
   set(value: T): void;
-  update(updater: (value: T) => T): void;
 }
 
 const computationStack: ReactiveComputation[] = [];
@@ -127,9 +126,6 @@ export function createSignal<T>(initialValue: T): Signal<T> {
       // 再通知显式 subscribe(listener)，让用户拿到稳定的新旧值。
       notifySubscribers(subscribers);
       notifyListeners(listeners, currentValue, previousValue);
-    },
-    update(updater) {
-      this.set(updater(currentValue));
     },
     subscribe(listener) {
       listeners.add(listener);
