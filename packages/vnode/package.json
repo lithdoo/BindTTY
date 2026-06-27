@@ -1,0 +1,21 @@
+{
+  "name": "@bindtty/vnode",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "type": "module",
+  "description": "VNode data model and design notes for BindTTY.",
+  "files": [
+    "README.md",
+    "DESIGN.md"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lithdoo/BindTTY.git",
+    "directory": "packages/vnode"
+  },
+  "bugs": {
+    "url": "https://github.com/lithdoo/BindTTY/issues"
+  },
+  "homepage": "https://github.com/lithdoo/BindTTY/tree/main/packages/vnode#readme"
+}
