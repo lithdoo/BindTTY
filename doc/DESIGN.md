@@ -1,6 +1,6 @@
 # BindTTY 视图树设计
 
-本文档描述 BindTTY 的视图树设计。
+本文档描述 BindTTY 的视图树设计。包结构与文档索引见 [README.md](./README.md)。
 
 BindTTY 的目标是构建一个面向 **MVVM + signal-driven TUI** 的 TypeScript/TSX 框架。它不是 React VDOM 的简单复刻，而是一个以 **ViewModel binding** 为核心的终端 UI 声明系统。
 
@@ -1044,7 +1044,35 @@ frame diff
 
 ---
 
-## 20. MVP 范围
+## 20. Monorepo 包结构
+
+MVP 阶段 monorepo 收敛为 7 个包。视图四层结构（ViewTemplate → MountedNode → LayoutNode → Frame）不变；包划分按实现职责组织。
+
+| 包 | 职责 |
+| --- | --- |
+| `@bindtty/signal` | 响应式内核 |
+| `@bindtty/vnode` | 声明层类型 |
+| `@bindtty/jsx-runtime` | TSX → ViewTemplate |
+| `@bindtty/runtime` | mount、binding、dirty、dispose、scheduler |
+| `@bindtty/layout` | layout、paint、Frame、ANSI diff |
+| `@bindtty/widgets` | ElementDefinition、focus、keyboard |
+| `bindtty` | 统一入口 |
+
+合并原则：
+
+~~~text
+layout 包暂时包含 paint / frame / ANSI diff，不单独拆 renderer-terminal。
+widgets 包暂时包含 focus / keyboard，不单独拆 input。
+scheduler 放在 runtime 包，不单独拆包。
+~~~
+
+ElementDefinition 放在 `@bindtty/widgets`；layout 引擎调用其 measure / paint 能力。InputSystem 通过 FocusManager 找到 MountedElementNode，再调用对应 definition 的输入处理。
+
+实现计划与里程碑见 [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md)，文档索引见 [README.md](./README.md)。
+
+---
+
+## 21. MVP 范围
 
 视图树 MVP 建议包含：
 
@@ -1107,7 +1135,7 @@ portal
 
 ---
 
-## 21. 后续扩展方向
+## 22. 后续扩展方向
 
 后续可以扩展：
 
@@ -1140,7 +1168,7 @@ Frame
 
 ---
 
-## 22. 总结
+## 23. 总结
 
 BindTTY 的视图树核心不是 React VDOM，而是 MVVM 绑定树。
 

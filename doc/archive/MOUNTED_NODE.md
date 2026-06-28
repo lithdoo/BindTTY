@@ -1,6 +1,8 @@
 # BindTTY MountedNode 设计思路
 
-本文档描述 BindTTY 视图系统中的 MountedNode 层设计。
+> **备份文档**：已合并至 [../VNODE.md](../VNODE.md)，本文件仅作历史参考。
+
+本文档描述 BindTTY 视图系统中的 MountedNode 层设计。包结构与文档索引见 [../README.md](../README.md)。
 
 MountedNode 是 Template 被 mount 后形成的运行时视图树。它可以类比为 BindTTY 的 Runtime DOM，但它不是 HTML DOM 的复刻，而是一个面向 **MVVM + signal-driven TUI** 的运行时节点系统。
 
@@ -411,6 +413,14 @@ LayoutEngine 不需要知道 Template，也不需要知道 Component。
 PaintEngine 同理，它读取 MountedNode 和 LayoutNode，然后调用对应 element definition 的绘制能力。
 
 InputSystem 则通过 FocusManager 找到 active MountedElementNode，再调用对应 element definition 的输入处理能力。
+
+包归属：
+
+~~~text
+@bindtty/runtime:     mount、binding、dirty、scheduler
+@bindtty/widgets:     ElementDefinition、focus、keyboard、input 行为
+@bindtty/layout:      layout、paint、Frame、ANSI diff（调用 widgets definition）
+~~~
 
 ---
 

@@ -29,6 +29,8 @@ Frame
 ANSI Patch
 ~~~
 
+文档索引见 [README.md](./README.md)。
+
 ## 总体目标
 
 BindTTY 的第一阶段目标不是完整组件生态，也不是 React VDOM 的简单复刻。第一阶段应先让 TSX 生成 `ViewTemplate`，运行时把它挂载成保存 binding subscription 的 `MountedNode`，再经过 layout / paint 输出终端 frame。
@@ -38,11 +40,12 @@ BindTTY 的第一阶段目标不是完整组件生态，也不是 React VDOM 的
 ~~~tsx
 class CounterVM {
   count = createSignal(0);
+  countLabel = computed(() => `Count: ${this.count.get()}`);
   inc = () => this.count.set(this.count.get() + 1);
 }
 
 function App({ vm }: { vm: CounterVM }) {
-  return <text>Count: {vm.count}</text>;
+  return <text value={vm.countLabel} />;
 }
 
 createApp({
@@ -51,18 +54,46 @@ createApp({
 }).mount();
 ~~~
 
-`<text>{vm.count}</text>` 应保存为 text binding。运行时订阅 `vm.count`，更新时标记对应 `MountedNode` dirty，而不是把组件整棵树重新执行作为唯一模型。
+`<text value={vm.countLabel} />` 应保存为 prop binding。运行时订阅对应 signal，更新时标记 `MountedNode` dirty，而不是把组件整棵树重新执行作为唯一模型。
+
+## Monorepo 包结构
+
+MVP 阶段使用 **7 个包**：
+
+~~~text
+packages/
+  signal/          @bindtty/signal
+  vnode/           @bindtty/vnode
+  jsx-runtime/     @bindtty/jsx-runtime
+  runtime/         @bindtty/runtime
+  layout/          @bindtty/layout
+  widgets/         @bindtty/widgets
+  bindtty/         bindtty（总入口）
+~~~
+
+当前已有：`signal`、`vnode`、`bindtty`。
+
+合并原则：
+
+- **layout + render**：MVP 不单独拆 `@bindtty/renderer-terminal`，paint / frame / ANSI diff 放在 `@bindtty/layout` 内，按文件分模块。
+- **widgets + input**：MVP 不单独拆 `@bindtty/input`，focus / keyboard / interactive element 放在 `@bindtty/widgets` 内。
+- **scheduler**：MVP 不单独拆包，microtask flush 放在 `@bindtty/runtime` 内。
 
 ## 核心分层
 
-### 1. @bindtty/vnode：ViewTemplate 设计层
+### 1. @bindtty/signal：响应式内核
 
-当前 `packages/vnode` 是视图树设计包，负责定义 TSX 产生的声明结构和 binding 语义。它描述的是 `ViewTemplate`，不是最终终端渲染节点。
+已完成 MVP 所需能力。runtime binding 基于 `ReadableSignal.subscribe()` 建立订阅。
+
+短期不在 signal 层大改；TUI 所需 batch、computed dispose 等可后置。
+
+### 2. @bindtty/vnode：ViewTemplate 设计层
+
+`packages/vnode` 负责定义 TSX 产生的声明结构和 binding 语义。它描述的是 `ViewTemplate`，不是最终终端渲染节点。
 
 `ViewTemplate` 应支持：
 
 - empty
-- text
 - element
 - fragment
 - component
@@ -79,22 +110,16 @@ LayoutNode 保存布局结果
 Frame 保存终端输出
 ~~~
 
-这份设计的详细说明见 `DESIGN.md`。
+详细说明见 [DESIGN.md](./DESIGN.md) 和 [VNODE.md](./VNODE.md)。
 
-### 2. @bindtty/jsx-runtime：TSX 到 ViewTemplate
+### 3. @bindtty/jsx-runtime：TSX 到 ViewTemplate
 
 实现自己的 JSX runtime，让用户写 TSX 时生成 BindTTY 的 `ViewTemplate`，而不是 React/Ink 节点。
 
-建议路径：
+路径：
 
 ~~~text
 packages/jsx-runtime
-~~~
-
-或者先放在：
-
-~~~text
-packages/core/src/jsx-runtime.ts
 ~~~
 
 需要导出：
@@ -120,17 +145,17 @@ export const Fragment = Symbol("Fragment");
 
 ~~~tsx
 <box>
-  <text>Hello</text>
+  <text value="Hello" />
 </box>
 ~~~
 
 编译后应调用 BindTTY 的 jsx runtime，并生成 `ViewTemplate`。
 
-### 3. @bindtty/runtime：mount、binding 和 dirty
+### 4. @bindtty/runtime：mount、binding、dirty 和调度
 
 runtime 是 MVVM 模型的核心。它把 `ViewTemplate` 挂载成 `MountedNode`，展开函数组件，并为 signal / computed / BindingExpression 建立订阅。
 
-建议路径：
+路径：
 
 ~~~text
 packages/runtime
@@ -142,22 +167,21 @@ packages/runtime
 - mountComponent()
 - mountControlNode()
 - createBinding()
-- bindTextSegments()
 - bindProps()
 - markDirty()
 - disposeMountedNode()
 - createApp()
+- queueJob() / flush（microtask scheduler）
 
 运行时节点应保存：
 
 ~~~text
 节点类型
 当前 props 值
-当前 text 值
 children
 binding subscriptions
 dirty state
-focus/input metadata
+focus/input metadata（注册信息，行为由 widgets 提供）
 ~~~
 
 绑定更新链路：
@@ -169,21 +193,37 @@ binding subscription fired
   ↓
 MountedNode 更新当前值
   ↓
-标记 dirty
+markDirty(node, kind)
   ↓
-scheduler request render
+queueJob(flush)
+  ↓
+layout / paint / frame diff
 ~~~
 
 第一版 dirty 可以粗一些，只要能区分 structure / layout / paint 级别即可。
 
-### 4. @bindtty/layout：MountedNode 到 LayoutNode
+MountedNode 设计见 [VNODE.md](./VNODE.md) Part II。
 
-layout 层基于当前 resolved 的 `MountedNode` 值计算终端空间，不保存 Component，也不保存 binding。
+### 5. @bindtty/layout：layout、paint 和终端输出
 
-建议路径：
+layout 包负责从 resolved 的 `MountedNode` 到终端输出的完整渲染链路。它不保存 Component，也不理解 binding。
+
+路径：
 
 ~~~text
 packages/layout
+~~~
+
+建议模块：
+
+~~~text
+src/layout-node.ts    LayoutNode 类型
+src/layout.ts         布局引擎
+src/measure-text.ts   文本测量
+src/frame.ts          Frame 类型
+src/paint.ts          绘制
+src/ansi.ts           ANSI 工具
+src/line-diff.ts      行级 diff 输出
 ~~~
 
 MVP 支持布局节点：
@@ -209,18 +249,6 @@ interface LayoutNode {
 }
 ~~~
 
-不要把 `x/y/width/height` 存进 `ViewTemplate`，也不要把 ANSI 输出存进 `MountedNode`。
-
-### 5. @bindtty/renderer-terminal：LayoutNode 到 Frame / ANSI Patch
-
-renderer-terminal 负责 paint 和输出，不应该接收 Component，也不应该理解 binding。
-
-建议路径：
-
-~~~text
-packages/renderer-terminal
-~~~
-
 MVP 先使用 line-based Frame：
 
 ~~~ts
@@ -242,58 +270,43 @@ for (const index of nextLines.keys()) {
 }
 ~~~
 
-后续可以升级为 cell buffer：
+后续可升级为 `Cell[][]`，用于 ANSI style、宽字符、emoji、CJK 和局部 repaint。届时可考虑拆出 `@bindtty/renderer-terminal`。
 
-~~~ts
-type Frame = Cell[][];
-~~~
+不要把 `x/y/width/height` 存进 `ViewTemplate`，也不要把 ANSI 输出存进 `MountedNode`。
 
-用于更准确地处理 ANSI style、宽字符、emoji、CJK 和局部 repaint。
+layout 引擎通过 `@bindtty/widgets` 提供的 ElementDefinition 参与 measure / paint；widgets 不直接写 stdout。
 
-### 6. @bindtty/scheduler：批量调度 layout / paint
+### 6. @bindtty/widgets：ElementDefinition 和输入
 
-当前 signal 是同步触发：signal 一 set，subscriber 立即执行。这适合测试，但不适合 TUI 主渲染，因为 stdout 重绘不能太频繁。
+widgets 包定义 intrinsic element 的运行时行为，并承载 MVP 阶段的 focus / keyboard 能力。
 
-建议先做最小 microtask scheduler：
-
-~~~ts
-const queue = new Set<() => void>();
-let flushing = false;
-
-export function queueJob(job: () => void) {
-  queue.add(job);
-
-  if (flushing) return;
-  flushing = true;
-
-  queueMicrotask(() => {
-    for (const job of queue) job();
-    queue.clear();
-    flushing = false;
-  });
-}
-~~~
-
-runtime 中的 binding subscriber 不应直接输出终端，而是标记 dirty 并请求一次调度：
+路径：
 
 ~~~text
-binding update
-  ↓
-markDirty(node, kind)
-  ↓
-queueJob(flush)
-  ↓
-layout / paint / frame diff
+packages/widgets
 ~~~
 
-### 7. @bindtty/input：键盘输入、焦点、事件派发
-
-TUI 不只是渲染，还需要输入系统。
-
-建议路径：
+建议模块：
 
 ~~~text
-packages/input
+src/elements/
+  text.ts
+  box.ts
+  button.ts
+  input.ts
+src/focus.ts
+src/keyboard.ts
+src/registry.ts
+~~~
+
+每种 element 提供 ElementDefinition：
+
+~~~text
+text:   测量、绘制
+box:    边框、padding、children layout
+vstack / hstack: 排列 children
+button: focus、activate、绘制
+input:  focus、编辑状态、keyboard、双向 value binding
 ~~~
 
 先支持按键：
@@ -321,14 +334,27 @@ class FocusManager {
 
 ~~~text
 stdin raw mode
-  -> parseKey()
+  -> parseKey()          // widgets/keyboard
   -> focusManager.dispatch()
-  -> widget handler
+  -> element definition handler
   -> ViewModel signal.set()
   -> binding update
-  -> scheduler
+  -> runtime scheduler
   -> layout / paint / frame diff
 ~~~
+
+当 focus scope、global shortcut 等变复杂时，可再拆 `@bindtty/input`。
+
+### 7. bindtty：总入口
+
+~~~ts
+export * from "@bindtty/signal";
+export * from "@bindtty/vnode";
+export * from "@bindtty/runtime";
+export * from "@bindtty/widgets";
+~~~
+
+用户通常只 import `bindtty`；各子包保持独立以便测试和按需引用。
 
 ## BindingValue 和 control node
 
@@ -344,14 +370,14 @@ type BindingValue<T> =
 推荐：
 
 ~~~tsx
-<text>{vm.count}</text>
-<text color={vm.color}>Ready</text>
+<text value={vm.countLabel} />
+<text value="Ready" color={vm.color} />
 ~~~
 
 不推荐：
 
 ~~~tsx
-<text>{vm.count.get()}</text>
+<text value={vm.countLabel.get()} />
 ~~~
 
 `.get()` 表示立即求值，会得到当前快照。MVVM 视图更应该保存绑定关系。
@@ -359,20 +385,20 @@ type BindingValue<T> =
 动态结构应该通过 control node 表达：
 
 ~~~tsx
-<show when={vm.loading} fallback={<main-view />}>
-  <text>Loading...</text>
+<show when={vm.loading} fallback={<text value="Ready" />}>
+  <text value="Loading..." />
 </show>
 
 <for each={vm.items} key={(item) => item.id}>
-  {(item) => <text>{item.title}</text>}
+  {(item) => <text value={item.title} />}
 </for>
 ~~~
 
 不推荐：
 
 ~~~tsx
-{vm.loading.get() ? <text>Loading...</text> : <main-view />}
-{vm.items.get().map(item => <text>{item.title}</text>)}
+{vm.loading.get() ? <text value="Loading..." /> : <main-view />}
+{vm.items.get().map(item => <text value={item.title} />)}
 ~~~
 
 因为 `.get()` 会立即求值，运行时无法保留结构绑定关系。
@@ -414,8 +440,6 @@ class UserVM {
 
 ### C. 后置考虑 batch()
 
-API 形态：
-
 ~~~ts
 batch(() => {
   a.set(1);
@@ -424,13 +448,9 @@ batch(() => {
 });
 ~~~
 
-语义：batch 内部的多次更新，只触发一次下游 binding 更新或调度 flush。
-
-第一版可以只靠 scheduler，batch() 可以后置。
+语义：batch 内部的多次更新，只触发一次下游 binding 更新或调度 flush。第一版可以只靠 runtime scheduler，batch() 可以后置。
 
 ### D. 明确 computed 生命周期
-
-当前 computed() 创建时立即运行并订阅依赖，简单直接，但如果在 View 中频繁创建 computed，又没有 dispose，就可能留下依赖订阅。
 
 短期规则：
 
@@ -438,23 +458,16 @@ batch(() => {
 - View 中不要临时创建 computed
 - 复杂 View 表达式用 `bind()`，由 runtime owner/scope 负责释放
 
-长期方向：
-
-- computed(...).dispose()
-- owner / scope 机制
-
 ## 里程碑
 
 ### Milestone 1：让 TSX 生成 ViewTemplate
-
-目标：
 
 ~~~tsx
 function App() {
   return (
     <vstack>
-      <text>Hello</text>
-      <text>BindTTY</text>
+      <text value="Hello" />
+      <text value="BindTTY" />
     </vstack>
   );
 }
@@ -462,22 +475,21 @@ function App() {
 
 需要实现：
 
-- @bindtty/vnode 的核心类型
+- @bindtty/vnode 核心类型
 - @bindtty/jsx-runtime
 - ViewTemplate normalize
 - Fragment / ComponentTemplate
 
 ### Milestone 2：挂载成 MountedNode
 
-目标：
-
 ~~~tsx
 class CounterVM {
   count = createSignal(0);
+  countLabel = computed(() => `Count: ${this.count.get()}`);
 }
 
 function App({ vm }: { vm: CounterVM }) {
-  return <text>Count: {vm.count}</text>;
+  return <text value={vm.countLabel} />;
 }
 ~~~
 
@@ -485,14 +497,12 @@ function App({ vm }: { vm: CounterVM }) {
 
 - mountTemplate()
 - function component 展开
-- text segment binding
 - prop binding
 - dispose subscriptions
 - dirty 标记
+- runtime microtask scheduler
 
 ### Milestone 3：layout / paint / line diff
-
-目标：
 
 ~~~text
 MountedNode -> LayoutNode -> Frame -> ANSI Patch
@@ -500,18 +510,16 @@ MountedNode -> LayoutNode -> Frame -> ANSI Patch
 
 需要实现：
 
-- layout screen / vstack / hstack / box / text
-- line-based Frame
-- line diff renderer
-- scheduler flush
+- @bindtty/layout：screen / vstack / hstack / box / text layout
+- line-based Frame、paint、line diff
+- @bindtty/widgets：基础 ElementDefinition（text、box、vstack、hstack）
+- runtime scheduler flush 串联完整渲染
 
 ### Milestone 4：control node
 
-目标：
-
 ~~~tsx
-<show when={vm.loading} fallback={<main-view />}>
-  <text>Loading...</text>
+<show when={vm.loading} fallback={<text value="Ready" />}>
+  <text value="Loading..." />
 </show>
 
 <for each={vm.todos} key={(todo) => todo.id}>
@@ -526,36 +534,30 @@ MountedNode -> LayoutNode -> Frame -> ANSI Patch
 - structure dirty
 - child node dispose
 
-### Milestone 5：键盘和 button
-
-目标：
+### Milestone 5：交互 widget（button + focus + keyboard）
 
 ~~~tsx
-<button onPress={vm.inc}>Increment</button>
+<button value="Increment" onPress={vm.inc} />
 ~~~
 
-需要实现：
+需要实现（均在 @bindtty/widgets）：
 
 - stdin raw mode
 - key parser
 - focus manager
 - interactive node registry
-- button widget
+- button ElementDefinition
 
 ### Milestone 6：input 双向绑定
 
-目标：
-
 ~~~tsx
 <input value={vm.name} />
-<text>Hello {vm.name}</text>
+<text value={vm.name} />
 ~~~
 
-`value` 可以直接接收 `Signal<string>`。这一层会让 BindTTY 的 MVVM 味道真正出来。
+`value` 可以直接接收 `Signal<string>`。input ElementDefinition 和 keyboard 处理同在 widgets 包。
 
 ### Milestone 7：scroll / list / viewport
-
-目标：
 
 ~~~tsx
 <scroll height={10} offset={vm.offset}>
@@ -563,101 +565,26 @@ MountedNode -> LayoutNode -> Frame -> ANSI Patch
 </scroll>
 ~~~
 
-这是 TUI 和 Web MVVM 框架的关键差异点。viewport rows、scrollback、历史消息限制，都应该在这一层解决。
-
-## 建议包结构
-
-当前已有：
-
-~~~text
-packages/
-  signal/
-  vnode/
-  bindtty/
-~~~
-
-建议扩展为：
-
-~~~text
-packages/
-  signal/
-    src/index.ts
-
-  vnode/
-    src/types.ts
-    src/create-template.ts
-    src/normalize-children.ts
-    src/control-node.ts
-
-  jsx-runtime/
-    src/jsx-runtime.ts
-    src/jsx-dev-runtime.ts
-    src/jsx-types.ts
-
-  runtime/
-    src/app.ts
-    src/mount.ts
-    src/binding.ts
-    src/dirty.ts
-    src/dispose.ts
-
-  scheduler/
-    src/index.ts
-
-  layout/
-    src/layout-node.ts
-    src/layout.ts
-    src/measure-text.ts
-
-  renderer-terminal/
-    src/ansi.ts
-    src/frame.ts
-    src/paint.ts
-    src/line-diff-renderer.ts
-
-  input/
-    src/keyboard.ts
-    src/focus.ts
-
-  widgets/
-    src/text.ts
-    src/box.ts
-    src/button.ts
-    src/input.ts
-
-  bindtty/
-    src/index.ts
-~~~
-
-最终 bindtty 做总入口：
-
-~~~ts
-export * from "@bindtty/signal";
-export * from "@bindtty/vnode";
-export * from "@bindtty/runtime";
-export * from "@bindtty/widgets";
-~~~
+viewport rows、scrollback、历史消息限制在这一层解决。这是 TUI 与 Web MVVM 的关键差异点。
 
 ## 工程事项
 
-- @bindtty/signal 当前仍是 private: true。如果未来要单独发布 npm，需要移除 private 并配置发布元数据。
-- 根 README 目前只有标题和 monorepo 说明，@bindtty/signal README 也仍是占位。下一步应补一个 Counter ViewModel 示例，明确仓库定位。
-- 测试继续使用 Node 内置 node:test 即可。后续每个 package 都保持 npm run build && node --test 风格，先不要引入复杂测试框架。
-- 先保持包小而清楚，避免在 layout、renderer、input、widgets 都未成型前过度设计 signal。
+- @bindtty/signal 当前仍是 private: true。若未来单独发布 npm，需移除 private 并配置发布元数据。
+- 根 README 和 @bindtty/signal README 仍是占位。下一步应补 Counter ViewModel 示例。
+- 测试继续使用 Node 内置 node:test。每个 package 保持 `npm run build && node --test` 风格。
+- 先保持包小而清楚，避免在 layout、widgets 未成型前过度设计 signal。
 - 文档中应持续避免把 BindTTY 描述成 React VDOM 复刻；核心叙事应是 MVVM binding tree。
 
 ## 优先级
 
 1. @bindtty/vnode：ViewTemplate / BindingValue / control node 类型
-2. @bindtty/jsx-runtime：TSX -> ViewTemplate
-3. @bindtty/runtime：mount / binding subscription / dirty
-4. @bindtty/layout：MountedNode -> LayoutNode
-5. @bindtty/renderer-terminal：LayoutNode -> Frame -> ANSI diff
-6. @bindtty/scheduler：批量 flush
-7. @bindtty/input：键盘 + focus
-8. widgets：text / box / button / input
-9. scroll / list：TUI 真正的核心组件
+2. @bindtty/jsx-runtime：TSX → ViewTemplate
+3. @bindtty/runtime：mount / binding / dirty / scheduler
+4. @bindtty/layout：MountedNode → LayoutNode → Frame → ANSI diff
+5. @bindtty/widgets：ElementDefinition / focus / keyboard / button / input
+6. bindtty：统一入口
+7. scroll / list / viewport：TUI 核心组件（后续）
 
 ## 一句话方向
 
-signal 包已经够用。现在应该从响应式内核转向 MVVM TUI 框架主链路，优先打通 TSX -> ViewTemplate -> MountedNode -> LayoutNode -> Frame -> ANSI Patch，并让 signal 更新以 binding-level invalidation 的方式驱动 dirty、layout 和 paint。
+signal 包已经够用。现在应该从响应式内核转向 MVVM TUI 框架主链路，优先打通 TSX → ViewTemplate → MountedNode → LayoutNode → Frame → ANSI Patch，并让 signal 更新以 binding-level invalidation 的方式驱动 dirty、layout 和 paint。

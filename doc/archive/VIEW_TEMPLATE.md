@@ -1,6 +1,8 @@
 # BindTTY Template 设计
 
-本文档描述 BindTTY 声明层的 Template 设计。
+> **备份文档**：已合并至 [../VNODE.md](../VNODE.md)，本文件仅作历史参考。
+
+本文档描述 BindTTY 声明层的 Template 设计。包结构与文档索引见 [../README.md](../README.md)。
 
 BindTTY 是一个面向 **MVVM + signal-driven TUI** 的 TypeScript/TSX 框架。Template 是 TSX 编译或运行时转换后的声明结构，用于描述用户声明的 UI、绑定关系、组件关系和动态结构。
 
