@@ -116,6 +116,8 @@ Frame 保存终端输出
 
 实现自己的 JSX runtime，让用户写 TSX 时生成 BindTTY 的 `ViewTemplate`，而不是 React/Ink 节点。
 
+落地细节见 [JSX_RUNTIME.md](./JSX_RUNTIME.md)。
+
 路径：
 
 ~~~text
@@ -153,7 +155,7 @@ export const Fragment = Symbol("Fragment");
 
 ### 4. @bindtty/runtime：mount、binding、dirty 和调度
 
-runtime 是 MVVM 模型的核心。它把 `ViewTemplate` 挂载成 `MountedNode`，展开函数组件，并为 signal / computed / BindingExpression 建立订阅。
+runtime 是 MVVM 模型的核心。它把 `ViewTemplate` 挂载成 `MountedNode`，展开函数组件，并为 signal / computed 等 `ReadableSignal` 建立订阅。
 
 路径：
 
@@ -363,8 +365,7 @@ MVVM 视图系统的核心是 `BindingValue`。
 ~~~ts
 type BindingValue<T> =
   | T
-  | ReadableSignal<T>
-  | BindingExpression<T>;
+  | ReadableSignal<T>;
 ~~~
 
 推荐：
@@ -420,13 +421,15 @@ interface ReadableSignal<T> {
 
 短期可以基于这个接口实现 binding。
 
-### B. BindingExpression
+### B. View 层 scoped computed
 
-为了表达 View 中的轻量派生值，可以增加：
+为了表达 View 中的轻量派生值，可以增加 `bind()` helper：
 
 ~~~ts
 const fullName = bind(() => `${vm.firstName.get()} ${vm.lastName.get()}`);
 ~~~
+
+`bind()` 本质上应返回 `ReadableSignal<T>`，可以用 runtime-owned computed 实现。它不需要成为 `BindingValue` 的第三种分支；真正需要明确的是它由哪个 mounted runtime scope dispose。
 
 不过复杂派生值仍推荐放进 ViewModel 的 `computed`：
 

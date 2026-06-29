@@ -307,7 +307,6 @@ MVVM 视图系统的核心是 `BindingValue`。
 ~~~text
 静态值
 ReadableSignal<T>
-BindingExpression<T>
 ~~~
 
 概念上：
@@ -315,8 +314,7 @@ BindingExpression<T>
 ~~~ts
 type BindingValue<T> =
   | T
-  | ReadableSignal<T>
-  | BindingExpression<T>;
+  | ReadableSignal<T>;
 
 type TemplateProps = Record<string, BindingValue<unknown>>;
 ~~~
@@ -346,6 +344,8 @@ Template 中的 props 保存 `BindingValue` 本身。mount 阶段才读取初始
 ~~~tsx
 <text value={bind(() => `${vm.firstName.get()} ${vm.lastName.get()}`)} />
 ~~~
+
+这里的 `bind()` 本质上是 View 层 scoped computed。它对外也应表现为 `ReadableSignal<T>`，生命周期由 mounted runtime owner 负责释放，而不是作为 `BindingValue` 的第三种独立形态。
 
 不过推荐把复杂派生值放在 ViewModel 的 `computed` 中：
 
@@ -1088,7 +1088,7 @@ ViewTemplate:
 Binding:
   static value
   ReadableSignal
-  BindingExpression
+  scoped computed as ReadableSignal
 
 MountedNode:
   element

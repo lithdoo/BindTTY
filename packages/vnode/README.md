@@ -2,7 +2,19 @@
 
 View tree package for BindTTY.
 
-定义声明层 `ViewTemplate` / `Template` 类型，以及 Template → MountedNode 的 mount、binding、dirty、dispose。
+定义声明层 `ViewTemplate` / `Template` 类型、`BindingValue`、element schema、normalize 工具，以及 MountedNode 的类型骨架。
+
+当前包保持为纯数据模型层：真正的 mount、binding subscription、dirty 调度和 dispose 行为由后续 `@bindtty/runtime` 承接。
+
+## BindingValue
+
+`BindingValue<T>` 已收敛为：
+
+~~~ts
+type BindingValue<T> = T | ReadableSignal<T>;
+~~~
+
+View 层的 `bind(() => ...)` 可作为 scoped computed helper 存在，但它对外也应表现为 `ReadableSignal<T>`，生命周期由 runtime owner 管理。
 
 ## 文档
 
@@ -15,6 +27,6 @@ View tree package for BindTTY.
 ~~~text
 packages/vnode/src/
   template/       Template 类型、normalize、schema
-  mounted/        mount、binding、dirty、dispose
+  mounted/        MountedNode 类型骨架
   index.ts
 ~~~

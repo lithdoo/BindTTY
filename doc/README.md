@@ -82,6 +82,7 @@ packages/widgets/
 | 文档 | 内容 |
 | --- | --- |
 | [VNODE.md](./VNODE.md) | @bindtty/vnode 包设计（Template + MountedNode） |
+| [JSX_RUNTIME.md](./JSX_RUNTIME.md) | @bindtty/jsx-runtime 落地设计（TSX → ViewTemplate） |
 | [DESIGN.md](./DESIGN.md) | 视图树总体设计、四层结构、BindingValue、control node |
 | [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) | 实现计划、里程碑、优先级 |
 | [archive/](./archive/) | 已合并前的原始分拆文档备份 |

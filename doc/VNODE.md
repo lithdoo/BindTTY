@@ -359,8 +359,7 @@ Template 不会读取 `vm.title.get()`，也不会建立订阅。
 ```ts
 export type BindingValue<T> =
   | T
-  | ReadableSignal<T>
-  | BindingExpression<T>;
+  | ReadableSignal<T>;
 ```
 
 它支持：
@@ -368,7 +367,6 @@ export type BindingValue<T> =
 ```text
 1. 静态值
 2. ReadableSignal<T>
-3. BindingExpression<T>
 ```
 
 ---
@@ -407,13 +405,21 @@ Template 只保存 signal 引用，不读取、不订阅。
 
 ---
 
-### 9.3 BindingExpression
+### 9.3 View 层临时派生值
 
 ```tsx
 <text value={bind(() => `Count: ${vm.count.get()}`)} />
 ```
 
-这里 `bind(...)` 返回 `BindingExpression<string>`。
+这里 `bind(...)` 不应引入第三种 binding source。它本质上是一个由 runtime scope 管理生命周期的临时 `computed`，对外也应该表现为 `ReadableSignal<string>`。
+
+也就是说：
+
+```ts
+function bind<T>(derive: () => T): ReadableSignal<T>;
+```
+
+`BindingValue` 的消费方只需要识别静态值和 `ReadableSignal`。`bind()` / scoped computed 的 dispose 归 mounted runtime owner 负责。
 
 推荐把复杂派生状态放到 ViewModel 的 computed 中：
 
@@ -1890,17 +1896,11 @@ export type IntrinsicElementTag =
 
 export type BindingValue<T> =
   | T
-  | ReadableSignal<T>
-  | BindingExpression<T>;
+  | ReadableSignal<T>;
 
 export interface ReadableSignal<T> {
   get(): T;
-  subscribe(listener: (value: T) => void): () => void;
-}
-
-export interface BindingExpression<T> {
-  kind: "binding-expression";
-  evaluate(): T;
+  subscribe(listener: (value: T, previousValue: T) => void): () => void;
 }
 
 // --- MountedNode ---
@@ -1987,4 +1987,3 @@ mounted node dirty
   ↓
 layout / paint / frame patch
 ```
-
