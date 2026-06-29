@@ -1003,11 +1003,11 @@ Template 不是运行时资源的所有者，因此不负责 dispose。
 
 ---
 
-## 19. 和 React memo 的关系
+## 19. Component 更新模型
 
-BindTTY MVP 不需要 React-style `memo`。
+BindTTY 不把 `memo` 作为核心概念引入 runtime。
 
-React 需要 memo，是因为它的默认模型是：
+React-style `memo` 服务于组件 rerender / props comparison 模型：
 
 ~~~text
 父组件重新 render
@@ -1017,7 +1017,9 @@ React 需要 memo，是因为它的默认模型是：
 memo 用 props comparison 跳过子组件
 ~~~
 
-BindTTY 的目标模型是：
+BindTTY 的目标模型不同。Component 是声明层模板函数，mount 阶段展开为 Template，再挂载成 MountedNode。Component 不进入 MountedNode，也不是默认更新单位。
+
+BindTTY 的更新路径是：
 
 ~~~text
 signal 更新
@@ -1027,13 +1029,13 @@ signal 更新
 对应 MountedNode dirty
 ~~~
 
-因此优化方向不是：
+因此 runtime 不需要通过 memo 来避免组件重执行。优化方向不是：
 
 ~~~text
 props memoization
 ~~~
 
-而是：
+而是更直接的运行时失效传播：
 
 ~~~text
 binding-level invalidation
@@ -1124,7 +1126,7 @@ ElementDefinition:
 暂不纳入 MVP：
 
 ~~~text
-React-style memo
+component rerun optimization
 class component
 hydration
 Suspense

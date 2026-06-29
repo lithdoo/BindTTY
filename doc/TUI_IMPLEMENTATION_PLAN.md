@@ -157,6 +157,8 @@ export const Fragment = Symbol("Fragment");
 
 runtime 是 MVVM 模型的核心。它把 `ViewTemplate` 挂载成 `MountedNode`，展开函数组件，并为 signal / computed 等 `ReadableSignal` 建立订阅。
 
+第一阶段落地细节见 [RUNTIME.md](./RUNTIME.md)。
+
 路径：
 
 ~~~text

@@ -14,7 +14,7 @@ export type Template =
   | FragmentTemplate
   | ComponentTemplate
   | ShowTemplate
-  | ForTemplate;
+  | ForTemplate<any>;
 
 export type ViewTemplate = Template;
 
