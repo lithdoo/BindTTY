@@ -63,7 +63,55 @@ ANSI string
 处理 dispose
 ```
 
-## 2. 包归属
+当前顶层 `bindtty` 包仍是 placeholder：
+
+```text
+packages/bindtty/
+  README.md
+  package.json
+```
+
+因此实现 `createApp` 前，需要先把顶层包改造成真实 TypeScript 包。
+
+## 2. 现有模块适配结论
+
+对照当前实现，底层包基本不需要为了 `createApp` 反向改造。
+
+| 模块 | 当前状态 | 是否需要改造 | 结论 |
+| --- | --- | --- | --- |
+| `@bindtty/runtime` | 已提供 `createRuntimeRoot()`、`onFlush()`、`clearDirty()`、`dispose()` | 否 | app 直接使用即可 |
+| `@bindtty/layout` | 已提供 `layoutRoot(root, { viewport })`，`LayoutNode` 使用绝对坐标 | 否 | app 只负责传 viewport |
+| `@bindtty/renderer-terminal` | 已提供 `createTerminalRenderer()`、`render()`、`reset()` | 否 | app 只负责持有 renderer |
+| `@bindtty/vnode` | 已提供 `ViewTemplate` / `Template` 类型 | 否 | app 参数使用 `ViewTemplate` |
+| `@bindtty/signal` | 已提供响应式 API | 否 | 顶层包后续可 re-export |
+| `bindtty` | 仍是 placeholder 包 | 是 | 需要新增 `src`、构建、测试、依赖 |
+
+需要注意的现有行为：
+
+```text
+runtime:
+  onFlush 返回 unsubscribe。
+  dispose 后 onFlush 返回 noop unsubscribe。
+  flush listener 抛错会向外冒出。
+
+layout:
+  null root 返回 null。
+  不读取 terminal。
+  不裁剪 viewport，renderer 负责最终裁剪。
+
+renderer-terminal:
+  render(null, { viewport }) 会生成空白 frame 并清理 previous frame。
+  reset() 只清 previous frame，不写 stdout。
+  render() 返回 ANSI string，不直接写 terminal。
+```
+
+因此 MVP 的主要实现工作集中在：
+
+```text
+packages/bindtty
+```
+
+## 3. 包归属
 
 MVP 中 `createApp` 放在顶层 `bindtty` 包：
 
@@ -102,7 +150,7 @@ bindtty
   不 import runtime / bindtty
 ```
 
-## 3. 包结构
+## 4. 包结构
 
 建议落地结构：
 
@@ -137,7 +185,41 @@ export commonly used template / runtime APIs if needed
 
 MVP 可以先只导出 `createApp`，再逐步整理统一入口导出面。
 
-## 4. 目标
+`package.json` 需要从 placeholder 改为可构建包：
+
+```json
+{
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
+  }
+}
+```
+
+依赖：
+
+```text
+dependencies:
+  @bindtty/runtime
+  @bindtty/layout
+  @bindtty/renderer-terminal
+  @bindtty/vnode
+  @bindtty/signal
+
+devDependencies:
+  @types/node
+  typescript
+```
+
+## 5. 目标
 
 `createApp` 的目标是把当前 root view 真正输出到 terminal-like stdout。
 
@@ -176,7 +258,7 @@ stdout.write(ANSI)
 
 这些能力后续再分阶段加入。
 
-## 5. 对外 API
+## 6. 对外 API
 
 建议 MVP API：
 
@@ -228,17 +310,16 @@ stdout.rows ?? fallbackViewport.height ?? 24
 
 `resize()` 返回重绘 ANSI string，方便测试。
 
-## 6. 生命周期
+## 7. 生命周期
 
-### 6.1 createApp
+### 7.1 createApp
 
 `createApp()` 只创建对象和内部资源：
 
 ```text
 createRuntimeRoot(view)
 createTerminalRenderer()
-register runtime.onFlush()
-optional register stdout resize listener
+create lifecycle state
 ```
 
 是否立即渲染由 `autoStart` 控制。
@@ -257,11 +338,15 @@ autoStart = false
 3. 后续 alternate screen / raw mode 可以在 start() 中进入。
 ```
 
-### 6.2 start
+如果 `autoStart` 为 `true`，`createApp()` 在返回前调用一次 `start()`。
+
+### 7.2 start
 
 `start()` 做首帧输出：
 
 ```text
+register runtime.onFlush()
+optional register stdout resize listener
 read viewport
 layoutRoot(runtime.root, { viewport })
 renderer.render(layoutTree, { viewport })
@@ -277,12 +362,14 @@ runtime.clearDirty()
 
 已 started:
   不重复注册监听
-  可以选择 no-op
+  no-op
 ```
 
 MVP 建议已 started 时 no-op。
 
-### 6.3 render
+`stop()` 后再次调用 `start()` 应恢复监听并重新 render 当前 runtime root。
+
+### 7.3 render
 
 `render()` 是 app 内部和测试共用的同步渲染入口。
 
@@ -309,12 +396,12 @@ function render() {
 
 `render()` 不主动调用 `renderer.reset()`。
 
-### 6.4 runtime flush
+### 7.4 runtime flush
 
 runtime flush listener 中调用 `render()`：
 
 ```ts
-const unsubscribe = runtime.onFlush(() => {
+flushUnsubscribe = runtime.onFlush(() => {
   render();
 });
 ```
@@ -323,7 +410,7 @@ const unsubscribe = runtime.onFlush(() => {
 
 如果 `render()` 过程中抛错，MVP 允许错误冒出；后续再设计 error boundary。
 
-### 6.5 resize
+### 7.5 resize
 
 resize 由 app layer 监听。
 
@@ -352,7 +439,7 @@ stdout.off?.("resize", resize);
 
 renderer 不监听 resize，layout 不监听 resize。
 
-### 6.6 stop
+### 7.6 stop
 
 MVP 中 `stop()` 表示停止响应 terminal resize 和 runtime flush，但不 dispose root。
 
@@ -366,11 +453,11 @@ MVP 中 `stop()` 表示停止响应 terminal resize 和 runtime flush，但不 d
 5. 不清屏。
 ```
 
-后续如果需要 pause/resume，可以在 `start()` 中重新注册监听并 render。
+`stop()` 后 signal 仍可能更新 mounted tree，但 app 不写 stdout。再次 `start()` 时应对当前 runtime root 做一次 render。
 
-如果不想引入 pause 语义，MVP 也可以先不暴露 `stop()`。但文档保留它，方便未来 app lifecycle。
+MVP 暴露 `stop()`，但它只表示暂停 app layer 监听和输出，不释放 runtime root。
 
-### 6.7 dispose
+### 7.7 dispose
 
 `dispose()` 是最终释放：
 
@@ -391,12 +478,14 @@ MVP 中 `stop()` 表示停止响应 terminal resize 和 runtime flush，但不 d
 3. 后续可以通过 options 增加 clearOnDispose。
 ```
 
-## 7. Flush 调用链
+## 8. Flush 调用链
 
 首帧：
 
 ```text
 app.start()
+  ↓
+register listeners
   ↓
 readViewport(stdout)
   ↓
@@ -445,7 +534,7 @@ app.render()
 full patch
 ```
 
-## 8. stdout 适配
+## 9. stdout 适配
 
 MVP 只要求 stdout-like 对象：
 
@@ -494,7 +583,7 @@ function createMockStdout() {
 
 MVP 不直接 import `process.stdout`。用户或外层 CLI 传入 stdout。
 
-## 9. 错误处理
+## 10. 错误处理
 
 MVP 错误策略：
 
@@ -532,9 +621,11 @@ createApp(view, {
 });
 ```
 
-## 10. MVP 落地阶段
+## 11. MVP 落地阶段
 
 ### 阶段 1：包骨架
+
+状态：已完成。
 
 目标：
 
@@ -544,6 +635,7 @@ createApp(view, {
 3. packages/bindtty/tsconfig.json
 4. packages/bindtty/test/tsconfig.json
 5. package.json build / test 脚本
+6. package.json dependencies / devDependencies
 ```
 
 依赖：
@@ -558,6 +650,8 @@ createApp(view, {
 
 ### 阶段 2：createApp 基础输出
 
+状态：已完成。
+
 目标：
 
 ```text
@@ -566,6 +660,7 @@ createApp(view, {
 3. app.render()
 4. readViewport()
 5. stdout.write(patch)
+6. autoStart true 调用 start()
 ```
 
 测试：
@@ -574,9 +669,13 @@ createApp(view, {
 start 写首帧
 fallback viewport 生效
 空 patch 不写 stdout
+autoStart false 默认不写 stdout
+autoStart true 创建后写首帧
 ```
 
 ### 阶段 3：runtime flush 对接
+
+状态：已完成。
 
 目标：
 
@@ -584,6 +683,8 @@ fallback viewport 生效
 1. runtime.onFlush 调用 app.render()
 2. signal update 后写最小 patch
 3. render 后 runtime.clearDirty()
+4. stop 后取消 runtime flush listener
+5. stop 后 start 可恢复监听并重绘
 ```
 
 测试：
@@ -592,9 +693,13 @@ fallback viewport 生效
 signal update 写 patch
 同 tick 多次更新由 runtime coalesce
 dispose 后 signal update 不再写
+stop 后 signal update 不写
+stop 后 start 写当前 root
 ```
 
 ### 阶段 4：resize 对接
+
+状态：已完成。
 
 目标：
 
@@ -603,6 +708,7 @@ dispose 后 signal update 不再写
 2. resize 调 renderer.reset()
 3. resize 后 full patch
 4. dispose / stop 取消 resize listener
+5. start 时注册 resize listener
 ```
 
 测试：
@@ -611,9 +717,13 @@ dispose 后 signal update 不再写
 columns / rows 改变后 full patch
 resize 后 previous frame 不复用旧尺寸
 dispose 后 emitResize 不写 stdout
+stop 后 emitResize 不写 stdout
+stop 后 start 重新监听 resize
 ```
 
 ### 阶段 5：生命周期收口
+
+状态：已完成。
 
 目标：
 
@@ -634,7 +744,7 @@ dispose 调 runtime.dispose
 stop 后不响应 flush / resize
 ```
 
-## 11. 测试计划
+## 12. 测试计划
 
 单元测试：
 
@@ -674,7 +784,7 @@ dispose:
   later signal update no write
 ```
 
-## 12. 当前结论
+## 13. 当前结论
 
 `createApp` 应先放在顶层 `bindtty` 包中。
 

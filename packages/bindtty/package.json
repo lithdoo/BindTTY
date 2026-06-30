@@ -1,19 +1,45 @@
 {
   "name": "bindtty",
   "version": "0.1.0-alpha.0",
+  "private": true,
   "type": "module",
-  "scripts": {
-    "build": "echo \"No build configured yet\"",
-    "test": "echo \"No tests configured yet\""
+  "description": "Top-level user-facing package for BindTTY.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
-  "description": "Placeholder alpha package for BindTTY.",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build --workspace @bindtty/jsx-runtime && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
+  },
+  "dependencies": {
+    "@bindtty/layout": "0.1.0-alpha.0",
+    "@bindtty/renderer-terminal": "0.1.0-alpha.0",
+    "@bindtty/runtime": "0.1.0-alpha.0",
+    "@bindtty/signal": "0.1.0-alpha.0",
+    "@bindtty/vnode": "0.1.0-alpha.0"
+  },
+  "devDependencies": {
+    "@bindtty/jsx-runtime": "0.1.0-alpha.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lithdoo/BindTTY.git"
+    "url": "git+https://github.com/lithdoo/BindTTY.git",
+    "directory": "packages/bindtty"
   },
   "bugs": {
     "url": "https://github.com/lithdoo/BindTTY/issues"
   },
-  "homepage": "https://github.com/lithdoo/BindTTY#readme"
+  "homepage": "https://github.com/lithdoo/BindTTY/tree/main/packages/bindtty#readme"
 }
