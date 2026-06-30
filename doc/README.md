@@ -32,15 +32,16 @@ layout / paint / frame patch
 
 ## Monorepo 包结构（MVP）
 
-MVP 阶段收敛为 **7 个包**。渲染先合并在 `@bindtty/layout`，输入先合并在 `@bindtty/widgets`，调度器先放在 `@bindtty/runtime`。
+MVP 阶段收敛为 **8 个包**。renderer 已独立为 `@bindtty/renderer-terminal`，输入先合并在 `@bindtty/widgets`，调度器先放在 `@bindtty/runtime`。
 
 | 包 | 职责 |
 | --- | --- |
 | `@bindtty/signal` | 响应式内核：`createSignal`、`computed`、`effect` |
 | `@bindtty/vnode` | 声明层：`ViewTemplate`、`BindingValue`、control node 类型 |
 | `@bindtty/jsx-runtime` | TSX → `ViewTemplate` |
-| `@bindtty/runtime` | `mount`、binding subscription、dirty、dispose、`createApp`、microtask 调度 |
-| `@bindtty/layout` | `MountedNode` → `LayoutNode` → `Frame` → ANSI diff |
+| `@bindtty/runtime` | `mount`、binding subscription、dirty、dispose、microtask 调度 |
+| `@bindtty/layout` | `MountedNode` → `LayoutNode` |
+| `@bindtty/renderer-terminal` | `LayoutNode` → `Frame` → ANSI diff |
 | `@bindtty/widgets` | ElementDefinition、focus、keyboard、interactive widget |
 | `bindtty` | 对用户暴露的统一入口 |
 
@@ -59,6 +60,8 @@ packages/layout/
   src/layout-node.ts
   src/layout.ts
   src/measure-text.ts
+
+packages/renderer-terminal/
   src/frame.ts
   src/paint.ts
   src/ansi.ts
@@ -75,7 +78,7 @@ packages/widgets/
   src/registry.ts
 ~~~
 
-后续若 terminal paint、ANSI diff 或 focus/input 系统明显变复杂，可再拆出 `@bindtty/renderer-terminal`、`@bindtty/input`。
+后续若 focus/input 系统明显变复杂，可再拆出 `@bindtty/input`。
 
 ## 文档索引
 
@@ -85,6 +88,8 @@ packages/widgets/
 | [JSX_RUNTIME.md](./JSX_RUNTIME.md) | @bindtty/jsx-runtime 落地设计（TSX → ViewTemplate） |
 | [RUNTIME.md](./RUNTIME.md) | @bindtty/runtime 落地设计（Template → MountedNode） |
 | [LAYOUT.md](./LAYOUT.md) | @bindtty/layout 落地设计（MountedNode → LayoutNode） |
+| [RENDERER.md](./RENDERER.md) | @bindtty/renderer-terminal 落地设计（LayoutNode → Frame → ANSI Patch） |
+| [APP.md](./APP.md) | bindtty createApp 落地设计（runtime + layout + renderer + stdout） |
 | [DESIGN.md](./DESIGN.md) | 视图树总体设计、四层结构、BindingValue、control node |
 | [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) | 实现计划、里程碑、优先级 |
 | [archive/](./archive/) | 已合并前的原始分拆文档备份 |
