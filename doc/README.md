@@ -32,7 +32,7 @@ layout / paint / frame patch
 
 ## Monorepo 包结构（MVP）
 
-MVP 阶段收敛为 **8 个包**。renderer 已独立为 `@bindtty/renderer-terminal`，输入先合并在 `@bindtty/widgets`，调度器先放在 `@bindtty/runtime`。
+MVP 阶段收敛为 **9 个包**。renderer 已独立为 `@bindtty/renderer-terminal`，terminal lifecycle 独立为 `@bindtty/terminal`，输入的 widget 行为后续再放入 `@bindtty/widgets` 或拆出 `@bindtty/input`，调度器先放在 `@bindtty/runtime`。
 
 | 包 | 职责 |
 | --- | --- |
@@ -42,6 +42,7 @@ MVP 阶段收敛为 **8 个包**。renderer 已独立为 `@bindtty/renderer-term
 | `@bindtty/runtime` | `mount`、binding subscription、dirty、dispose、microtask 调度 |
 | `@bindtty/layout` | `MountedNode` → `LayoutNode` |
 | `@bindtty/renderer-terminal` | `LayoutNode` → `Frame` → ANSI diff |
+| `@bindtty/terminal` | Terminal lifecycle、viewport、resize、input event adapter |
 | `@bindtty/widgets` | ElementDefinition、focus、keyboard、interactive widget |
 | `bindtty` | 对用户暴露的统一入口 |
 
@@ -90,6 +91,8 @@ packages/widgets/
 | [LAYOUT.md](./LAYOUT.md) | @bindtty/layout 落地设计（MountedNode → LayoutNode） |
 | [RENDERER.md](./RENDERER.md) | @bindtty/renderer-terminal 落地设计（LayoutNode → Frame → ANSI Patch） |
 | [APP.md](./APP.md) | bindtty createApp 落地设计（runtime + layout + renderer + stdout） |
+| [TERMINAL.md](./TERMINAL.md) | @bindtty/terminal 落地设计（terminal lifecycle + input + resize） |
+| [E2E_TESTING.md](./E2E_TESTING.md) | E2E 测试计划（TSX → App → Terminal 闭环验证） |
 | [DESIGN.md](./DESIGN.md) | 视图树总体设计、四层结构、BindingValue、control node |
 | [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) | 实现计划、里程碑、优先级 |
 | [archive/](./archive/) | 已合并前的原始分拆文档备份 |

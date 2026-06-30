@@ -128,6 +128,23 @@ test("creates for templates with render functions", () => {
   });
 });
 
+test("creates for templates with automatic runtime key arguments", () => {
+  const items = signal([{ id: 1, title: "One" }]);
+  const key = (item: { id: number }) => item.id;
+  const renderItem = (item: { title: string }) => jsx("text", { value: item.title });
+  const view = jsx("for", {
+    each: items,
+    children: renderItem
+  }, key);
+  const forView = view as {
+    kind: "for";
+    key: (item: { id: number; title: string }, index: number) => string | number;
+  };
+
+  assert.equal(forView.kind, "for");
+  assert.equal(forView.key(items.get()[0]!, 0), 1);
+});
+
 test("rejects invalid JSX shapes", () => {
   assert.throws(() => jsx("unknown", {}), /Unknown intrinsic element/);
   assert.throws(() => jsx("show", {}), /requires prop "when"/);

@@ -17,7 +17,11 @@ import type { ForProps, JsxProps, JsxType, ShowProps } from "./types.js";
 
 export const Fragment = Symbol.for("bindtty.fragment");
 
-export function jsx(type: JsxType, rawProps: JsxProps | null): Template {
+export function jsx(
+  type: JsxType,
+  rawProps: JsxProps | null,
+  jsxKey?: unknown
+): Template {
   const props = normalizeProps(rawProps);
 
   if (type === Fragment) {
@@ -33,6 +37,10 @@ export function jsx(type: JsxType, rawProps: JsxProps | null): Template {
   }
 
   if (type === "for") {
+    if (jsxKey !== undefined && !("key" in props)) {
+      props.key = jsxKey;
+    }
+
     return createForTemplate(props);
   }
 

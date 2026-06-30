@@ -148,10 +148,29 @@ jsxs("box", {
 type: string | FunctionComponent | Fragment
 props: object | null
 props.children: unknown
-key: string | undefined
+key: unknown | undefined
 ```
 
-MVP 阶段可以暂不把 `key` 放入普通 `ElementTemplate`。`for` 的 key 使用显式 `key` prop 函数。
+MVP 阶段不把 `key` 放入普通 `ElementTemplate` 或 component props。
+
+需要特别注意：在 TypeScript automatic runtime 中，TSX 的 `key` 是特殊属性，不会出现在 `props` 中，而是作为 `jsx(type, props, key)` 的第三个参数传入。因此：
+
+```tsx
+<for each={items} key={(item) => item.id}>
+  {(item) => <text value={item.title} />}
+</for>
+```
+
+运行时收到的是近似：
+
+```ts
+jsx("for", {
+  each: items,
+  children: (item) => jsx("text", { value: item.title })
+}, (item) => item.id);
+```
+
+`@bindtty/jsx-runtime` 需要只在 `type === "for"` 时把第三参数恢复为 `ForTemplate.key`；普通元素和组件仍忽略 `key`。
 
 ## 6. 转换规则
 
@@ -419,7 +438,7 @@ import {
 
 export const Fragment = Symbol.for("bindtty.fragment");
 
-export function jsx(type: unknown, rawProps: unknown, key?: string) {
+export function jsx(type: unknown, rawProps: unknown, key?: unknown) {
   const props = normalizeProps(rawProps);
   const children = props.children;
   delete props.children;
@@ -441,6 +460,10 @@ export function jsx(type: unknown, rawProps: unknown, key?: string) {
   }
 
   if (type === "for") {
+    if (key !== undefined && !("key" in props)) {
+      props.key = key;
+    }
+
     if (typeof children !== "function") {
       throw new TypeError("<for> children must be a render function.");
     }

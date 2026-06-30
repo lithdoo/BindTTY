@@ -2,6 +2,7 @@ import { layoutRoot } from "@bindtty/layout";
 import { createTerminalRenderer } from "@bindtty/renderer-terminal";
 import { createRuntimeRoot } from "@bindtty/runtime";
 import type { Dispose } from "@bindtty/runtime";
+import type { TerminalHost } from "@bindtty/terminal";
 import type { ViewTemplate } from "@bindtty/vnode";
 
 export interface AppStdout {
@@ -19,12 +20,23 @@ export interface AppViewport {
   height: number;
 }
 
-export interface CreateAppOptions {
+export interface CreateAppStdoutOptions {
   stdout: AppStdout;
   stdin?: AppStdin;
   fallbackViewport?: AppViewport;
   autoStart?: boolean;
+  terminal?: never;
 }
+
+export interface CreateAppTerminalOptions {
+  terminal: TerminalHost;
+  autoStart?: boolean;
+  stdout?: never;
+  stdin?: never;
+  fallbackViewport?: never;
+}
+
+export type CreateAppOptions = CreateAppStdoutOptions | CreateAppTerminalOptions;
 
 export interface BindTTYApp {
   start(): void;
@@ -40,19 +52,34 @@ export function createApp(
 ): BindTTYApp {
   const runtime = createRuntimeRoot(view);
   const renderer = createTerminalRenderer();
+  const terminal = options.terminal;
   let started = false;
   let disposed = false;
   let flushUnsubscribe: Dispose | null = null;
+  let terminalResizeUnsubscribe: Dispose | null = null;
 
   function handleResize(): void {
     app.resize();
   }
 
   function readViewport(): AppViewport {
+    if (terminal) {
+      return terminal.viewport;
+    }
+
     return {
       width: options.stdout.columns ?? options.fallbackViewport?.width ?? 80,
       height: options.stdout.rows ?? options.fallbackViewport?.height ?? 24
     };
+  }
+
+  function writePatch(patch: string): void {
+    if (terminal) {
+      terminal.write(patch);
+      return;
+    }
+
+    options.stdout.write(patch);
   }
 
   function render(): string {
@@ -65,7 +92,7 @@ export function createApp(
     const patch = renderer.render(layoutTree, { viewport });
 
     if (patch !== "") {
-      options.stdout.write(patch);
+      writePatch(patch);
     }
 
     runtime.clearDirty();
@@ -79,10 +106,15 @@ export function createApp(
       }
 
       started = true;
+      terminal?.start();
       flushUnsubscribe = runtime.onFlush(() => {
         render();
       });
-      options.stdout.on?.("resize", handleResize);
+      if (terminal) {
+        terminalResizeUnsubscribe = terminal.onResize(handleResize);
+      } else {
+        options.stdout.on?.("resize", handleResize);
+      }
       render();
     },
 
@@ -105,7 +137,13 @@ export function createApp(
       started = false;
       flushUnsubscribe?.();
       flushUnsubscribe = null;
-      options.stdout.off?.("resize", handleResize);
+      terminalResizeUnsubscribe?.();
+      terminalResizeUnsubscribe = null;
+      if (terminal) {
+        terminal.stop();
+      } else {
+        options.stdout.off?.("resize", handleResize);
+      }
     },
 
     dispose(): void {
@@ -117,6 +155,7 @@ export function createApp(
       disposed = true;
       runtime.dispose();
       renderer.reset();
+      terminal?.dispose();
     }
   };
 

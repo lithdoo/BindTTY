@@ -1,0 +1,21 @@
+{
+  "name": "@bindtty/e2e",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end tests for the BindTTY package graph.",
+  "scripts": {
+    "test": "npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/terminal && npm run build --workspace bindtty && tsc -p tsconfig.json && node --test dist/*.test.js"
+  },
+  "dependencies": {
+    "@bindtty/signal": "0.1.0-alpha.0",
+    "@bindtty/terminal": "0.1.0-alpha.0",
+    "bindtty": "0.1.0-alpha.0"
+  },
+  "devDependencies": {
+    "@bindtty/jsx-runtime": "0.1.0-alpha.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "license": "MIT"
+}

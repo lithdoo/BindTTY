@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { createApp, type AppStdout, type CreateAppOptions } from "bindtty";
 import { createSignal } from "@bindtty/signal";
+import type { Dispose, TerminalHost, TerminalKeyEvent, TerminalViewport } from "@bindtty/terminal";
 import { elementTemplate, forTemplate, showTemplate } from "@bindtty/vnode";
 
 interface MockStdout extends AppStdout {
@@ -14,6 +15,16 @@ interface MockStdout extends AppStdout {
 interface MockStdin {
   rawModeCalls: number;
   setRawMode(value: boolean): void;
+}
+
+interface MockTerminal extends TerminalHost {
+  writes: string[];
+  startCalls: number;
+  stopCalls: number;
+  disposeCalls: number;
+  resizeListenerCount(): number;
+  emitResize(): void;
+  setViewport(viewport: TerminalViewport): void;
 }
 
 function createMockStdout(columns?: number, rows?: number): MockStdout {
@@ -52,6 +63,56 @@ function createMockStdin(): MockStdin {
     rawModeCalls: 0,
     setRawMode(_value: boolean) {
       this.rawModeCalls += 1;
+    }
+  };
+}
+
+function createMockTerminal(width = 1, height = 1): MockTerminal {
+  let currentViewport = {
+    width,
+    height
+  };
+  const resizeListeners = new Set<() => void>();
+
+  return {
+    writes: [],
+    startCalls: 0,
+    stopCalls: 0,
+    disposeCalls: 0,
+    get viewport() {
+      return currentViewport;
+    },
+    start() {
+      this.startCalls += 1;
+    },
+    stop() {
+      this.stopCalls += 1;
+    },
+    dispose() {
+      this.disposeCalls += 1;
+    },
+    write(chunk: string) {
+      this.writes.push(chunk);
+    },
+    onResize(listener: () => void): Dispose {
+      resizeListeners.add(listener);
+      return () => {
+        resizeListeners.delete(listener);
+      };
+    },
+    onKey(_listener: (event: TerminalKeyEvent) => void): Dispose {
+      return () => {};
+    },
+    resizeListenerCount() {
+      return resizeListeners.size;
+    },
+    emitResize() {
+      for (const listener of [...resizeListeners]) {
+        listener();
+      }
+    },
+    setViewport(viewport: TerminalViewport) {
+      currentViewport = viewport;
     }
   };
 }
@@ -414,4 +475,159 @@ test("app lifecycle does not enter stdin raw mode", () => {
   app.dispose();
 
   assert.equal(stdin.rawModeCalls, 0);
+});
+
+test("terminal mode starts terminal and writes first frame through terminal", () => {
+  const terminal = createMockTerminal(1, 1);
+  const app = createApp(elementTemplate("text", { value: "A" }), { terminal });
+
+  app.start();
+
+  assert.equal(terminal.startCalls, 1);
+  assert.equal(terminal.resizeListenerCount(), 1);
+  assert.equal(terminal.writes.length, 1);
+  assert.match(terminal.writes[0], /A/);
+});
+
+test("terminal mode autoStart starts terminal and renders first frame", () => {
+  const terminal = createMockTerminal(1, 1);
+
+  createApp(elementTemplate("text", { value: "A" }), {
+    terminal,
+    autoStart: true
+  });
+
+  assert.equal(terminal.startCalls, 1);
+  assert.equal(terminal.resizeListenerCount(), 1);
+  assert.equal(terminal.writes.length, 1);
+  assert.match(terminal.writes[0], /A/);
+});
+
+test("terminal mode uses terminal viewport for rendering", () => {
+  const terminal = createMockTerminal(1, 1);
+  const app = createApp(elementTemplate("text", { value: "AB" }), { terminal });
+
+  app.start();
+
+  assert.equal(terminal.writes.length, 1);
+  assert.match(terminal.writes[0], /A/);
+  assert.doesNotMatch(terminal.writes[0], /B/);
+});
+
+test("terminal mode render is a no-op when the frame is unchanged", () => {
+  const terminal = createMockTerminal(1, 1);
+  const app = createApp(elementTemplate("text", { value: "A" }), { terminal });
+
+  app.start();
+
+  assert.equal(app.render(), "");
+  assert.equal(terminal.writes.length, 1);
+});
+
+test("terminal resize triggers app resize and full repaint", () => {
+  const terminal = createMockTerminal(1, 1);
+  const app = createApp(elementTemplate("text", { value: "AB" }), { terminal });
+
+  app.start();
+  terminal.setViewport({ width: 2, height: 1 });
+  terminal.emitResize();
+
+  assert.equal(terminal.writes.length, 2);
+  assert.match(terminal.writes[1], /A/);
+  assert.match(terminal.writes[1], /B/);
+});
+
+test("terminal mode manual resize returns and writes the repaint patch", () => {
+  const terminal = createMockTerminal(1, 1);
+  const app = createApp(elementTemplate("text", { value: "A" }), { terminal });
+
+  app.start();
+
+  const patch = app.resize();
+
+  assert.equal(terminal.writes.length, 2);
+  assert.equal(terminal.writes[1], patch);
+  assert.match(patch, /A/);
+});
+
+test("terminal mode receives runtime flush renders", async () => {
+  const terminal = createMockTerminal(1, 1);
+  const label = createSignal("A");
+  const app = createApp(elementTemplate("text", { value: label }), { terminal });
+
+  app.start();
+  label.set("B");
+  await nextMicrotask();
+
+  assert.equal(terminal.writes.length, 2);
+  assert.match(terminal.writes[1], /B/);
+});
+
+test("terminal mode stop unsubscribes runtime flush and restart renders latest state", async () => {
+  const terminal = createMockTerminal(1, 1);
+  const label = createSignal("A");
+  const app = createApp(elementTemplate("text", { value: label }), { terminal });
+
+  app.start();
+  app.stop();
+  label.set("B");
+  await nextMicrotask();
+
+  assert.equal(terminal.writes.length, 1);
+
+  app.start();
+
+  assert.equal(terminal.writes.length, 2);
+  assert.match(terminal.writes[1], /B/);
+});
+
+test("terminal mode stop and restart control terminal lifecycle", () => {
+  const terminal = createMockTerminal(1, 1);
+  const app = createApp(elementTemplate("text", { value: "A" }), { terminal });
+
+  app.start();
+  app.stop();
+
+  assert.equal(terminal.stopCalls, 1);
+  assert.equal(terminal.resizeListenerCount(), 0);
+
+  terminal.setViewport({ width: 2, height: 1 });
+  terminal.emitResize();
+
+  assert.equal(terminal.writes.length, 1);
+
+  app.start();
+
+  assert.equal(terminal.startCalls, 2);
+  assert.equal(terminal.resizeListenerCount(), 1);
+  assert.equal(terminal.writes.length, 2);
+});
+
+test("terminal mode dispose stops and disposes terminal", () => {
+  const terminal = createMockTerminal(1, 1);
+  const app = createApp(elementTemplate("text", { value: "A" }), { terminal });
+
+  app.start();
+  app.dispose();
+  app.dispose();
+  app.start();
+
+  assert.equal(terminal.stopCalls, 1);
+  assert.equal(terminal.disposeCalls, 1);
+  assert.equal(terminal.resizeListenerCount(), 0);
+  assert.equal(terminal.writes.length, 1);
+});
+
+test("terminal mode dispose prevents later runtime flush writes", async () => {
+  const terminal = createMockTerminal(1, 1);
+  const label = createSignal("A");
+  const app = createApp(elementTemplate("text", { value: label }), { terminal });
+
+  app.start();
+  app.dispose();
+  label.set("B");
+  await nextMicrotask();
+
+  assert.equal(terminal.disposeCalls, 1);
+  assert.equal(terminal.writes.length, 1);
 });

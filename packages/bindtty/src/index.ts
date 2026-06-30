@@ -4,5 +4,7 @@ export type {
   AppStdout,
   AppViewport,
   BindTTYApp,
+  CreateAppStdoutOptions,
+  CreateAppTerminalOptions,
   CreateAppOptions
 } from "./app.js";
