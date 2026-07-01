@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { stripVTControlCharacters } from "node:util";
 
-import { createApp } from "bindtty";
+import { Button, createApp } from "bindtty";
 import { createSignal } from "@bindtty/signal";
 import { ANSI, createNodeTerminal } from "@bindtty/terminal";
 import type {
@@ -303,4 +303,59 @@ test("tsx app dispatches terminal keys through interaction focus", async () => {
   assert.equal(stdout.writes.length, writeCountAfterDispose);
   assert.equal(stdin.listenerCount(), 0);
   assert.deepEqual(stdin.rawModeCalls, [true, false]);
+});
+
+test("tsx app dispatches terminal keys through Button widgets", async () => {
+  const stdout = createFakeStdout(24, 12);
+  const stdin = createFakeStdin();
+  const first = createSignal("First");
+  const second = createSignal("Second");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <vstack>
+      <Button
+        label={first}
+        onPress={() => {
+          first.set("First pressed");
+        }}
+      />
+      <Button
+        label={second}
+        onPress={() => {
+          second.set(second.get() === "Second" ? "Enter pressed" : "Space pressed");
+        }}
+      />
+    </vstack>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /First/);
+  assert.match(visibleText(stdout.writes.at(-1)), /Second/);
+
+  stdin.emitKey(undefined, { name: "tab" });
+  stdin.emitKey("\r", { name: "return" });
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /Enter pressed/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /First pressed/);
+
+  stdin.emitKey(" ", { name: "space" });
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /Space/);
+
+  app.dispose();
+  const writeCountAfterDispose = stdout.writes.length;
+
+  stdin.emitKey(" ", { name: "space" });
+  await nextMicrotask();
+
+  assert.equal(stdout.writes.length, writeCountAfterDispose);
 });

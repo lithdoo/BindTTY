@@ -99,6 +99,7 @@ packages/widgets/
 | [APP.md](./APP.md) | bindtty createApp 落地设计（runtime + layout + renderer + stdout） |
 | [TERMINAL.md](./TERMINAL.md) | @bindtty/terminal 落地设计（terminal lifecycle + input + resize） |
 | [INTERACTION.md](./INTERACTION.md) | @bindtty/interaction 落地设计（keyboard focus + onKey dispatch） |
+| [WIDGETS.md](./WIDGETS.md) | @bindtty/widgets 落地设计（Button / TextInput 等高层控件） |
 | [E2E_TESTING.md](./E2E_TESTING.md) | E2E 测试计划（TSX → App → Terminal 闭环验证） |
 | [DESIGN.md](./DESIGN.md) | 视图树总体设计、四层结构、BindingValue、control node |
 | [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) | 实现计划、里程碑、优先级 |

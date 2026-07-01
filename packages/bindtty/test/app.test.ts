@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createApp, type AppStdout, type CreateAppOptions } from "bindtty";
+import { Button, createApp, type AppStdout, type CreateAppOptions } from "bindtty";
 import { createSignal } from "@bindtty/signal";
 import type { Dispose, TerminalHost, TerminalKeyEvent, TerminalViewport } from "@bindtty/terminal";
 import {
@@ -154,6 +154,10 @@ async function nextMicrotask(): Promise<void> {
 
 test("bindtty exports the createApp entrypoint", () => {
   assert.equal(typeof createApp, "function");
+});
+
+test("bindtty exports the Button widget", () => {
+  assert.equal(typeof Button, "function");
 });
 
 test("createApp returns lifecycle methods without rendering by default", () => {
@@ -666,6 +670,33 @@ test("terminal runtime flush removes nodes whose dynamic onKey becomes false", a
 
   assert.match(terminal.writes.at(-1) ?? "", /Y/);
   assert.doesNotMatch(terminal.writes.at(-1) ?? "", /X/);
+});
+
+test("terminal mode dispatches Button onPress and repaints updated signal label", async () => {
+  const terminal = createMockTerminal(8, 3);
+  const label = createSignal("A");
+  const app = createApp(
+    Button({
+      label,
+      onPress() {
+        label.set("B");
+      }
+    }),
+    { terminal }
+  );
+
+  app.start();
+  terminal.emitKey(keyEvent("\r", { name: "return" }));
+  await nextMicrotask();
+
+  assert.equal(terminal.writes.length, 2);
+  assert.match(terminal.writes[1], /B/);
+
+  app.dispose();
+  terminal.emitKey(keyEvent("\r", { name: "return" }));
+  await nextMicrotask();
+
+  assert.equal(terminal.writes.length, 2);
 });
 
 test("terminal resize triggers app resize and full repaint", () => {
