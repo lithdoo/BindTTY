@@ -32,7 +32,7 @@ layout / paint / frame patch
 
 ## Monorepo 包结构（MVP）
 
-MVP 阶段收敛为 **9 个包**。renderer 已独立为 `@bindtty/renderer-terminal`，terminal lifecycle 独立为 `@bindtty/terminal`，输入的 widget 行为后续再放入 `@bindtty/widgets` 或拆出 `@bindtty/input`，调度器先放在 `@bindtty/runtime`。
+MVP 阶段收敛为 **10 个包**。renderer 已独立为 `@bindtty/renderer-terminal`，terminal lifecycle 独立为 `@bindtty/terminal`，键盘 focus 与 `onKey` 派发独立为 `@bindtty/interaction`，调度器先放在 `@bindtty/runtime`。
 
 | 包 | 职责 |
 | --- | --- |
@@ -43,7 +43,8 @@ MVP 阶段收敛为 **9 个包**。renderer 已独立为 `@bindtty/renderer-term
 | `@bindtty/layout` | `MountedNode` → `LayoutNode` |
 | `@bindtty/renderer-terminal` | `LayoutNode` → `Frame` → ANSI diff |
 | `@bindtty/terminal` | Terminal lifecycle、viewport、resize、input event adapter |
-| `@bindtty/widgets` | ElementDefinition、focus、keyboard、interactive widget |
+| `@bindtty/interaction` | keyboard focus、onKey dispatch、focused state |
+| `@bindtty/widgets` | 高层 interactive widget 与复合控件 |
 | `bindtty` | 对用户暴露的统一入口 |
 
 包内模块边界示例：
@@ -68,18 +69,23 @@ packages/renderer-terminal/
   src/ansi.ts
   src/line-diff.ts
 
+packages/interaction/
+  src/controller.ts
+  src/focus.ts
+  src/keyboard.ts
+  src/types.ts
+
 packages/widgets/
   src/elements/
     text.ts
     box.ts
     button.ts
     input.ts
-  src/focus.ts
-  src/keyboard.ts
-  src/registry.ts
 ~~~
 
-后续若 focus/input 系统明显变复杂，可再拆出 `@bindtty/input`。
+后续若 input 编辑器明显变复杂，可再拆出 `@bindtty/input`。
+
+注意：`@bindtty/interaction` 当前已完成 shared prop model、包骨架、focus list、key dispatch、App 接入、renderer 可见 focused 样式与 interaction e2e。
 
 ## 文档索引
 
@@ -92,6 +98,7 @@ packages/widgets/
 | [RENDERER.md](./RENDERER.md) | @bindtty/renderer-terminal 落地设计（LayoutNode → Frame → ANSI Patch） |
 | [APP.md](./APP.md) | bindtty createApp 落地设计（runtime + layout + renderer + stdout） |
 | [TERMINAL.md](./TERMINAL.md) | @bindtty/terminal 落地设计（terminal lifecycle + input + resize） |
+| [INTERACTION.md](./INTERACTION.md) | @bindtty/interaction 落地设计（keyboard focus + onKey dispatch） |
 | [E2E_TESTING.md](./E2E_TESTING.md) | E2E 测试计划（TSX → App → Terminal 闭环验证） |
 | [DESIGN.md](./DESIGN.md) | 视图树总体设计、四层结构、BindingValue、control node |
 | [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) | 实现计划、里程碑、优先级 |

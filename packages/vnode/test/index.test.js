@@ -47,6 +47,27 @@ test('creates element templates and validates element schema', () => {
   assert.throws(() => elementTemplate('text'), /requires prop "value"/);
 });
 
+test('element schema includes common interaction props', () => {
+  const onKey = () => true;
+  const onFocusChange = () => {};
+  const view = elementTemplate('box', {
+    id: 'panel',
+    onKey,
+    onFocusChange
+  });
+
+  assert.deepEqual(view, {
+    kind: 'element',
+    tag: 'box',
+    props: {
+      id: 'panel',
+      onKey,
+      onFocusChange
+    },
+    children: []
+  });
+});
+
 test('normalizes empty, array, and fragment children', () => {
   const first = elementTemplate('text', { value: 'A' });
   const second = elementTemplate('text', { value: 'B' });

@@ -74,6 +74,35 @@ test("TerminalRenderer returns empty output when the frame is unchanged", () => 
   assert.equal(renderer.render(textLayout("A"), { viewport }), "");
 });
 
+test("TerminalRenderer paints focused state with inverse style", () => {
+  const renderer = createTerminalRenderer();
+
+  assert.equal(
+    renderer.render(textLayout("A"), {
+      viewport,
+      isFocused: () => true
+    }),
+    "\x1b[1;1H\x1b[0m\x1b[7mA\x1b[1;2H\x1b[0m \x1b[1;3H\x1b[0m \x1b[0m"
+  );
+});
+
+test("TerminalRenderer emits a patch when focused state changes", () => {
+  const renderer = createTerminalRenderer();
+
+  renderer.render(textLayout("A"), {
+    viewport,
+    isFocused: () => false
+  });
+
+  assert.equal(
+    renderer.render(textLayout("A"), {
+      viewport,
+      isFocused: () => true
+    }),
+    "\x1b[1;1H\x1b[0m\x1b[7mA\x1b[0m"
+  );
+});
+
 test("TerminalRenderer emits only changed cells on content updates", () => {
   const renderer = createTerminalRenderer();
 

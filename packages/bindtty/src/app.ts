@@ -1,8 +1,9 @@
+import { createInteractionController } from "@bindtty/interaction";
 import { layoutRoot } from "@bindtty/layout";
 import { createTerminalRenderer } from "@bindtty/renderer-terminal";
 import { createRuntimeRoot } from "@bindtty/runtime";
 import type { Dispose } from "@bindtty/runtime";
-import type { TerminalHost } from "@bindtty/terminal";
+import type { TerminalHost, TerminalKeyEvent } from "@bindtty/terminal";
 import type { ViewTemplate } from "@bindtty/vnode";
 
 export interface AppStdout {
@@ -52,14 +53,28 @@ export function createApp(
 ): BindTTYApp {
   const runtime = createRuntimeRoot(view);
   const renderer = createTerminalRenderer();
+  const interaction = createInteractionController();
   const terminal = options.terminal;
   let started = false;
   let disposed = false;
   let flushUnsubscribe: Dispose | null = null;
   let terminalResizeUnsubscribe: Dispose | null = null;
+  let terminalKeyUnsubscribe: Dispose | null = null;
 
   function handleResize(): void {
     app.resize();
+  }
+
+  function refreshInteraction(): void {
+    interaction.refresh(runtime.root);
+  }
+
+  function handleKey(event: TerminalKeyEvent): void {
+    const result = interaction.handleKey(event);
+
+    if (result.handled || result.dirtyNodes.length > 0) {
+      render();
+    }
   }
 
   function readViewport(): AppViewport {
@@ -88,8 +103,12 @@ export function createApp(
     }
 
     const viewport = readViewport();
+    refreshInteraction();
     const layoutTree = layoutRoot(runtime.root, { viewport });
-    const patch = renderer.render(layoutTree, { viewport });
+    const patch = renderer.render(layoutTree, {
+      viewport,
+      isFocused: (mounted) => interaction.isFocused(mounted)
+    });
 
     if (patch !== "") {
       writePatch(patch);
@@ -112,6 +131,7 @@ export function createApp(
       });
       if (terminal) {
         terminalResizeUnsubscribe = terminal.onResize(handleResize);
+        terminalKeyUnsubscribe = terminal.onKey(handleKey);
       } else {
         options.stdout.on?.("resize", handleResize);
       }
@@ -139,6 +159,8 @@ export function createApp(
       flushUnsubscribe = null;
       terminalResizeUnsubscribe?.();
       terminalResizeUnsubscribe = null;
+      terminalKeyUnsubscribe?.();
+      terminalKeyUnsubscribe = null;
       if (terminal) {
         terminal.stop();
       } else {
@@ -154,6 +176,7 @@ export function createApp(
       app.stop();
       disposed = true;
       runtime.dispose();
+      interaction.dispose();
       renderer.reset();
       terminal?.dispose();
     }

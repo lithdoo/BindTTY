@@ -4,7 +4,11 @@ import test from "node:test";
 import { createApp, type AppStdout, type CreateAppOptions } from "bindtty";
 import { createSignal } from "@bindtty/signal";
 import type { Dispose, TerminalHost, TerminalKeyEvent, TerminalViewport } from "@bindtty/terminal";
-import { elementTemplate, forTemplate, showTemplate } from "@bindtty/vnode";
+import {
+  elementTemplate,
+  forTemplate,
+  showTemplate
+} from "@bindtty/vnode";
 
 interface MockStdout extends AppStdout {
   writes: string[];
@@ -23,7 +27,9 @@ interface MockTerminal extends TerminalHost {
   stopCalls: number;
   disposeCalls: number;
   resizeListenerCount(): number;
+  keyListenerCount(): number;
   emitResize(): void;
+  emitKey(event: TerminalKeyEvent): void;
   setViewport(viewport: TerminalViewport): void;
 }
 
@@ -73,6 +79,7 @@ function createMockTerminal(width = 1, height = 1): MockTerminal {
     height
   };
   const resizeListeners = new Set<() => void>();
+  const keyListeners = new Set<(event: TerminalKeyEvent) => void>();
 
   return {
     writes: [],
@@ -100,20 +107,44 @@ function createMockTerminal(width = 1, height = 1): MockTerminal {
         resizeListeners.delete(listener);
       };
     },
-    onKey(_listener: (event: TerminalKeyEvent) => void): Dispose {
-      return () => {};
+    onKey(listener: (event: TerminalKeyEvent) => void): Dispose {
+      keyListeners.add(listener);
+      return () => {
+        keyListeners.delete(listener);
+      };
     },
     resizeListenerCount() {
       return resizeListeners.size;
+    },
+    keyListenerCount() {
+      return keyListeners.size;
     },
     emitResize() {
       for (const listener of [...resizeListeners]) {
         listener();
       }
     },
+    emitKey(event: TerminalKeyEvent) {
+      for (const listener of [...keyListeners]) {
+        listener(event);
+      }
+    },
     setViewport(viewport: TerminalViewport) {
       currentViewport = viewport;
     }
+  };
+}
+
+function keyEvent(
+  input: string,
+  overrides: Partial<TerminalKeyEvent> = {}
+): TerminalKeyEvent {
+  return {
+    input,
+    ctrl: false,
+    meta: false,
+    shift: false,
+    ...overrides
   };
 }
 
@@ -485,6 +516,7 @@ test("terminal mode starts terminal and writes first frame through terminal", ()
 
   assert.equal(terminal.startCalls, 1);
   assert.equal(terminal.resizeListenerCount(), 1);
+  assert.equal(terminal.keyListenerCount(), 1);
   assert.equal(terminal.writes.length, 1);
   assert.match(terminal.writes[0], /A/);
 });
@@ -499,6 +531,7 @@ test("terminal mode autoStart starts terminal and renders first frame", () => {
 
   assert.equal(terminal.startCalls, 1);
   assert.equal(terminal.resizeListenerCount(), 1);
+  assert.equal(terminal.keyListenerCount(), 1);
   assert.equal(terminal.writes.length, 1);
   assert.match(terminal.writes[0], /A/);
 });
@@ -522,6 +555,117 @@ test("terminal mode render is a no-op when the frame is unchanged", () => {
 
   assert.equal(app.render(), "");
   assert.equal(terminal.writes.length, 1);
+});
+
+test("terminal key events dispatch to the focused onKey handler and repaint", async () => {
+  const terminal = createMockTerminal(1, 1);
+  const label = createSignal("A");
+  const app = createApp(
+    elementTemplate("text", {
+      value: label,
+      onKey: (event: TerminalKeyEvent) => {
+        if (event.input === "x") {
+          label.set("B");
+          return true;
+        }
+        return false;
+      }
+    }),
+    { terminal }
+  );
+
+  app.start();
+  terminal.emitKey(keyEvent("x"));
+  await nextMicrotask();
+
+  assert.equal(terminal.writes.length, 2);
+  assert.match(terminal.writes[1], /B/);
+});
+
+test("terminal Tab traversal changes which onKey handler receives keys", () => {
+  const terminal = createMockTerminal(2, 1);
+  const firstLabel = createSignal("A");
+  const secondLabel = createSignal("B");
+  const app = createApp(
+    elementTemplate("hstack", {}, [
+      elementTemplate("text", {
+        value: firstLabel,
+        onKey: (event: TerminalKeyEvent) => {
+          if (event.input === "x") {
+            firstLabel.set("X");
+            return true;
+          }
+          return false;
+        }
+      }),
+      elementTemplate("text", {
+        value: secondLabel,
+        onKey: (event: TerminalKeyEvent) => {
+          if (event.input === "x") {
+            secondLabel.set("Y");
+            return true;
+          }
+          return false;
+        }
+      })
+    ]),
+    { terminal }
+  );
+
+  app.start();
+  terminal.emitKey(keyEvent("", { name: "tab" }));
+  assert.equal(terminal.writes.length, 2);
+  assert.match(terminal.writes[1], /\x1b\[7mB/);
+
+  terminal.emitKey(keyEvent("x"));
+
+  assert.equal(terminal.writes.length, 3);
+  assert.match(terminal.writes[2], /Y/);
+  assert.doesNotMatch(terminal.writes[2], /X/);
+});
+
+test("terminal runtime flush removes nodes whose dynamic onKey becomes false", async () => {
+  const terminal = createMockTerminal(2, 1);
+  const firstLabel = createSignal("A");
+  const secondLabel = createSignal("B");
+  const firstOnKey = createSignal<false | ((event: TerminalKeyEvent) => boolean)>(
+    (event) => {
+      if (event.name === "return") {
+        firstLabel.set("X");
+        return true;
+      }
+      return false;
+    }
+  );
+  const app = createApp(
+    elementTemplate("hstack", {}, [
+      elementTemplate("text", {
+        value: firstLabel,
+        onKey: firstOnKey
+      }),
+      elementTemplate("text", {
+        value: secondLabel,
+        onKey: (event: TerminalKeyEvent) => {
+          if (event.name === "return") {
+            secondLabel.set("Y");
+            return true;
+          }
+          return false;
+        }
+      })
+    ]),
+    { terminal }
+  );
+
+  app.start();
+  firstOnKey.set(false);
+  await nextMicrotask();
+
+  terminal.emitKey(keyEvent("\r", { name: "return" }));
+  await nextMicrotask();
+
+  assert.match(terminal.writes.at(-1) ?? "", /Y/);
+  assert.doesNotMatch(terminal.writes.at(-1) ?? "", /X/);
 });
 
 test("terminal resize triggers app resize and full repaint", () => {
@@ -590,9 +734,11 @@ test("terminal mode stop and restart control terminal lifecycle", () => {
 
   assert.equal(terminal.stopCalls, 1);
   assert.equal(terminal.resizeListenerCount(), 0);
+  assert.equal(terminal.keyListenerCount(), 0);
 
   terminal.setViewport({ width: 2, height: 1 });
   terminal.emitResize();
+  terminal.emitKey(keyEvent("x"));
 
   assert.equal(terminal.writes.length, 1);
 
@@ -600,6 +746,7 @@ test("terminal mode stop and restart control terminal lifecycle", () => {
 
   assert.equal(terminal.startCalls, 2);
   assert.equal(terminal.resizeListenerCount(), 1);
+  assert.equal(terminal.keyListenerCount(), 1);
   assert.equal(terminal.writes.length, 2);
 });
 
@@ -615,6 +762,7 @@ test("terminal mode dispose stops and disposes terminal", () => {
   assert.equal(terminal.stopCalls, 1);
   assert.equal(terminal.disposeCalls, 1);
   assert.equal(terminal.resizeListenerCount(), 0);
+  assert.equal(terminal.keyListenerCount(), 0);
   assert.equal(terminal.writes.length, 1);
 });
 

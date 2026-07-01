@@ -364,6 +364,23 @@ test("ignores non-layout paint props while measuring layout", () => {
   });
 });
 
+test("ignores interaction props while measuring layout", () => {
+  const root = createMountedElement("box", {
+    id: "panel",
+    onKey: true,
+    onFocusChange: () => {},
+    padding: 1
+  }, [createMountedText("A")]);
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 3,
+    height: 3
+  });
+});
+
 test("lays out fragment roots with column fallback flow", () => {
   const root = createMountedFragment([
     createMountedText("A"),

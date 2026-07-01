@@ -25,7 +25,7 @@ TSX
 - 使用真实 `createApp`。
 - 使用真实 `createNodeTerminal`。
 - fake `stdout` / `stdin`，避免依赖当前进程是否处于 TTY。
-- 覆盖首屏渲染、signal 更新、resize、stop/restart、dispose、Ctrl+C lifecycle。
+- 覆盖首屏渲染、signal 更新、resize、stop/restart、dispose、Ctrl+C lifecycle、keyboard focus 与 `onKey` dispatch。
 
 ## 为什么 fake stdout / stdin
 
@@ -65,7 +65,7 @@ packages/e2e/
 
 ## 当前测试场景
 
-`packages/e2e/test/app-terminal.test.tsx` 覆盖两组场景。
+`packages/e2e/test/app-terminal.test.tsx` 覆盖三组场景。
 
 ### App 到 Terminal 完整链路
 
@@ -93,6 +93,17 @@ packages/e2e/
 - raw mode、cursor、alternate screen 被恢复。
 - 后续写入被忽略。
 
+### Interaction Key Dispatch
+
+验证内容：
+
+- TSX app 中两个 `onKey` 节点能进入 interaction focus list。
+- 首个 focus target 有可见 focused 输出。
+- fake stdin 发送 Tab 后 focus 移动到第二个 target。
+- Enter 只派发给当前 focused target。
+- `onKey` callback 更新 signal 后能渲染可见结果。
+- `dispose()` 后 fake stdin key 不再触发输出。
+
 ## 后续阶段
 
 ### 阶段 2：更多用户场景
@@ -104,9 +115,8 @@ packages/e2e/
 
 ### 阶段 3：交互 Widget E2E
 
-等 widgets/focus/input 落地后补充：
+等 widgets/input 落地后补充：
 
-- focus next/previous。
 - button press。
 - input text editing。
 - keyboard event 到 widget action 的完整链路。

@@ -36,6 +36,7 @@ export interface RenderOptions {
     width: number;
     height: number;
   };
+  isFocused?: (mounted: import("@bindtty/vnode").MountedNode) => boolean;
 }
 
 export interface TerminalRenderer {

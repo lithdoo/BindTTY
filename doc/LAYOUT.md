@@ -43,7 +43,7 @@ layout 负责回答：
 2. frame diff
 3. terminal write
 4. keyboard input
-5. focus manager
+5. interaction focus manager
 6. interactive widget behavior
 ```
 
@@ -450,8 +450,11 @@ screen  是否占满 viewport
 @bindtty/renderer-terminal
   定义 tag 的绘制语义
 
+@bindtty/interaction
+  定义 keyboard focus 与 onKey 派发
+
 @bindtty/widgets
-  定义交互行为、focus、keyboard
+  定义高层控件语义，例如 button / input
 ```
 
 ## 8. 第一版支持范围

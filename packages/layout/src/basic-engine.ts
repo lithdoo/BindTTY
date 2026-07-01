@@ -82,6 +82,12 @@ const layoutPropAliases = new Map<string, string>([
   ["max-height", "maxHeight"]
 ]);
 
+const nonLayoutProps = new Set<string>([
+  "id",
+  "onKey",
+  "onFocusChange"
+]);
+
 export function createBasicLayoutEngine(): LayoutEngine {
   return {
     layout(root: MountedNode | null, options: LayoutEngineOptions): LayoutNode | null {
@@ -417,6 +423,10 @@ function validateElementProps(node: MountedElementNode): void {
   const canonicalProps: string[] = [];
 
   for (const propName of Object.keys(node.props)) {
+    if (nonLayoutProps.has(propName)) {
+      continue;
+    }
+
     const canonicalName = layoutPropAliases.get(propName) ?? propName;
     const previousName = seenCanonicalProps.get(canonicalName);
 

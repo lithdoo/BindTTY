@@ -17,6 +17,58 @@ import type { ForProps, JsxProps, JsxType, ShowProps } from "./types.js";
 
 export const Fragment = Symbol.for("bindtty.fragment");
 
+type InteractionFocusChangeReason =
+  | "initial"
+  | "next"
+  | "previous"
+  | "programmatic"
+  | "clear"
+  | "refresh";
+
+interface InteractionNodeFocusChangeEvent {
+  id: string;
+  node: unknown;
+  focused: boolean;
+  reason: InteractionFocusChangeReason;
+}
+
+interface InteractionKeyEvent {
+  input: string;
+  name?: string;
+  ctrl: boolean;
+  meta: boolean;
+  shift: boolean;
+  sequence?: string;
+}
+
+interface InteractionKeyContext {
+  node: unknown;
+  isFocused: true;
+}
+
+type InteractionKeyHandler = (
+  event: InteractionKeyEvent,
+  context: InteractionKeyContext
+) => boolean | void;
+type InteractionKeyBinding = boolean | InteractionKeyHandler | null | undefined;
+
+interface IntrinsicInteractionProps {
+  id?: BindingValue<string | number>;
+  onKey?: BindingValue<InteractionKeyBinding>;
+  onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
+}
+
+interface IntrinsicPaintProps {
+  color?: BindingValue<string>;
+  background?: BindingValue<string>;
+  bold?: BindingValue<boolean>;
+}
+
+interface IntrinsicBoxStyleProps {
+  border?: BindingValue<boolean | number>;
+  padding?: BindingValue<number>;
+}
+
 export function jsx(
   type: JsxType,
   rawProps: JsxProps | null,
@@ -114,45 +166,41 @@ export namespace JSX {
   export type Element = Template;
 
   export interface IntrinsicElements {
-    screen: {
+    screen: IntrinsicInteractionProps & {
       children?: TemplateChildren;
     };
 
-    box: {
-      children?: TemplateChildren;
-      border?: BindingValue<boolean>;
-      padding?: BindingValue<number>;
-    };
-
-    vstack: {
+    box: IntrinsicInteractionProps & IntrinsicBoxStyleProps & IntrinsicPaintProps & {
       children?: TemplateChildren;
     };
 
-    hstack: {
+    vstack: IntrinsicInteractionProps & {
       children?: TemplateChildren;
     };
 
-    text: {
+    hstack: IntrinsicInteractionProps & {
+      children?: TemplateChildren;
+    };
+
+    text: IntrinsicInteractionProps & IntrinsicPaintProps & {
       value: BindingValue<string | number>;
-      color?: BindingValue<string>;
-      bold?: BindingValue<boolean>;
       children?: never;
     };
 
-    button: {
+    button: IntrinsicInteractionProps & {
       value: BindingValue<string | number>;
       disabled?: BindingValue<boolean>;
       onPress?: () => void;
       children?: never;
     };
 
-    input: {
+    input: IntrinsicInteractionProps & {
       value?: BindingValue<string>;
       placeholder?: BindingValue<string>;
       children?: never;
     };
 
-    spacer: {
+    spacer: IntrinsicInteractionProps & {
       size?: BindingValue<number>;
       children?: never;
     };

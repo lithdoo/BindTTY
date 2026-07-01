@@ -5,7 +5,7 @@
   "type": "module",
   "description": "End-to-end tests for the BindTTY package graph.",
   "scripts": {
-    "test": "npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/terminal && npm run build --workspace bindtty && tsc -p tsconfig.json && node --test dist/*.test.js"
+    "test": "npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/terminal && npm run build --workspace @bindtty/interaction && npm run build --workspace bindtty && tsc -p tsconfig.json && node --test dist/*.test.js"
   },
   "dependencies": {
     "@bindtty/signal": "0.1.0-alpha.0",

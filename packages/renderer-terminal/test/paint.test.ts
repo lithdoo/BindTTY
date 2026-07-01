@@ -166,6 +166,76 @@ test("paintLayout paints box background and border", () => {
   });
 });
 
+test("paintLayout ignores interaction props", () => {
+  const root = layout(
+    element("text", {
+      value: "A",
+      id: "label",
+      onKey: true,
+      onFocusChange: () => {}
+    }),
+    rect(0, 0, 1, 1)
+  );
+  const frame = paintLayout(root, {
+    viewport,
+    isFocused: () => false
+  });
+
+  assert.deepEqual(frameToLines(frame), [
+    "A       ",
+    "        ",
+    "        ",
+    "        "
+  ]);
+  assert.deepEqual(getCell(frame, 0, 0)?.style, {});
+});
+
+test("paintLayout applies inverse style to focused text", () => {
+  const root = layout(
+    element("text", { value: "A", color: "red", bold: true }),
+    rect(0, 0, 1, 1)
+  );
+  const frame = paintLayout(root, {
+    viewport,
+    isFocused: (mounted) => mounted === root.mounted
+  });
+
+  assert.deepEqual(frameToLines(frame), [
+    "A       ",
+    "        ",
+    "        ",
+    "        "
+  ]);
+  assert.deepEqual(getCell(frame, 0, 0)?.style, {
+    foreground: "red",
+    bold: true,
+    inverse: true
+  });
+});
+
+test("paintLayout applies inverse style to focused container rects", () => {
+  const child = layout(element("text", { value: "A" }), rect(1, 0, 1, 1));
+  const root = layout(
+    element("box", { background: "blue", border: true }),
+    rect(0, 0, 3, 3),
+    [child]
+  );
+  const frame = paintLayout(root, {
+    viewport,
+    isFocused: (mounted) => mounted === root.mounted
+  });
+
+  assert.deepEqual(frameToLines(frame), [
+    "┌A┐     ",
+    "│ │     ",
+    "└─┘     ",
+    "        "
+  ]);
+  assert.equal(getCell(frame, 1, 0)?.style.inverse, true);
+  assert.equal(getCell(frame, 1, 1)?.style.inverse, true);
+  assert.equal(getCell(frame, 3, 0)?.style.inverse, undefined);
+});
+
 test("paintLayout supports kebab-case border color aliases", () => {
   const root = layout(
     element("box", {

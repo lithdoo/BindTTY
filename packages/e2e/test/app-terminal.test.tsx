@@ -238,3 +238,69 @@ test("ctrl c from fake stdin disposes the real node terminal lifecycle", () => {
   assert.equal(stdout.listenerCount(), 0);
   assert.equal(stdin.listenerCount(), 0);
 });
+
+test("tsx app dispatches terminal keys through interaction focus", async () => {
+  const stdout = createFakeStdout(2, 1);
+  const stdin = createFakeStdin();
+  const first = createSignal("A");
+  const second = createSignal("B");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <hstack>
+      <text
+        value={first}
+        onKey={(event) => {
+          if (event.name === "return") {
+            first.set("X");
+            return true;
+          }
+          return false;
+        }}
+      />
+      <text
+        value={second}
+        onKey={(event) => {
+          if (event.name === "return") {
+            second.set("Y");
+            return true;
+          }
+          return false;
+        }}
+      />
+    </hstack>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.equal(stdin.listenerCount(), 1);
+  assert.match(visibleText(stdout.writes.at(-1)), /AB/);
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7mA/);
+
+  stdin.emitKey(undefined, { name: "tab" });
+
+  assert.match(visibleText(stdout.writes.at(-1)), /AB/);
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7mB/);
+
+  stdin.emitKey("\r", { name: "return" });
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /Y/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /X/);
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7mY/);
+
+  app.dispose();
+  const writeCountAfterDispose = stdout.writes.length;
+
+  stdin.emitKey("\r", { name: "return" });
+  await nextMicrotask();
+
+  assert.equal(stdout.writes.length, writeCountAfterDispose);
+  assert.equal(stdin.listenerCount(), 0);
+  assert.deepEqual(stdin.rawModeCalls, [true, false]);
+});

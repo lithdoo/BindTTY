@@ -1,11 +1,12 @@
 import type { LayoutNode, LayoutViewport } from "@bindtty/layout";
 import type { MountedElementNode } from "@bindtty/vnode";
-import { createFrame, setCell, writeText } from "./frame.js";
+import { createFrame, getCell, setCell, writeText } from "./frame.js";
 import { readPaintStyle, toBorderCellStyle, toCellStyle } from "./style.js";
 import type { CellStyle, Frame } from "./types.js";
 
 export interface PaintOptions {
   viewport: LayoutViewport;
+  isFocused?: (mounted: LayoutNode["mounted"]) => boolean;
 }
 
 const BORDER = {
@@ -24,17 +25,17 @@ export function paintLayout(
   const frame = createFrame(options.viewport.width, options.viewport.height);
 
   if (root) {
-    paintNode(frame, root);
+    paintNode(frame, root, options);
   }
 
   return frame;
 }
 
-function paintNode(frame: Frame, node: LayoutNode): void {
+function paintNode(frame: Frame, node: LayoutNode, options: PaintOptions): void {
   const mounted = node.mounted;
 
   if (mounted.kind !== "element") {
-    paintChildren(frame, node);
+    paintChildren(frame, node, options);
     return;
   }
 
@@ -42,16 +43,20 @@ function paintNode(frame: Frame, node: LayoutNode): void {
     case "screen":
     case "vstack":
     case "hstack":
-      paintChildren(frame, node);
+      paintChildren(frame, node, options);
+      paintFocusedState(frame, node, options);
       return;
     case "box":
       paintBox(frame, node, mounted);
-      paintChildren(frame, node);
+      paintChildren(frame, node, options);
+      paintFocusedState(frame, node, options);
       return;
     case "text":
       paintText(frame, node, mounted);
+      paintFocusedState(frame, node, options);
       return;
     case "spacer":
+      paintFocusedState(frame, node, options);
       return;
     case "button":
     case "input":
@@ -59,9 +64,13 @@ function paintNode(frame: Frame, node: LayoutNode): void {
   }
 }
 
-function paintChildren(frame: Frame, node: LayoutNode): void {
+function paintChildren(
+  frame: Frame,
+  node: LayoutNode,
+  options: PaintOptions
+): void {
   for (const child of node.children) {
-    paintNode(frame, child);
+    paintNode(frame, child, options);
   }
 }
 
@@ -176,4 +185,32 @@ function shouldPaintBorder(border: boolean | number | undefined): boolean {
   }
 
   return border === true;
+}
+
+function paintFocusedState(
+  frame: Frame,
+  node: LayoutNode,
+  options: PaintOptions
+): void {
+  if (options.isFocused?.(node.mounted) !== true) {
+    return;
+  }
+
+  const { x, y, width, height } = node.rect;
+
+  for (let row = y; row < y + height; row += 1) {
+    for (let col = x; col < x + width; col += 1) {
+      const cell = getCell(frame, col, row);
+
+      if (cell) {
+        setCell(frame, col, row, {
+          char: cell.char,
+          style: {
+            ...cell.style,
+            inverse: true
+          }
+        });
+      }
+    }
+  }
 }

@@ -42,7 +42,8 @@ MountedNode 层（运行时）:
 @bindtty/jsx-runtime:  TSX → Template
 @bindtty/vnode:        Template → MountedNode
 @bindtty/runtime:      createApp、scheduler、渲染调度
-@bindtty/widgets:      ElementDefinition、focus、keyboard
+@bindtty/interaction:  keyboard focus、onKey 派发
+@bindtty/widgets:      高层控件语义
 @bindtty/layout:       MountedNode → LayoutNode → Frame → ANSI diff
 ```
 
@@ -1551,11 +1552,11 @@ keyboard event
   ↓
 InputSystem 接收事件
   ↓
-FocusManager 找到当前 focused node
+InteractionController 找到当前 focused node
   ↓
-调用该 node 的 element definition
+调用该 node 的 onKey
   ↓
-input state 更新
+widgets / 业务组件更新 input state
   ↓
 触发绑定回调或用户事件
   ↓
@@ -1634,13 +1635,14 @@ LayoutEngine 不需要知道 Template，也不需要知道 Component。
 
 PaintEngine 同理，它读取 MountedNode 和 LayoutNode，然后调用对应 element definition 的绘制能力。
 
-InputSystem 则通过 FocusManager 找到 active MountedElementNode，再调用对应 element definition 的输入处理能力。
+InputSystem 则通过 InteractionController 找到 focused MountedElementNode，再调用该节点的 onKey。具体 button / input 语义由 widgets 或业务组件在 onKey 内实现。
 
 包归属：
 
 ~~~text
 @bindtty/runtime:     mount、binding、dirty、scheduler
-@bindtty/widgets:     ElementDefinition、focus、keyboard、input 行为
+@bindtty/interaction: keyboard focus、onKey 派发
+@bindtty/widgets:     高层控件语义、input 行为
 @bindtty/layout:      layout、paint、Frame、ANSI diff（调用 widgets definition）
 ~~~
 
@@ -1702,7 +1704,7 @@ dispose 的职责包括：
 取消 binding subscriptions
 dispose children
 清理 element local state
-从 focus manager 注销
+释放 interaction 可引用的 mounted node
 清理 input handlers
 释放 control node 持有的 branch / item nodes
 ```

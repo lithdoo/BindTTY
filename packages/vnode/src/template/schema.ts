@@ -13,27 +13,44 @@ export interface ElementSchema {
   props?: Record<string, PropSchema>;
 }
 
+const commonElementProps: Record<string, PropSchema> = {
+  id: { dirty: "paint" },
+  onKey: { dirty: "paint" },
+  onFocusChange: { dirty: "paint" }
+};
+
 export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
   screen: {
-    acceptsChildren: true
+    acceptsChildren: true,
+    props: {
+      ...commonElementProps
+    }
   },
   box: {
     acceptsChildren: true,
     props: {
+      ...commonElementProps,
       border: { dirty: "paint" },
       padding: { dirty: "layout" }
     }
   },
   vstack: {
-    acceptsChildren: true
+    acceptsChildren: true,
+    props: {
+      ...commonElementProps
+    }
   },
   hstack: {
-    acceptsChildren: true
+    acceptsChildren: true,
+    props: {
+      ...commonElementProps
+    }
   },
   text: {
     acceptsChildren: false,
     requiredProps: ["value"],
     props: {
+      ...commonElementProps,
       value: { required: true, dirty: "layout" },
       color: { dirty: "paint" },
       bold: { dirty: "paint" }
@@ -43,6 +60,7 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
     acceptsChildren: false,
     requiredProps: ["value"],
     props: {
+      ...commonElementProps,
       value: { required: true, dirty: "layout" },
       disabled: { dirty: "paint" }
     }
@@ -50,6 +68,7 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
   input: {
     acceptsChildren: false,
     props: {
+      ...commonElementProps,
       value: { dirty: "paint" },
       placeholder: { dirty: "paint" }
     }
@@ -57,6 +76,7 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
   spacer: {
     acceptsChildren: false,
     props: {
+      ...commonElementProps,
       size: { dirty: "layout" }
     }
   }

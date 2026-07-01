@@ -16,6 +16,20 @@ export const view: Template = (
   </vstack>
 );
 
+export const interactionPropsView = (
+  <box
+    id="panel"
+    onKey={(event) => event.name === "return"}
+    onFocusChange={(event) => {
+      Boolean(event.focused);
+    }}
+    border
+    padding={1}
+  >
+    <text value="Focusable" color="green" />
+  </box>
+);
+
 // @ts-expect-error text content must use value prop, not children.
 export const invalidTextChild = <text value="Hello">Hello</text>;
 

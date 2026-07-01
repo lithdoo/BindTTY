@@ -249,7 +249,7 @@ stdout.write(ANSI)
 1. layout 计算细节。
 2. ANSI diff 细节。
 3. widget 行为。
-4. focus manager。
+4. interaction focus manager。
 5. keyboard input。
 6. stdin raw mode。
 7. alternate screen。
@@ -819,6 +819,6 @@ stdout.write
 alternate screen
 stdin raw mode
 keyboard input
-focus manager
+interaction focus manager
 widgets
 ```

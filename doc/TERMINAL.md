@@ -87,7 +87,7 @@ TerminalKeyEvent
 3. layout 计算。
 4. Frame diff。
 5. widget 行为。
-6. focus manager。
+6. interaction focus manager。
 7. TextInput value / selection / cursor 逻辑。
 8. 输入法 IME 候选窗和 preedit。
 ```
@@ -583,24 +583,30 @@ TerminalHost:
   ↓
 TerminalKeyEvent
   ↓
-InputManager / FocusManager
+InteractionController
   ↓
-focused widget
+focused MountedElementNode
   ↓
 TextInput / Button / custom widget
 ```
 
 Terminal Host 只发布 key event。
 
-后续 `@bindtty/widgets` 或 `@bindtty/input` 负责：
+后续 `@bindtty/interaction` 负责：
 
 ```text
 1. focus tree。
 2. tab / shift-tab。
-3. enter / space 激活 button。
-4. TextInput value / cursor / selection。
-5. preventDefault / stopPropagation。
-6. disabled / readonly。
+3. focused node 的 onKey 派发。
+4. focus change 通知。
+```
+
+后续 `@bindtty/widgets` 或 `@bindtty/input` 负责：
+
+```text
+1. enter / space 激活 button。
+2. TextInput value / cursor / selection。
+3. disabled / readonly 这类控件语义。
 ```
 
 ## 12. 错误处理
