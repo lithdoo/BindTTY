@@ -1,11 +1,13 @@
+import type { Readable } from "node:stream";
+
+import { resolvePlatformAdapter } from "./adapters/resolve.js";
 import { ANSI } from "./ansi.js";
-import { normalizeKeypressEvent } from "./input.js";
 import type {
   CreateNodeTerminalOptions,
   Dispose,
-  KeypressListener,
   ResizeListener,
   TerminalHost,
+  TerminalKeyEvent,
   TerminalKeyListener,
   TerminalViewport
 } from "./types.js";
@@ -22,6 +24,8 @@ export function createNodeTerminal(
   let disposed = false;
   const resizeListeners = new Set<ResizeListener>();
   const keyListeners = new Set<TerminalKeyListener>();
+  const platform = resolvePlatformAdapter(options);
+  let detachStdin: Dispose = () => {};
 
   function handleResize(): void {
     for (const listener of [...resizeListeners]) {
@@ -29,9 +33,7 @@ export function createNodeTerminal(
     }
   }
 
-  const handleKeypress: KeypressListener = (input, key) => {
-    const event = normalizeKeypressEvent(input, key);
-
+  function dispatchKey(event: TerminalKeyEvent): void {
     if (event.ctrl && event.name === "c" && options.exitOnCtrlC !== false) {
       terminal.dispose();
       return;
@@ -40,7 +42,7 @@ export function createNodeTerminal(
     for (const listener of [...keyListeners]) {
       listener(event);
     }
-  };
+  }
 
   function readViewport(): TerminalViewport {
     return {
@@ -83,13 +85,25 @@ export function createNodeTerminal(
         write(ANSI.hideCursor);
       }
 
-      if (options.rawMode === true && options.stdin?.setRawMode) {
-        options.stdin.setRawMode(true);
-        options.stdin.resume?.();
+      if (options.stdin) {
+        const stdin = options.stdin as Readable;
+        const stdinInput = platform.createStdinInput(options);
+
+        if (options.rawMode === true && options.stdin.setRawMode) {
+          if (options.stdin.isTTY) {
+            stdinInput.prepare(stdin);
+          }
+
+          options.stdin.setRawMode(true);
+          options.stdin.resume?.();
+        } else if (options.stdin.isTTY) {
+          stdinInput.prepare(stdin);
+        }
+
+        detachStdin = stdinInput.attach(stdin, dispatchKey);
       }
 
       options.stdout.on?.("resize", handleResize);
-      options.stdin?.on?.("keypress", handleKeypress);
     },
 
     stop(): void {
@@ -98,7 +112,8 @@ export function createNodeTerminal(
       }
 
       options.stdout.off?.("resize", handleResize);
-      options.stdin?.off?.("keypress", handleKeypress);
+      detachStdin();
+      detachStdin = () => {};
 
       if (options.rawMode === true && options.stdin?.setRawMode) {
         options.stdin.setRawMode(false);

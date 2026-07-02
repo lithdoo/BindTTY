@@ -47,25 +47,22 @@ layout 负责回答：
 6. interactive widget behavior
 ```
 
-这些能力交给 `@bindtty/renderer-terminal` 或未来 app / widgets 层处理。第一版先让 layout 成为纯函数，便于测试和组合。
+这些能力交给 `@bindtty/renderer-terminal` 或 `bindtty` createApp 层处理。layout 保持为纯函数，便于测试和组合。
 
 当前落地进度：
 
 ```text
 已完成:
-  packages/layout 包骨架
   LayoutRect / LayoutNode / LayoutViewport / LayoutOptions
   LayoutEngine / LayoutEngineOptions
   layoutRoot()
   createBasicLayoutEngine()
   自定义 engine 替换测试
-  text / vstack / hstack 基础 layout
-  box / spacer / screen layout
+  text / vstack / hstack / box / spacer / screen layout
   fragment / show / for structure layout
-  unsupported button / input 抛错
-  runtime flush integration
-  renderer-terminal 对接（已完成）
-  createApp 组合 runtime / layout / renderer（已完成）
+  unsupported intrinsic button / input 抛错
+  renderer-terminal 对接
+  createApp 组合 runtime / layout / renderer / interaction
   focusStyle / onKey / onFocusChange 作为非 layout prop 忽略
 
 注意：文档中 LayoutStyle 接口（含 width/height/minWidth/flexbox 等 40+ 字段）属于远期设计，
@@ -143,7 +140,7 @@ export function layoutRoot(
 
 `layoutRoot()` 是稳定入口。第一版默认使用 `BasicLayoutEngine`，后续可以传入 `YogaLayoutEngine`，上层 runtime / renderer 不需要改变调用方式。
 
-阶段 1 的 `BasicLayoutEngine` 只保证接口 contract：`null` root 返回 `null`，非空 root 返回包含 `mounted` / `rect` / `contentRect` / `children` 的 `LayoutNode` 骨架。真实 element measure / arrange 在后续阶段实现。
+`BasicLayoutEngine` 已实现 screen、box、vstack、hstack、text、spacer 及 fragment/show/for 结构的 measure / arrange。intrinsic `button` / `input` 会抛 `Unsupported layout element`。
 
 使用方式：
 
@@ -203,7 +200,7 @@ dirty
 
 ## 5. 与 runtime / renderer / app 的接口 contract
 
-layout 的职责是稳定输出 renderer 可以消费的几何树。它不 import runtime，也不 import renderer；真正的组合发生在未来 `bindtty` 或 `createApp()` 层。
+layout 的职责是稳定输出 renderer 可以消费的几何树。它不 import runtime，也不 import renderer；组合由 `bindtty` 包的 `createApp()` 完成。
 
 ### 5.1 import 方向
 

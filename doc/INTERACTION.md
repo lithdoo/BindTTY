@@ -1038,7 +1038,7 @@ MVP 默认 focused 样式为：renderer 对 focused mounted element 的 layout r
 
 ### 13.7 app
 
-`bindtty createApp` 需要成为 runtime / terminal / interaction / renderer 的组合层：
+`bindtty createApp` 已是 runtime / terminal / interaction / renderer 的组合层（`packages/bindtty/src/app.ts`）：
 
 ```text
 start:
@@ -1069,9 +1069,9 @@ terminal 已经提供 `TerminalKeyEvent` 和 `TerminalHost.onKey()`，interactio
 
 ## 14. 与 App 的接口
 
-`bindtty createApp` 需要新增 interaction 接入点。
+`bindtty createApp` 已接入 interaction（`packages/bindtty/src/app.ts`）。
 
-建议 App 内部流程：
+App 内部流程：
 
 ```ts
 const runtime = createRuntimeRoot(view);
@@ -1267,10 +1267,12 @@ custom component props 不会自动进入 intrinsic element，必须显式转发
 
 ### 阶段 2：空包与类型
 
+状态：已完成。
+
 ```text
 1. 新建 packages/interaction。
 2. 导出 InteractionController / InteractionResult / InteractionKeyHandler / InteractionFocusChangeEvent / InteractionNodeFocusChangeEvent 类型。
-3. 实现 createInteractionController 空骨架。
+3. 实现 createInteractionController。
 4. 添加基础构建和导出测试。
 ```
 

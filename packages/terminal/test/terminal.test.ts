@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { ANSI, createNodeTerminal, normalizeKeypressEvent } from "@bindtty/terminal";
+import { ANSI, createNodeTerminal, normalizeKeypressEvent, parseRawChunk, RawStdinInput } from "@bindtty/terminal";
 import type {
   CreateNodeTerminalOptions,
   KeypressKey,
@@ -732,4 +732,86 @@ test("ctrl c is dispatched when exitOnCtrlC is disabled", () => {
     }
   ]);
   assert.deepEqual(stdout.writes, ["still running"]);
+});
+
+test("parseRawChunk maps printable characters without name for text input", () => {
+  const events = [...parseRawChunk("ab")];
+
+  assert.deepEqual(events, [
+    {
+      input: "a",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: "a"
+    },
+    {
+      input: "b",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: "b"
+    }
+  ]);
+  assert.ok(events[0] !== undefined && !("name" in events[0]));
+});
+
+test("parseRawChunk maps control keys used by raw stdin adapter", () => {
+  const events = [...parseRawChunk("\r\x7f\x03\t ")];
+
+  assert.deepEqual(events, [
+    {
+      input: "\r",
+      name: "return",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: "\r"
+    },
+    {
+      input: "",
+      name: "backspace",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: "\x7f"
+    },
+    {
+      input: "c",
+      name: "c",
+      ctrl: true,
+      meta: false,
+      shift: false,
+      sequence: "\x03"
+    },
+    {
+      input: "",
+      name: "tab",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: "\t"
+    },
+    {
+      input: " ",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: " "
+    }
+  ]);
+});
+
+test("stdinInputAdapter injection selects a fixed stdin reader", () => {
+  const stdout = createMockStdout();
+  const stdin = createMockStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    stdinInputAdapter: new RawStdinInput()
+  });
+
+  terminal.start();
+
+  assert.equal(stdin.listenerCount(), 0);
 });

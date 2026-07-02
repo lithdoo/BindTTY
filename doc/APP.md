@@ -55,27 +55,31 @@ ANSI string
   reset()
 ```
 
-缺失的是 app layer：
+顶层 `bindtty` 包已实现 app layer（`packages/bindtty/src/app.ts`），负责：
 
 ```text
-读取 terminal viewport
+读取 viewport（stdout 或 TerminalHost）
 监听 runtime flush
-调用 layout
-调用 renderer
-写 stdout
-处理 resize
-处理 dispose
+interaction.refresh + layout + render
+写 stdout 或 terminal.write
+处理 resize / keypress
+stop / dispose 生命周期
 ```
 
-当前顶层 `bindtty` 包仍是 placeholder：
+当前包结构：
 
 ```text
 packages/bindtty/
-  README.md
+  src/
+    index.ts
+    app.ts
+  test/
+    app.test.ts
+    tsx-app.test.tsx
   package.json
+  tsconfig.json
+  README.md
 ```
-
-因此实现 `createApp` 前，需要先把顶层包改造成真实 TypeScript 包。
 
 ## 2. 现有模块适配结论
 
@@ -88,7 +92,7 @@ packages/bindtty/
 | `@bindtty/renderer-terminal` | 已提供 `createTerminalRenderer()`、`render()`、`reset()` | 否 | app 只负责持有 renderer |
 | `@bindtty/vnode` | 已提供 `ViewTemplate` / `Template` 类型 | 否 | app 参数使用 `ViewTemplate` |
 | `@bindtty/signal` | 已提供响应式 API | 否 | 顶层包后续可 re-export |
-| `bindtty` | 仍是 placeholder 包 | 是 | 需要新增 `src`、构建、测试、依赖 |
+| `bindtty` | 已实现 `createApp`、双模式、interaction 接入、widgets re-export | 否 | 已完成；后续可扩展 re-export 范围 |
 
 需要注意的现有行为：
 
@@ -107,12 +111,6 @@ renderer-terminal:
   render(null, { viewport }) 会生成空白 frame 并清理 previous frame。
   reset() 只清 previous frame，不写 stdout。
   render() 返回 ANSI string，不直接写 terminal。
-```
-
-因此 MVP 的主要实现工作集中在：
-
-```text
-packages/bindtty
 ```
 
 ## 3. 包归属
@@ -231,10 +229,14 @@ dependencies:
   @bindtty/runtime
   @bindtty/layout
   @bindtty/renderer-terminal
+  @bindtty/terminal
+  @bindtty/interaction
+  @bindtty/widgets
   @bindtty/vnode
   @bindtty/signal
 
 devDependencies:
+  @bindtty/jsx-runtime
   @types/node
   typescript
 ```
@@ -330,7 +332,6 @@ terminal 模式下：
 - `terminal.onKey()` 驱动 interaction.handleKey → dispatch → repaint
 - `terminal.write()` 替代 `stdout.write`
 - `terminal.stop()` / `terminal.dispose()` 清理终端状态
-}
 
 export interface BindTTYApp {
   start(): void;
@@ -833,39 +834,40 @@ dispose:
 
 ## 13. 当前结论
 
-`createApp` 应先放在顶层 `bindtty` 包中。
+`createApp` 已在顶层 `bindtty` 包实现，M1–M6 主链路已打通。
 
-MVP 完成后，用户能写：
+用户可写：
 
 ```ts
-import { createApp } from "bindtty";
+import { createApp, Button, TextInput } from "bindtty";
+import { createNodeTerminal } from "@bindtty/terminal";
 
-const app = createApp(view, {
-  stdout: process.stdout,
-  stdin: process.stdin
-});
-
+// stdout 模式（测试 / 非 TTY）
+const app = createApp(view, { stdout: process.stdout });
 app.start();
+
+// terminal 模式（真实终端）
+const terminal = createNodeTerminal({ stdout: process.stdout, stdin: process.stdin });
+const ttyApp = createApp(view, { terminal });
+ttyApp.start();
 ```
 
-这会打通：
+完整调用链：
 
 ```text
-runtime flush
-  ↓
-layoutRoot
-  ↓
-renderer.render
-  ↓
-stdout.write
+signal.set()
+  ↓ runtime binding + scheduler flush
+  ↓ interaction.refresh
+  ↓ layoutRoot
+  ↓ renderer.render（含 isFocused）
+  ↓ stdout.write / terminal.write
 ```
 
-后续再继续推进：
+后续待推进（见 [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) Milestone 7）：
 
 ```text
-alternate screen
-stdin raw mode
-keyboard input
-interaction focus manager
-widgets
+scroll / list / viewport
+高级 layout props
+signal batch()、runtime bind() helper
+顶层包 re-export signal / vnode / runtime
 ```

@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@bindtty/jsx-runtime",
+    "strict": true,
+    "outDir": "../../dist/real/harness",
+    "rootDir": ".",
+    "skipLibCheck": true
+  },
+  "include": [
+    "*.ts",
+    "*.tsx"
+  ]
+}

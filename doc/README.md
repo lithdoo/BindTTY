@@ -11,12 +11,13 @@
 | [RUNTIME.md](./RUNTIME.md) | @bindtty/runtime 落地设计（Template → MountedNode） |
 | [LAYOUT.md](./LAYOUT.md) | @bindtty/layout 落地设计（MountedNode → LayoutNode） |
 | [RENDERER.md](./RENDERER.md) | @bindtty/renderer-terminal 落地设计（LayoutNode → Frame → ANSI Patch） |
-| [APP.md](./APP.md) | bindtty createApp 落地设计（runtime + layout + renderer + stdout） |
+| [APP.md](./APP.md) | bindtty createApp 落地设计（runtime + layout + renderer + terminal + interaction） |
 | [TERMINAL.md](./TERMINAL.md) | @bindtty/terminal 落地设计（terminal lifecycle + input + resize） |
 | [INTERACTION.md](./INTERACTION.md) | @bindtty/interaction 落地设计（keyboard focus + onKey dispatch） |
 | [WIDGETS.md](./WIDGETS.md) | @bindtty/widgets 落地设计（Button / TextInput 等高层控件） |
 | [TEXT_INPUT.md](./TEXT_INPUT.md) | TextInput 控件详细设计（拆分光标渲染方案） |
-| [E2E_TESTING.md](./E2E_TESTING.md) | E2E 测试计划（TSX → App → Terminal 闭环验证） |
+| [E2E_TESTING.md](./E2E_TESTING.md) | E2E 测试计划（mock + real PTY） |
+| [../packages/e2e/README.md](../packages/e2e/README.md) | E2E 包说明（`mock/` 与 `real/`） |
 | [DESIGN.md](./DESIGN.md) | 视图树总体设计、四层结构、BindingValue、control node |
 | [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) | 实现计划、里程碑、优先级 |
 | [archive/](./archive/) | 已合并前的原始分拆文档备份 |

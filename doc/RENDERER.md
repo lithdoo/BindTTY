@@ -58,7 +58,7 @@ renderer 负责回答：
 7. scrollback / alternate screen 策略
 ```
 
-这些能力分别由 runtime、layout、widgets、未来 input/app 层处理。
+这些能力分别由 runtime、layout、`@bindtty/interaction`、`@bindtty/widgets`、`bindtty` createApp 层处理。
 
 当前包边界已经建立：
 
@@ -74,38 +74,26 @@ packages/renderer-terminal
 packages/renderer-terminal
 ```
 
-当前包骨架：
+当前包结构（完整实现）：
 
 ```text
 packages/renderer-terminal/
   src/
     index.ts
+    frame.ts
+    paint.ts
+    style.ts
+    diff.ts
+    ansi.ts
+    renderer.ts
+    types.ts
+  test/
   package.json
   tsconfig.json
   README.md
 ```
 
-实际结构（完整实现）：
-
-```text
-packages/renderer-terminal/
-  src/
-    index.ts
-    types.ts
-    frame.ts
-    paint.ts
-    style.ts      # PaintStyle、readPaintStyle、focusStyle 处理
-    diff.ts
-    ansi.ts
-    renderer.ts
-  test/
-    renderer.test.ts
-    frame.test.ts
-    diff.test.ts
-    ansi.test.ts
-    paint.test.ts
-    integration.test.ts
-```
+早期计划中的最小包骨架仅含 `index.ts`，已扩展为上述模块。
 
 模块职责：
 
@@ -239,7 +227,7 @@ TextInput 应使用 `focusStyle="none"` 放在接收 `onKey` 的外层 `box` 上
 
 ## 4. 与其它模块的接口调用
 
-renderer 不直接挂到 runtime，也不直接拥有 terminal。MVP 的组合层应该在未来 `bindtty` 或 `createApp()` 中完成。
+renderer 不直接挂到 runtime，也不直接拥有 terminal。组合由 `bindtty` 包的 `createApp()` 完成。
 
 ### 4.1 import 方向
 

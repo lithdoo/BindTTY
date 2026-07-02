@@ -48,6 +48,25 @@ export interface TerminalKeyEvent {
   sequence?: string;
 }
 
+export interface PlatformTerminalAdapter {
+  readonly name: string;
+
+  createStdinInput(options: CreateNodeTerminalOptions): StdinInputAdapter;
+}
+
+export type StdinInputKind = "readline" | "raw";
+
+export interface StdinInputAdapter {
+  readonly kind: StdinInputKind;
+
+  prepare(stdin: import("node:stream").Readable): void;
+
+  attach(
+    stdin: import("node:stream").Readable,
+    onKey: (event: TerminalKeyEvent) => void
+  ): Dispose;
+}
+
 export interface CreateNodeTerminalOptions {
   stdout: TerminalStdout;
   stdin?: TerminalStdin;
@@ -56,6 +75,8 @@ export interface CreateNodeTerminalOptions {
   hideCursor?: boolean;
   rawMode?: boolean;
   exitOnCtrlC?: boolean;
+  platformAdapter?: PlatformTerminalAdapter;
+  stdinInputAdapter?: StdinInputAdapter;
 }
 
 export interface TerminalHost {

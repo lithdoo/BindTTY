@@ -51,21 +51,24 @@ const app = createApp(<screen />, { terminal });
 
 ## 包结构
 
-E2E 独立为私有 workspace：
+E2E 为单一私有 workspace，按目录区分 mock 与 real PTY：
 
 ~~~text
 packages/e2e/
-  package.json
-  tsconfig.json
-  test/
-    app-terminal.test.tsx
+  mock/
+    test/app-terminal.test.tsx    # fake stdout/stdin
+  real/
+    harness/                      # PTY 子进程应用
+    src/                          # pty-session、marker-log
+    test/pty-e2e.test.ts
+  scripts/
 ~~~
 
-该包不发布，只用于仓库验证。
+默认 `npm test`（workspace `@bindtty/e2e`）会跑 mock 与 real；仅 mock 用 `npm run test:mock`。
 
 ## 当前测试场景
 
-`packages/e2e/test/app-terminal.test.tsx` 覆盖三组场景。
+`packages/e2e/mock/test/app-terminal.test.tsx` 覆盖三组场景。
 
 ### App 到 Terminal 完整链路
 
@@ -113,15 +116,26 @@ packages/e2e/
 - For keyed reorder、remove、reinsert 的可见输出。
 - Show fallback 与 active branch 多次切换。
 
-### 阶段 3：交互 Widget E2E
+### 阶段 3：交互 Widget E2E ✅
 
-等 widgets/input 落地后补充：
+已在 `packages/e2e/mock/test/app-terminal.test.tsx` 覆盖：
 
-- button press。
-- input text editing。
+- Button press（Tab 切换 focus、Enter 触发 onPress）。
+- TextInput 文本编辑与 signal 更新。
 - keyboard event 到 widget action 的完整链路。
 
-### 阶段 4：真实 PTY Smoke Test
+### 阶段 4：真实 PTY E2E（已实现）
+
+`packages/e2e/real/` 使用 `node-pty` 在真实伪终端中运行 harness：
+
+```bash
+npm run test:e2e:real:win   # Windows ConPTY
+npm run test:e2e:real:wsl   # WSL/Linux PTY（需 Ubuntu 等带 Node 的发行版）
+```
+
+详见 [packages/e2e/README.md](../packages/e2e/README.md)。
+
+### 阶段 5：可选 PTY Smoke（未实现）
 
 在稳定 fake-stream E2E 之外，可选引入 `node-pty` 做真实伪终端 smoke test。
 

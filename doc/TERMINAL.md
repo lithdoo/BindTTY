@@ -12,45 +12,45 @@
 
 ## 1. 背景
 
-当前 APP MVP 已经打通：
+APP 主链路已打通，支持 **stdout 模式**与 **terminal 模式**：
 
 ```text
 runtime flush
-  ↓
-layoutRoot
-  ↓
-renderer.render
-  ↓
-stdout.write
+  ↓ interaction.refresh
+  ↓ layoutRoot
+  ↓ renderer.render（含 isFocused）
+  ↓ stdout.write 或 terminal.write
 ```
 
-但它还没有接管真实终端会话。
-
-当前 `createApp` 管：
+**stdout 模式**下 `createApp` 管：
 
 ```text
-1. 创建 RuntimeRoot。
-2. 创建 TerminalRenderer。
-3. 读取 stdout.columns / stdout.rows。
-4. 首帧 render。
-5. runtime flush 后重新 layout / render。
-6. stdout resize 后 reset renderer 并重绘。
-7. stop / dispose app 监听器。
+1. 创建 RuntimeRoot、TerminalRenderer、InteractionController。
+2. 读取 stdout.columns / stdout.rows（或 fallback viewport）。
+3. 首帧 render。
+4. runtime flush 后 refresh interaction + render。
+5. stdout resize 后 reset renderer 并重绘。
+6. stop / dispose app 监听器。
 ```
 
-当前 `createApp` 不管：
+**terminal 模式**下额外由 `TerminalHost`（`@bindtty/terminal`）管：
 
 ```text
 1. alternate screen。
 2. cursor hide / show。
 3. stdin raw mode。
-4. keypress 解析。
-5. Ctrl+C / SIGINT / SIGTERM。
-6. process exit 时恢复终端状态。
-7. mouse / paste / focus terminal protocol。
+4. keypress 解析 → interaction.handleKey。
+5. Ctrl+C 默认触发 dispose。
+6. terminal viewport / onResize。
 ```
 
-这些能力属于 Terminal Host。
+`createApp` 仍不管：
+
+```text
+1. mouse / paste / focus terminal protocol。
+2. process.on("exit") 自动恢复（见 §7.2 注释）；异常退出可能留在 unclean state。
+3. IME / composition 事件。
+```
 
 ## 2. 目标
 
@@ -501,17 +501,16 @@ Terminal Host 不自己实现输入法。
 
 ## 10. 与 createApp 的关系
 
-当前 APP API：
+当前 APP API 支持两种模式：
 
 ```ts
+// stdout 模式（测试 / 非 TTY）
 createApp(view, {
-  stdout: process.stdout
+  stdout: process.stdout,
+  fallbackViewport: { width: 80, height: 24 }
 });
-```
 
-后续可以新增：
-
-```ts
+// terminal 模式（真实终端）
 createApp(view, {
   terminal: createNodeTerminal({
     stdout: process.stdout,
@@ -523,16 +522,9 @@ createApp(view, {
 });
 ```
 
-兼容策略：
+`options` 中 `stdout` 与 `terminal` 互斥。terminal 模式使用 `terminal.viewport` 和 `terminal.write`。
 
-```text
-1. 保留 stdout 模式。
-2. 新增 terminal 模式。
-3. options 中 stdout 与 terminal 互斥。
-4. terminal 模式优先使用 terminal.viewport 和 terminal.write。
-```
-
-app 接入伪代码：
+`createApp` 已实现（`packages/bindtty/src/app.ts`）：
 
 ```ts
 function start() {

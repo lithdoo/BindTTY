@@ -6,8 +6,8 @@
     "jsx": "react-jsx",
     "jsxImportSource": "@bindtty/jsx-runtime",
     "strict": true,
-    "outDir": "dist",
-    "rootDir": "test",
+    "outDir": "../dist/mock",
+    "rootDir": ".",
     "skipLibCheck": true
   },
   "include": [

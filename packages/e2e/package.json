@@ -3,14 +3,27 @@
   "version": "0.1.0-alpha.0",
   "private": true,
   "type": "module",
-  "description": "End-to-end tests for the BindTTY package graph.",
+  "description": "End-to-end tests for BindTTY (mock streams and real PTY).",
   "scripts": {
-    "test": "npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/terminal && npm run build --workspace @bindtty/interaction && npm run build --workspace @bindtty/widgets && npm run build --workspace bindtty && tsc -p tsconfig.json && node --test dist/*.test.js"
+    "build:deps": "npm run build --workspace @bindtty/signal && npm run build --workspace @bindtty/vnode && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build --workspace @bindtty/terminal && npm run build --workspace @bindtty/interaction && npm run build --workspace @bindtty/widgets && npm run build --workspace bindtty",
+    "build:mock": "npm run build:deps && tsc -p mock/tsconfig.json",
+    "build:real": "npm run build:deps && tsc -p real/harness/tsconfig.json && tsc -p real/tsconfig.json",
+    "build": "npm run build:mock && npm run build:real",
+    "test": "npm run build && node --test dist/mock/test/*.test.js && node --test --test-concurrency=1 dist/real/test/*.test.js",
+    "test:mock": "npm run build:mock && node --test dist/mock/test/*.test.js",
+    "test:real": "npm run build:real && node --test --test-concurrency=1 dist/real/test/*.test.js",
+    "test:all": "npm test",
+    "env:real": "node scripts/print-env.mjs",
+    "run:real:win": "node scripts/run-host.mjs",
+    "run:real:wsl": "node scripts/run-wsl.mjs"
   },
   "dependencies": {
     "@bindtty/signal": "0.1.0-alpha.0",
     "@bindtty/terminal": "0.1.0-alpha.0",
     "bindtty": "0.1.0-alpha.0"
+  },
+  "optionalDependencies": {
+    "node-pty": "^1.0.0"
   },
   "devDependencies": {
     "@bindtty/jsx-runtime": "0.1.0-alpha.0",

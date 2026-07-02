@@ -94,7 +94,57 @@ packages/widgets/
 @bindtty/terminal:          TerminalHost（alt screen/cursor/raw mode/resize/keypress）
 @bindtty/interaction:       keyboard focus、onKey dispatch、Tab/Shift+Tab traversal
 @bindtty/widgets:           Button（onPress）、TextInput（受控 value/onChange/光标拆分）
-bindtty:                    createApp（stdout + terminal 双模式）、re-export widgets
+bindtty:                    createApp（stdout + terminal 双模式）、re-export Button/TextInput
+```
+
+## 实现进度
+
+| 里程碑 | 内容 | 状态 |
+| --- | --- | --- |
+| M1 | TSX → ViewTemplate | ✅ |
+| M2 | mount + binding + dirty + scheduler | ✅ |
+| M3 | layout + paint + ANSI diff（Cell Frame） | ✅ |
+| M4 | `<show>` / `<for key>` | ✅ |
+| M5 | terminal + interaction + Button | ✅ |
+| M6 | TextInput 双向绑定 | ✅ |
+| M7 | scroll / list / viewport | ❌ |
+
+详见 [TUI_IMPLEMENTATION_PLAN.md](./doc/TUI_IMPLEMENTATION_PLAN.md)。
+
+## 快速开始
+
+```bash
+npm install
+npm run build
+npm test
+```
+
+```ts
+import { createSignal, computed } from "@bindtty/signal";
+import { createApp } from "bindtty";
+
+class CounterVM {
+  count = createSignal(0);
+  label = computed(() => `Count: ${this.count.get()}`);
+}
+
+function App({ vm }: { vm: CounterVM }) {
+  return <text value={vm.label} />;
+}
+
+const app = createApp(<App vm={new CounterVM()} />, {
+  stdout: process.stdout
+});
+app.start();
+```
+
+tsconfig 需设置 `jsx: "react-jsx"`、`jsxImportSource: "bindtty"`。真实终端使用 `createNodeTerminal` + `createApp(view, { terminal })`，见 [APP.md](./doc/APP.md)。
+
+真实 PTY E2E（`node-pty`，`packages/e2e/real/`）见 [packages/e2e/README.md](./packages/e2e/README.md)：
+
+```bash
+npm run test:e2e:real:win
+npm run test:e2e:real:wsl   # 需 WSL Ubuntu + Node.js
 ```
 
 ## 文档索引
@@ -106,7 +156,7 @@ bindtty:                    createApp（stdout + terminal 双模式）、re-expo
 | [RUNTIME.md](./doc/RUNTIME.md) | @bindtty/runtime 落地设计（Template → MountedNode） |
 | [LAYOUT.md](./doc/LAYOUT.md) | @bindtty/layout 落地设计（MountedNode → LayoutNode） |
 | [RENDERER.md](./doc/RENDERER.md) | @bindtty/renderer-terminal 落地设计（LayoutNode → Frame → ANSI Patch） |
-| [APP.md](./doc/APP.md) | bindtty createApp 落地设计（runtime + layout + renderer + stdout） |
+| [APP.md](./doc/APP.md) | bindtty createApp 落地设计（runtime + layout + renderer + terminal + interaction） |
 | [TERMINAL.md](./doc/TERMINAL.md) | @bindtty/terminal 落地设计（terminal lifecycle + input + resize） |
 | [INTERACTION.md](./doc/INTERACTION.md) | @bindtty/interaction 落地设计（keyboard focus + onKey dispatch） |
 | [WIDGETS.md](./doc/WIDGETS.md) | @bindtty/widgets 落地设计（Button / TextInput 等高层控件） |
