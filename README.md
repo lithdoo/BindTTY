@@ -107,9 +107,9 @@ bindtty:                    createApp（stdout + terminal 双模式）、re-expo
 | M4 | `<show>` / `<for key>` | ✅ |
 | M5 | terminal + interaction + Button | ✅ |
 | M6 | TextInput 双向绑定 | ✅ |
-| M7 | scroll / list / viewport | ❌ |
+| M7 | scroll / list / viewport | ❌ 见 [M7_SCROLL_VIEWPORT.md](./doc/M7_SCROLL_VIEWPORT.md) |
 
-详见 [TUI_IMPLEMENTATION_PLAN.md](./doc/TUI_IMPLEMENTATION_PLAN.md)。
+详见 [TUI_IMPLEMENTATION_PLAN.md](./doc/TUI_IMPLEMENTATION_PLAN.md) 与 [M7_SCROLL_VIEWPORT.md](./doc/M7_SCROLL_VIEWPORT.md)。
 
 ## 快速开始
 

@@ -863,10 +863,10 @@ signal.set()
   ↓ stdout.write / terminal.write
 ```
 
-后续待推进（见 [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) Milestone 7）：
+后续待推进（见 [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md) 与 [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) Milestone 7）：
 
 ```text
-scroll / list / viewport
+scroll / list / viewport（M7 详细设计见 M7_SCROLL_VIEWPORT.md）
 高级 layout props
 signal batch()、runtime bind() helper
 顶层包 re-export signal / vnode / runtime

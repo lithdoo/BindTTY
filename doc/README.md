@@ -20,4 +20,5 @@
 | [../packages/e2e/README.md](../packages/e2e/README.md) | E2E 包说明（`mock/` 与 `real/`） |
 | [DESIGN.md](./DESIGN.md) | 视图树总体设计、四层结构、BindingValue、control node |
 | [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) | 实现计划、里程碑、优先级 |
+| [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md) | **M7** scroll / viewport / list 计划与设计 |
 | [archive/](./archive/) | 已合并前的原始分拆文档备份 |
