@@ -609,12 +609,12 @@ MountedNode -> LayoutNode -> Frame (Cell[]) -> ANSI Patch
 
 ### Milestone 7：scroll / list / viewport ❌ 未开始
 
-详见 **[M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md)**（计划、分层设计、API 草案、实现切片与验收标准）。
+详见 **[M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md)**（计划、分层设计、稳定接口契约、分阶段开发计划与验收标准）。
 
 ~~~tsx
-<scroll height={10} offset={vm.offset}>
-  <list items={vm.logs} />
-</scroll>
+<ScrollView height={10} offset={vm.offset} onOffsetChange={vm.setOffset}>
+  <List items={vm.logs} getKey={(log) => log.id} render={(log) => <text value={log.message} />} />
+</ScrollView>
 ~~~
 
 viewport rows、scrollback、历史消息限制在这一层解决。这是 TUI 与 Web MVVM 的关键差异点。

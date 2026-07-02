@@ -1,6 +1,6 @@
 # Milestone 7：Scroll / Viewport / List 计划与设计
 
-本文档汇总 BindTTY **Milestone 7** 的目标、分层设计、API 草案、实现切片与验收标准。M1–M6 主链路已完成；M7 是「从可运行 demo 到可承载真实长内容 UI」的关键一步。
+本文档汇总 BindTTY **Milestone 7** 的目标、分层设计、稳定接口契约、实现阶段与验收标准。M1–M6 主链路已完成；M7 是「从可运行 demo 到可承载真实长内容 UI」的关键一步。
 
 相关文档：
 
@@ -40,8 +40,8 @@
 | --- | --- |
 | **Clip** | 子内容超出容器时，只绘制可见区域 |
 | **Scroll offset** | 用 signal 驱动垂直（优先）滚动偏移 |
-| **Scroll 控件** | 用户可声明 `<scroll>` 或等价 widget |
-| **List 场景** | 动态 `items` + scroll 的组合用法 |
+| **Scroll 控件** | 用户可声明 `ScrollView` widget |
+| **List 场景** | 动态 `items` + `ScrollView` 的组合用法 |
 | **键盘滚动** | ↑/↓（及可选 PgUp/PgDn）改变 offset |
 | **测试** | 每层单测 + mock E2E；real PTY 保持 smoke |
 
@@ -86,7 +86,7 @@ M7 改动应**自下而上**，尽量不动 `@bindtty/signal` 与 runtime 核心
 
 ```text
 @vnode / @bindtty/jsx-runtime
-  扩展 intrinsic tag 或 widget 类型：scroll、（可选）list
+  M7 第一版不新增 intrinsic tag；只需要允许 box 接收新增 layout metadata props
 
 @bindtty/layout
   measure：子树自然尺寸
@@ -102,7 +102,7 @@ M7 改动应**自下而上**，尽量不动 `@bindtty/signal` 与 runtime 核心
   与 focus 链协同：focus 在内部可编辑控件上时优先交给 TextInput
 
 @bindtty/widgets（推荐）
-  ScrollView / List 作为高层 API，内部组合 box + offset + onKey
+  ScrollView / List 作为高层 API，内部组合 box + metadata props + onKey
 
 bindtty createApp
   无结构性变更；仍 layoutRoot → render → write
@@ -112,6 +112,59 @@ bindtty createApp
 
 - **layout 可产生超出 parent 的 rect**；**renderer 负责最终裁剪**
 - **Terminal viewport 仍是 Frame 全屏尺寸来源**；scroll 是 layout 树内的子窗口
+- **M7 第一版只落地 widget API**；不新增 `<scroll>` / `<list>` intrinsic，避免扩大 vnode 与 JSX runtime 的表面积
+
+### 3.1 对外 API 决策
+
+M7 第一版统一采用：
+
+```tsx
+import { ScrollView, List } from "@bindtty/widgets";
+```
+
+不采用：
+
+```tsx
+<scroll />
+<list />
+```
+
+原因：
+
+1. 当前 vnode intrinsic tag 是闭合集合，新增 tag 会同时影响 vnode schema、jsx runtime、layout、renderer、文档与测试。
+2. `ScrollView` 可以先编译成普通 `box`，通过内部 metadata props 驱动 layout / renderer。
+3. 未来若需要 `<scroll>` intrinsic，可以在保持 `ScrollView` API 不变的前提下把内部实现替换为 intrinsic。
+
+### 3.2 内部 metadata prop 决策
+
+`ScrollView` 第一版渲染为：
+
+```tsx
+<box
+  id={props.id}
+  height={props.height}
+  width={props.width}
+  overflow="clip"
+  scrollX={0}
+  scrollY={props.offset}
+  onKey={computed onKey}
+  onFocusChange={props.onFocusChange}
+>
+  {props.children}
+</box>
+```
+
+这些 props 进入 intrinsic element，但不是用户直接书写的公共基础控件 API：
+
+| Prop | dirty | 归属 | 说明 |
+| --- | --- | --- | --- |
+| `height` | layout | layout | 固定可见高度，M7 必须支持 |
+| `width` | layout | layout | 可选；未传时使用父级可用宽度 |
+| `overflow` | layout | layout / renderer | M7 只支持 `"visible"` 与 `"clip"`，默认 `"visible"` |
+| `scrollX` | layout | layout / renderer | 预留，M7 固定为 0 |
+| `scrollY` | layout | layout / renderer | 垂直滚动 offset，layout clamp 后输出给 renderer |
+
+`height` / `width` 同时作为未来通用 layout props 的第一步。M7 只实现固定数值，不实现百分比、flex、min/max 系列。
 
 ---
 
@@ -152,11 +205,11 @@ items signal push 新行
 
 ---
 
-## 5. API 草案
+## 5. 稳定接口契约
 
 ### 5.1 LayoutNode 扩展（内部）
 
-布局引擎向 renderer 传递裁剪与滚动信息，例如：
+布局引擎向 renderer 传递裁剪与滚动信息。M7 第一版固定字段名如下：
 
 ```ts
 export interface LayoutClip {
@@ -167,22 +220,71 @@ export interface LayoutClip {
 }
 
 export interface LayoutScrollState {
-  offsetX: number;
-  offsetY: number;
+  x: number;
+  y: number;
+}
+
+export interface LayoutSize {
+  width: number;
+  height: number;
 }
 
 export interface LayoutNode {
   // ...现有字段
-  clip?: LayoutClip;           // 绘制时裁剪边界（可选，默认用 rect）
-  scroll?: LayoutScrollState;  // 子树绘制前应用的偏移
+  clip?: LayoutClip;                 // 绘制子树时裁剪边界；默认继承父级 clip
+  scrollOffset?: LayoutScrollState;  // 绘制子树前应用的位移；已由 layout clamp
+  contentSize?: LayoutSize;          // 子树自然尺寸；用于测试、调试、未来 scrollbar
 }
 ```
 
-具体字段名以实现时 `@bindtty/layout` 类型为准；renderer 只依赖稳定契约。
+语义：
 
-### 5.2 Scroll 控件（用户面向）
+1. `clip` 使用绝对坐标，与 `rect` / `contentRect` 同坐标系。
+2. `scrollOffset` 只影响 children 的绘制位置，不移动当前节点自己的背景与边框。
+3. `contentSize` 是 children 未被 clip 截断时的自然尺寸。
+4. `scrollOffset.y` 必须在 layout 阶段 clamp，renderer 不再二次 clamp，只负责按值绘制。
+5. 非 scroll 节点不写 `scrollOffset`；普通 clip 节点可只写 `clip`。
 
-**方案 A（推荐）**：`@bindtty/widgets` 提供 `ScrollView`，不新增 intrinsic tag。
+### 5.2 vnode / JSX schema 变更
+
+`box` 的 schema 增加这些 layout props：
+
+```ts
+box: {
+  props: {
+    height: { dirty: "layout" },
+    width: { dirty: "layout" },
+    overflow: { dirty: "layout" },
+    scrollX: { dirty: "layout" },
+    scrollY: { dirty: "layout" }
+  }
+}
+```
+
+TSX 类型同步增加：
+
+```ts
+interface IntrinsicBoxStyleProps {
+  border?: BindingValue<boolean | number>;
+  padding?: BindingValue<number>;
+  height?: BindingValue<number>;
+  width?: BindingValue<number>;
+  overflow?: BindingValue<"visible" | "clip">;
+  scrollX?: BindingValue<number>;
+  scrollY?: BindingValue<number>;
+}
+```
+
+规则：
+
+1. `height` / `width` 只接受非负数值；非法值按 0 处理或复用现有 `toNonNegativeNumber`。
+2. `overflow` 只支持 `"visible"` / `"clip"`；其它值抛错，避免 silent behavior。
+3. `scrollY` 改变必须触发布局，因为 clamp 依赖 `contentSize` 与 `clip.height`。
+4. 这些 props 初期只在 `box` 支持；`vstack` / `hstack` 后续再扩展。
+
+### 5.3 ScrollView 控件（用户面向）
+
+`@bindtty/widgets` 提供 `ScrollView`，不新增 intrinsic tag。
 
 ```tsx
 import { createSignal } from "@bindtty/signal";
@@ -199,21 +301,27 @@ const offset = createSignal(0);
 </ScrollView>
 ```
 
-**方案 B**：vnode intrinsic `<scroll>`，widgets 薄封装。
-
-第一版优先 **方案 A**，减少 jsx-runtime 与 mount 分岔；若 layout 需要专用节点类型，可在内部用 `box` + metadata 实现。
-
-`ScrollView` props 草案：
+`ScrollView` props：
 
 | Prop | 类型 | 说明 |
 | --- | --- | --- |
+| `id` | `BindingValue<string | number>` | 可选 focus id |
 | `offset` | `BindingValue<number>` | 垂直偏移（行），默认 0 |
 | `height` | `BindingValue<number>` | 可见高度（行），必填 |
 | `width` | `BindingValue<number>` | 可选，默认撑满父级 |
 | `children` | `Template` | 可滚动内容 |
 | `scrollOnArrow` | `BindingValue<boolean>` | 是否在 focus 于容器时响应方向键，默认 true |
+| `onOffsetChange` | `(nextOffset: number) => void` | 键盘滚动时写回外部状态 |
+| `onFocusChange` | `InteractionNodeFocusChangeEvent => void` | 透传到内部 box |
 
-### 5.3 List 场景（用户面向）
+受控规则：
+
+1. `offset` 是外部状态来源，`ScrollView` 不拥有自己的长期 offset state。
+2. 键盘滚动时，如果提供 `onOffsetChange`，调用它；如果没有提供，则 `ScrollView` 只是静态裁剪容器，不进入 focus list。
+3. `onOffsetChange` 接收的是未 clamp 的意图值还是已 clamp 值需要明确：M7 第一版接收 **意图值**，实际可见值由下一轮 layout clamp。
+4. 若业务希望精确知道 clamp 后值，后续可以增加 `onScrollStateChange`，M7 不做。
+
+### 5.4 List 场景（用户面向）
 
 M7 不强制新 `<list>` intrinsic；推荐 **composition**：
 
@@ -225,25 +333,56 @@ M7 不强制新 `<list>` intrinsic；推荐 **composition**：
 </ScrollView>
 ```
 
-若需要语义化 API，可在 widgets 增加薄包装：
+`List` 是可选语法糖，归属 `@bindtty/widgets`：
 
 ```tsx
 <List
   height={12}
   offset={scrollY}
   items={items}
-  key={(item) => item.id}
+  getKey={(item) => item.id}
   render={(item) => <text value={item.label} />}
 />
 ```
 
 内部仍是 `ScrollView` + `<for>`；**第一版 List 可以是语法糖，不做虚拟化**。
 
+`List` MVP props：
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `items` | `BindingValue<readonly T[]>` | 列表数据 |
+| `getKey` | `(item: T, index: number) => string | number` | 稳定 key，转发给内部 `<for key={...}>` |
+| `render` | `(item: T, index: number) => Template` | 行渲染 |
+| `height` | `BindingValue<number>` | 转发给 `ScrollView` |
+| `offset` | `BindingValue<number>` | 转发给 `ScrollView` |
+| `onOffsetChange` | `(nextOffset: number) => void` | 转发给 `ScrollView` |
+
+不做 `selectedIndex`、虚拟化、滚动条、行复用；这些进入后续里程碑。
+
 ---
 
 ## 6. Layout 设计要点
 
-### 6.1 Measure
+### 6.1 新增 prop 读取规则
+
+在 `@bindtty/layout` 中增加这些读取 helper：
+
+```ts
+readOptionalSize(value: unknown): number | undefined
+readOverflow(value: unknown): "visible" | "clip"
+readScrollOffset(value: unknown): number
+```
+
+规则：
+
+1. `undefined` / `null` 表示未设置。
+2. `height` / `width` 若设置，使用 `Math.floor` + 非负 clamp。
+3. `overflow` 未设置时为 `"visible"`。
+4. `scrollX` / `scrollY` 未设置时为 0。
+5. `scrollX` M7 只读取并输出 0；若用户传非 0，可以 clamp 为 0，避免暗示水平滚动已可用。
+
+### 6.2 Measure
 
 scroll 容器：
 
@@ -251,18 +390,39 @@ scroll 容器：
 2. 对 children 做 **无高度上限**（或极大上限）的 measure，得到 **content height**
 3. `contentHeight` 记录于节点，供 clamp offset 与滚动条逻辑使用
 
-### 6.2 Arrange
+普通 `box`：
+
+1. 没有 `height` / `width` 时保持现有自然尺寸。
+2. 设置 `height` 时，box 外部 `rect.height = height`；children 仍按自然高度 measure。
+3. 设置 `width` 时，box 外部 `rect.width = width`；children 的可用宽度使用 content width。
+4. `padding` / `border` 仍按现有逻辑扣减 contentRect。
+
+### 6.3 Arrange
 
 1. 容器 `rect` = 父级分配到的区域（或固定 height）
 2. `clip` = 容器 content 区域（扣除 border/padding 后）
 3. 子节点按正常 flow 排列，**不因 clip 而截断 measure 结果**
-4. `scroll.offsetY` clamp 到 `[0, max(0, contentHeight - clip.height)]`
+4. `scrollOffset.y` clamp 到 `[0, max(0, contentHeight - clip.height)]`
+5. 设置 `overflow="clip"` 的节点输出 `clip = contentRect`
+6. 设置 `scrollY` 的节点输出 `scrollOffset = { x: 0, y: clampedOffset }`
+7. 设置 `overflow="clip"` 或 `scrollY` 的节点都输出 `contentSize`
 
-### 6.3 与现有 BasicLayoutEngine 的关系
+### 6.4 Flow 与结构节点
 
-- 在 `box` / `vstack` 上增加可选 `maxHeight` + `clip` 路径，或新增 `ScrollLayoutContext`
+`fragment` / `show` / `for` 仍是 transparent layout node：
+
+1. 当它们作为 root 节点时，默认 column flow。
+2. 当它们位于父级内部时，沿用父级 flow。
+3. 它们不主动产生 clip / scrollOffset。
+4. 如果 `for` 的 children 高度超过外层 `ScrollView`，由外层 box 的 clip 裁剪。
+
+### 6.5 与现有 BasicLayoutEngine 的关系
+
+- 只在 `box` 上增加 `height` / `width` / `overflow` / `scrollX` / `scrollY`
+- 不实现 `maxHeight`，避免与未来 min/max layout props 混在一起
 - 不改变 `screen` 占满 terminal viewport 的语义
 - 参考 [LAYOUT.md](./LAYOUT.md) §10.4：children 可超出 parent，overflow 由 renderer/scroll 处理
+- `contentSize` 可由 arrange 阶段重新 measure children 得出；M7 优先正确性，不先做 measure cache
 
 ---
 
@@ -273,29 +433,58 @@ scroll 容器：
 ### 7.1 绘制顺序
 
 ```text
-paint(node):
-  if node.scroll:
-    save origin
-    translate(-offsetX, -offsetY)
-  paint children with clip = node.clip ?? node.rect
-  restore
+paint(node, context):
+  nextClip = intersect(context.clip, node.clip ?? context.clip)
+  paint current node background / border in context.clip
+
+  childContext = {
+    clip: nextClip,
+    offsetX: context.offsetX - (node.scrollOffset?.x ?? 0),
+    offsetY: context.offsetY - (node.scrollOffset?.y ?? 0)
+  }
+
+  paint children with childContext
 ```
 
 ### 7.2 裁剪
 
-- `setCell(x, y)` 前检查：cell 是否在 **clip rect** 与 **terminal viewport** 交集内
+- `setCell(x, y)` 前检查：cell 是否在当前 **clip rect** 与 **terminal viewport** 交集内
 - 负坐标、部分可见字符按现有 §7.3 防御性处理
+- 当前节点自身的 border/background 不受自身 scrollOffset 影响，只受父级 clip 影响
+- children 的坐标在绘制前应用 scroll offset
 
-### 7.3 Diff 行为
+### 7.3 renderer 内部结构
 
-- offset 变化 → 内容在 clip 内移动 → 应产生 **增量 patch**（非强制全屏重绘）
+新增内部类型即可，不需要暴露到 public API：
+
+```ts
+interface PaintContext {
+  clip: LayoutRect;
+  offsetX: number;
+  offsetY: number;
+}
+```
+
+`paintText` / `paintBox` / `paintFocusedState` 从 context 读取 offset 和 clip：
+
+1. 对真实写入坐标使用 `node.rect.x + offsetX` / `node.rect.y + offsetY`。
+2. `writeText` 需要支持 clip，可以新增 `writeTextClipped`，也可以在 paint 层逐 cell 写入。
+3. `fillRect`、border、focused inverse 都必须走同一套 `setCellClipped`。
+4. clip 交集为空时，直接跳过子树。
+
+### 7.4 Diff 行为
+
+- offset 变化 → 内容在 clip 内移动 → 可以产生普通 diff patch，不需要特殊 scroll patch
 - resize clip 区域 → 按现有 resize 路径整帧重算
+- 如果 diff patch 较大，M7 不优化；正确性优先
 
-### 7.4 测试重点
+### 7.5 测试重点
 
 - clip 外 cell 不写入
 - offset 增加 1 行后，可见行内容下移一行
 - content 少于 clip height 时，offset clamp 为 0
+- focused inverse 不应越过 clip
+- box border 保持固定，children 滚动
 
 ---
 
@@ -316,70 +505,202 @@ paint(node):
 ```text
 1. 若 focus 在 TextInput 内：方向键优先移动光标（现有行为）
 2. 若 focus 在 ScrollView 或可滚动容器上：方向键改 offset
-3. 若 focus 在 scroll 内非输入子节点：按容器策略消费或冒泡
+3. 若 focus 在 scroll 内非输入子节点：M7 不做事件冒泡，只有当前 focused 节点收到 key
 ```
 
 实现上：`ScrollView` 提供 `onKey`，在 `interaction` 中与 TextInput 相同模式；focus 进入 scroll 区域时由 Tab 顺序决定。
 
-### 8.3 Real PTY 限制
+### 8.3 ScrollView onKey 规则
+
+`ScrollView` 内部 box 只有在 `scrollOnArrow !== false` 且存在 `onOffsetChange` 时才挂载滚动 handler。
+
+```ts
+if (event.name === "up") onOffsetChange(offset - 1)
+if (event.name === "down") onOffsetChange(offset + 1)
+if (event.name === "pageup") onOffsetChange(offset - height)
+if (event.name === "pagedown") onOffsetChange(offset + height)
+if (event.name === "home") onOffsetChange(0)
+if (event.name === "end") onOffsetChange(Number.MAX_SAFE_INTEGER)
+```
+
+返回值：
+
+1. 识别并调用 `onOffsetChange` 时返回 `true`。
+2. 未识别的 key 返回 `false`。
+3. `scrollOnArrow === false` 或未提供 `onOffsetChange` 时，内部 `box` 使用 `onKey=false`，不进入 focus list。
+
+### 8.4 Real PTY 限制
 
 `@bindtty/terminal` 的 raw stdin 路径不解析方向键序列；**箭头键 E2E 以 mock 为准**，real PTY 不阻塞 M7 交付。
 
 ---
 
-## 9. 实现切片与验收
+## 9. 分阶段开发计划
 
-建议分 **4 个切片**顺序交付，每片独立可测、可合并。
+建议分 **6 个阶段**顺序交付，每阶段独立可测、可合并。每阶段完成后都应运行对应包测试；第 4 阶段后开始补 mock E2E。
 
-### 切片 A：Clip 基础设施
+### 阶段 1：Layout props 与 schema 打底
 
-**范围**：layout 输出 `clip`；renderer paint 按 clip 裁剪。
+**目标**：让 `box` 可以合法接收 `height` / `width` / `overflow` / `scrollX` / `scrollY`，但先不要求 renderer 裁剪。
+
+**改动包**：
+
+- `@bindtty/vnode`
+- `@bindtty/jsx-runtime`
+- `@bindtty/layout`
+
+**实现任务**：
+
+- [ ] vnode `box` schema 增加新增 props，dirty 均为 `layout`
+- [ ] JSX `box` 类型增加新增 props
+- [ ] layout `supportedPropsByTag.box` 增加新增 props
+- [ ] layout 增加 prop 读取 helper 与非法 `overflow` 校验
+- [ ] `height` / `width` 固定尺寸参与 `measureBox`
 
 **验收**：
 
-- [ ] 固定 `height=3` 的 box 内放 10 行 text，屏幕只显示 3 行
+- [ ] `<box height={3}>` 不再抛 unsupported prop
+- [ ] layout 单测：box 设置 height 后 `rect.height === 3`
+- [ ] layout 单测：box 设置 width 后 `rect.width === width`
+- [ ] 动态 height signal 更新会触发 layout dirty
+
+**不涉及**：clip、scroll offset、renderer。
+
+---
+
+### 阶段 2：Layout clip / contentSize / scrollOffset
+
+**目标**：layout 输出完整 scroll 契约。
+
+**改动包**：
+
+- `@bindtty/layout`
+
+**实现任务**：
+
+- [ ] `LayoutNode` 增加 `clip?`、`scrollOffset?`、`contentSize?`
+- [ ] `overflow="clip"` 时输出 `clip = contentRect`
+- [ ] `scrollY` 时计算 children 自然 `contentSize`
+- [ ] `scrollOffset.y` clamp 到合法范围
+- [ ] children rect 保持自然排列，不因 clip 截断
+
 - [ ] layout 单测：子 rect 可大于 parent
+- [ ] layout 单测：`contentSize.height > clip.height`
+- [ ] layout 单测：offset 过大时 `scrollOffset.y` clamp 到 max
+- [ ] layout 单测：内容不足 clip 高度时 `scrollOffset.y === 0`
+
+**不涉及**：renderer 实际裁剪。
+
+---
+
+### 阶段 3：Renderer clip stack
+
+**目标**：renderer 按 LayoutNode 的 `clip` 裁剪绘制。
+
+**改动包**：
+
+- `@bindtty/renderer-terminal`
+
+**实现任务**：
+
+- [ ] 增加 `PaintContext`
+- [ ] paint children 时计算 clip 交集
+- [ ] 所有 cell 写入统一走 clipped setCell
+- [ ] text / box / border / focus inverse 都遵守 clip
+- [ ] 没有 `clip` 的现有场景保持行为不变
+
+**验收**：
+
 - [ ] renderer 单测：clip 外无 cell
-- [ ] mock E2E：可见文本匹配前 3 行
-
-**不涉及**：offset、键盘。
+- [ ] renderer 单测：负坐标 + clip 不越界
+- [ ] renderer 单测：focused inverse 不越过 clip
+- [ ] mock E2E：固定 `height=3` 的 box 内放 10 行 text，只显示前 3 行
 
 ---
 
-### 切片 B：ScrollView + offset signal
+### 阶段 4：Renderer scrollOffset
 
-**范围**：`@bindtty/widgets` 的 `ScrollView`；offset 驱动重绘。
+**目标**：renderer 应用 `scrollOffset` 绘制 children。
+
+**改动包**：
+
+- `@bindtty/renderer-terminal`
+- `packages/e2e/mock`
+
+**实现任务**：
+
+- [ ] children paint context 应用 `-scrollOffset`
+- [ ] 当前节点 border/background 不随 scrollOffset 移动
+- [ ] offset 变化通过普通 frame diff 输出 patch
+- [ ] mock E2E 增加静态 offset 场景
 
 **验收**：
 
-- [ ] `offset` 从 0 改为 5，可见内容变为第 6 行起
-- [ ] offset 超过 `contentHeight - clip.height` 时被 clamp
-- [ ] mock E2E：改 signal 后断言可见输出
-- [ ] 与 `createApp` + terminal 模式联调通过
+- [ ] offset 0 显示第 1 行起
+- [ ] offset 5 显示第 6 行起
+- [ ] offset 过大显示最后可见窗口
+- [ ] box border 固定，只有 content 滚动
 
 ---
 
-### 切片 C：键盘滚动
+### 阶段 5：ScrollView widget 与键盘滚动
 
-**范围**：ScrollView `onKey` + interaction；可选 PgUp/PgDn。
+**目标**：用户可以通过 `ScrollView` 声明滚动窗口，并用 key 更新 offset。
+
+**改动包**：
+
+- `@bindtty/widgets`
+- `packages/e2e/mock`
+
+**实现任务**：
+
+- [ ] 新增 `ScrollView`
+- [ ] `ScrollView` 渲染为内部 `box`
+- [ ] `height` / `width` / `overflow="clip"` / `scrollY` 转发到 box
+- [ ] `onKey` 支持 ↑/↓/PgUp/PgDn/Home/End
+- [ ] `onOffsetChange` 受控写回外部 signal
+- [ ] `@bindtty/widgets` 与 `bindtty` 入口导出 `ScrollView`
 
 **验收**：
 
-- [ ] mock E2E：↑/↓ 改变可见行
-- [ ] TextInput 获得 focus 时 ↑ 不滚动外层 ScrollView
-- [ ] focus Tab 进 ScrollView 后方向键生效
+- [ ] widgets 单测：`scrollOnArrow` / 无 `onOffsetChange` 时 focus 行为符合文档
+- [ ] mock E2E：focus 到 ScrollView 后 ↓ 改变可见行
+- [ ] mock E2E：TextInput focused 时方向键优先被 TextInput 消费，不滚动外层 ScrollView
+- [ ] mock E2E：PgDn/Home/End 行为正确
 
 ---
 
-### 切片 D：动态 List 组合
+### 阶段 6：List 语法糖与动态数据
 
-**范围**：`<for>` + `ScrollView` + 动态 `items`；可选 `List` 语法糖。
+**目标**：给常见长列表提供更顺手的 API，但不做虚拟化。
+
+**改动包**：
+
+- `@bindtty/widgets`
+- `packages/e2e/mock`
+- 文档
+
+**实现任务**：
+
+- [ ] 新增 `List<T>`
+- [ ] 内部组合 `ScrollView` + `<for>`
+- [ ] `items` / `getKey` / `render` 转换到 `<for>`
+- [ ] 增加动态 items 场景测试
+- [ ] 更新 `WIDGETS.md`、`TUI_IMPLEMENTATION_PLAN.md`、根 README 状态
 
 **验收**：
 
 - [ ] `items.push()` 后 content 变长，clamp 行为正确
-- [ ] （可选）`stickToBottom`：新日志追加时 offset 跟随到底
+- [ ] 删除当前可见前方 item 后，可见窗口稳定且不越界
+- [ ] key 未变、内容变更时复用现有 for 行为
 - [ ] mock E2E：For 增删与滚动组合场景
+
+**后置项**：
+
+- `stickToBottom`
+- virtualization
+- scrollbar
+- selected row / active descendant
 
 ---
 
@@ -387,13 +708,50 @@ paint(node):
 
 | 层级 | 内容 |
 | --- | --- |
-| `@bindtty/layout` | measure content height、clip rect、offset clamp |
-| `@bindtty/renderer-terminal` | clip paint、offset translate、diff |
-| `@bindtty/widgets` | ScrollView props、onKey |
-| `packages/e2e/mock` | 可见输出断言（strip ANSI 后） |
+| `@bindtty/vnode` | box 新 props schema、dirty kind |
+| `@bindtty/jsx-runtime` | TSX 类型接入，`height` / `overflow` 可编译 |
+| `@bindtty/layout` | fixed size、contentSize、clip rect、offset clamp |
+| `@bindtty/renderer-terminal` | clip paint、offset translate、focused inverse、diff |
+| `@bindtty/widgets` | ScrollView props、onKey、List composition |
+| `packages/e2e/mock` | 可见输出断言（strip ANSI 后）、键盘滚动、动态 list |
 | `packages/e2e/real` | 不新增方向键 PTY 用例；可选 smoke「长输出不崩溃」 |
 
 遵循 [E2E_TESTING.md](./E2E_TESTING.md)：**细节在 mock，真实性在 PTY smoke**。
+
+### 10.1 最小用例清单
+
+Layout：
+
+- [ ] `box height` 固定外部 rect
+- [ ] `box width` 固定外部 rect
+- [ ] `overflow="clip"` 输出 `clip`
+- [ ] `scrollY` 输出 clamp 后 `scrollOffset`
+- [ ] `contentSize` 记录未裁剪 children 尺寸
+- [ ] `for` 作为 scroll content 时 content height 正确
+
+Renderer：
+
+- [ ] text 被 clip 截断
+- [ ] background fill 被 clip 截断
+- [ ] border 被父 clip 截断，但不被自身 scrollOffset 移动
+- [ ] children 被 scrollOffset 移动
+- [ ] focused inverse 被 clip 截断
+- [ ] diff 在 offset 改变后输出正确 patch
+
+Widgets：
+
+- [ ] `ScrollView` 输出内部 box props
+- [ ] `ScrollView` onKey 调用 `onOffsetChange`
+- [ ] `scrollOnArrow=false` 行为符合文档
+- [ ] `List` 渲染所有 item 并保留 key
+
+E2E mock：
+
+- [ ] 静态 clip
+- [ ] signal offset 更新
+- [ ] 键盘滚动
+- [ ] TextInput 与 ScrollView 同屏时方向键优先级
+- [ ] 动态 list push/delete
 
 ---
 
@@ -432,6 +790,9 @@ const app = createApp(
 | measure 性能（超长列表） | M7 全量 mount；文档注明行数建议；M8 虚拟化 |
 | offset 与 TextInput 焦点冲突 | 明确 interaction 优先级；E2E 覆盖 |
 | 水平滚动与边框 padding 交互复杂 | M7 仅垂直；水平 API 预留 |
+| `height` props 与未来 layout props 设计冲突 | M7 只实现 fixed number，并在 LAYOUT.md 标注这是通用 layout props 的第一步 |
+| `onOffsetChange` 拿到意图值而非 clamp 值 | 文档明确；后续如有需要再加 `onScrollStateChange` |
+| raw stdin 不支持箭头键 | mock E2E 覆盖细节；real PTY 只做 smoke |
 
 ---
 
@@ -443,7 +804,8 @@ M7 落地时同步更新：
 - [ ] [LAYOUT.md](./LAYOUT.md) — overflow/scroll 从「后续」改为已实现
 - [ ] [RENDERER.md](./RENDERER.md) — clip/scroll paint 规则
 - [ ] [WIDGETS.md](./WIDGETS.md) — ScrollView / List API
-- [ ] [VNODE.md](./VNODE.md) — 若采用 intrinsic scroll tag
+- [ ] [VNODE.md](./VNODE.md) — box 新 layout props schema
+- [ ] [JSX_RUNTIME.md](./JSX_RUNTIME.md) — box TSX props 增量
 - [ ] [E2E_TESTING.md](./E2E_TESTING.md) — 新增场景列表
 - [ ] 根 [README.md](../README.md) — 当前完成状态
 
