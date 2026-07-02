@@ -32,14 +32,30 @@ export class MarkerLog {
     const started = Date.now();
 
     return new Promise((resolve, reject) => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+
+      const finish = (error?: Error): void => {
+        if (timer) {
+          clearTimeout(timer);
+          timer = undefined;
+        }
+
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve();
+      };
+
       const tick = (): void => {
         if (this.has(line)) {
-          resolve();
+          finish();
           return;
         }
 
         if (Date.now() - started >= timeoutMs) {
-          reject(
+          finish(
             new Error(
               `Timed out waiting for marker ${line}. Got: ${this.readLines().join(", ")}`
             )
@@ -47,7 +63,7 @@ export class MarkerLog {
           return;
         }
 
-        setTimeout(tick, intervalMs);
+        timer = setTimeout(tick, intervalMs);
       };
 
       tick();

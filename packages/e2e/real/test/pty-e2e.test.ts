@@ -80,7 +80,7 @@ test("real PTY: counter app renders and increments through Button", { concurrenc
     assert.ok(result.markers.includes("PASS"));
     assert.ok(result.markers.includes("COUNT:1"));
   } finally {
-    session.kill();
+    session.dispose();
     marker.cleanup();
   }
 });
@@ -118,7 +118,84 @@ test("real PTY: TextInput typing and submit in terminal", { concurrency: false }
     assert.ok(result.markers.includes("PASS"));
     assert.match(result.visibleOutput, /sent:ab/);
   } finally {
-    session.kill();
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
+test("real PTY: Tab moves focus between Button widgets", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("focus");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("focus-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 80,
+    rows: 24
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await delay(300);
+
+    session.write("\t");
+    await delay(100);
+    session.write("\r");
+
+    await marker.waitFor("PRESSED:Second", { timeoutMs: 8_000 });
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(!result.markers.includes("PRESSED:First"));
+    assert.ok(result.markers.includes("PRESSED:Second"));
+  } finally {
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
+test("real PTY: TextInput backspace edits before submit", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("textedit");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("textedit-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 80,
+    rows: 24
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await delay(200);
+    session.write("a");
+    await delay(50);
+    session.write("b");
+    await delay(50);
+    session.write("\x7f");
+    await delay(50);
+    session.write("\r");
+
+    await marker.waitFor("SUBMITTED:sent:a", { timeoutMs: 8_000 });
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(result.markers.includes("PASS"));
+    assert.match(result.visibleOutput, /sent:a/);
+  } finally {
+    session.dispose();
     marker.cleanup();
   }
 });

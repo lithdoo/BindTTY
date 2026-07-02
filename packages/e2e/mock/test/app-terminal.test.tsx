@@ -426,3 +426,95 @@ test("tsx app dispatches terminal keys through TextInput widgets", async () => {
 
   assert.equal(stdout.writes.length, writeCountAfterDispose);
 });
+
+test("tsx app edits TextInput with backspace arrows shift tab placeholder and empty submit", async () => {
+  const stdout = createFakeStdout(40, 16);
+  const stdin = createFakeStdin();
+  const value = createSignal("");
+  const submitted = createSignal("idle");
+  const firstAction = createSignal("idle");
+  const secondAction = createSignal("idle");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <vstack>
+      <TextInput
+        value={value}
+        placeholder="Name"
+        onChange={(nextValue) => {
+          value.set(nextValue);
+        }}
+        onSubmit={(nextValue) => {
+          submitted.set(`sent:${nextValue}`);
+        }}
+      />
+      <Button
+        label="First"
+        onPress={() => {
+          firstAction.set("pressed");
+        }}
+      />
+      <Button
+        label="Second"
+        onPress={() => {
+          secondAction.set("pressed");
+        }}
+      />
+      <text value={submitted} />
+    </vstack>,
+    { terminal }
+  );
+
+  app.start();
+
+  stdin.emitKey(undefined, { name: "tab" });
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /Name/);
+
+  stdin.emitKey(undefined, { name: "tab", shift: true });
+  await nextMicrotask();
+
+  stdin.emitKey("\r", { name: "return" });
+  await nextMicrotask();
+
+  assert.equal(submitted.get(), "sent:");
+
+  stdin.emitKey("a");
+  await nextMicrotask();
+  stdin.emitKey("b");
+  await nextMicrotask();
+  stdin.emitKey("", { name: "backspace", sequence: "\x7f" });
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.join("")), /\ba\b/);
+  assert.doesNotMatch(visibleText(stdout.writes.join("")), /\bab\b/);
+
+  stdin.emitKey(undefined, { name: "left" });
+  await nextMicrotask();
+  stdin.emitKey("Z");
+  await nextMicrotask();
+
+  stdin.emitKey("\r", { name: "return" });
+  await nextMicrotask();
+
+  assert.equal(submitted.get(), "sent:Za");
+
+  stdin.emitKey(undefined, { name: "tab" });
+  await nextMicrotask();
+  stdin.emitKey(undefined, { name: "tab" });
+  await nextMicrotask();
+  stdin.emitKey(undefined, { name: "tab", shift: true });
+  await nextMicrotask();
+  stdin.emitKey(" ", { name: "space" });
+  await nextMicrotask();
+
+  assert.equal(firstAction.get(), "pressed");
+  assert.equal(secondAction.get(), "idle");
+
+  app.dispose();
+});

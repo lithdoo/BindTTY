@@ -67,6 +67,8 @@ npm run test:e2e:real:wsl
 | --- | --- |
 | `counter-app.tsx` | Button Enter 递增 |
 | `interaction-app.tsx` | TextInput 输入 + Enter 提交 |
+| `focus-app.tsx` | Tab 切换 Button focus + Enter |
+| `textedit-app.tsx` | TextInput Backspace 后提交 |
 
 ## 目录结构
 

@@ -1,6 +1,6 @@
 import { stripVTControlCharacters } from "node:util";
 
-import type { IPty } from "node-pty";
+import type { IDisposable, IPty } from "node-pty";
 import * as pty from "node-pty";
 
 import { MarkerLog } from "./marker-log.js";
@@ -26,8 +26,12 @@ export class PtySession {
   private output = "";
   private exitCode: number | null = null;
   private exited = false;
+  private disposed = false;
+  private exitTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly exitPromise: Promise<void>;
   private readonly pty: IPty;
+  private readonly dataDisposable: IDisposable;
+  private exitDisposable!: IDisposable;
 
   constructor(private readonly options: PtySessionOptions) {
     this.pty = pty.spawn(this.options.command, this.options.args, {
@@ -44,12 +48,12 @@ export class PtySession {
       }
     });
 
-    this.pty.onData((chunk) => {
+    this.dataDisposable = this.pty.onData((chunk) => {
       this.output += chunk;
     });
 
     this.exitPromise = new Promise((resolve) => {
-      this.pty.onExit(({ exitCode }) => {
+      this.exitDisposable = this.pty.onExit(({ exitCode }) => {
         this.exitCode = exitCode;
         this.exited = true;
         resolve();
@@ -66,22 +70,46 @@ export class PtySession {
   }
 
   async waitForExit(timeoutMs = 15_000): Promise<number | null> {
-    await Promise.race([
-      this.exitPromise,
-      new Promise<void>((_resolve, reject) => {
-        setTimeout(() => {
-          reject(new Error("PTY harness timed out"));
-        }, timeoutMs);
-      })
-    ]);
+    try {
+      await Promise.race([
+        this.exitPromise,
+        new Promise<void>((_resolve, reject) => {
+          this.exitTimer = setTimeout(() => {
+            reject(new Error("PTY harness timed out"));
+          }, timeoutMs);
+        })
+      ]);
+    } finally {
+      if (this.exitTimer) {
+        clearTimeout(this.exitTimer);
+        this.exitTimer = undefined;
+      }
+    }
 
     return this.exitCode;
   }
 
   kill(): void {
-    if (!this.exited) {
+    if (!this.exited && !this.disposed) {
       this.pty.kill();
     }
+  }
+
+  dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+
+    this.disposed = true;
+
+    if (this.exitTimer) {
+      clearTimeout(this.exitTimer);
+      this.exitTimer = undefined;
+    }
+
+    this.kill();
+    this.dataDisposable.dispose();
+    this.exitDisposable.dispose();
   }
 
   getVisibleOutput(): string {
@@ -94,7 +122,7 @@ export class PtySession {
     try {
       exitCode = await this.waitForExit(timeoutMs);
     } catch (error) {
-      this.kill();
+      this.dispose();
       throw error;
     }
 
