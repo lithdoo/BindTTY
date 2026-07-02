@@ -203,6 +203,32 @@ focused mounted element
   -> focus 变化会导致 Frame style diff，进而产生 ANSI patch
 ```
 
+该默认策略必须允许按节点关闭，供 TextInput 等复杂控件自行绘制 focused 样式：
+
+```ts
+export type FocusStyle = "inverse" | "none";
+
+export interface PaintStyle {
+  focusStyle?: FocusStyle;
+}
+```
+
+规则：
+
+```text
+focusStyle 未设置:
+  等价于 "inverse"，保持 Button 等简单控件现有行为。
+
+focusStyle = "inverse":
+  focused 时 renderer 对该 LayoutNode rect 叠加 inverse。
+
+focusStyle = "none":
+  focused 时 renderer 不自动叠加 inverse。
+  控件可通过 onFocusChange + signal + 自己的 paint props 手动实现 focused 样式。
+```
+
+TextInput 应使用 `focusStyle="none"` 放在接收 `onKey` 的外层 `box` 上，避免外层 box 的整块 focused inverse 覆盖内部 cursor 样式。
+
 `render()` 是有状态的：它会保存上一帧，用于下一次 diff。`reset()` 清空上一帧，适用于终端 resize、进入 alternate screen、清屏后重绘等场景。
 
 ## 4. 与其它模块的接口调用
@@ -797,6 +823,7 @@ export interface PaintStyle {
   italic?: boolean;
   underline?: boolean;
   inverse?: boolean;
+  focusStyle?: "inverse" | "none";
   border?: boolean | number;
   borderColor?: string;
 }

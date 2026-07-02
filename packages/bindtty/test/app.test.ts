@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { stripVTControlCharacters } from "node:util";
 
-import { Button, createApp, type AppStdout, type CreateAppOptions } from "bindtty";
+import {
+  Button,
+  TextInput,
+  createApp,
+  type AppStdout,
+  type CreateAppOptions
+} from "bindtty";
 import { createSignal } from "@bindtty/signal";
 import type { Dispose, TerminalHost, TerminalKeyEvent, TerminalViewport } from "@bindtty/terminal";
 import {
@@ -158,6 +165,10 @@ test("bindtty exports the createApp entrypoint", () => {
 
 test("bindtty exports the Button widget", () => {
   assert.equal(typeof Button, "function");
+});
+
+test("bindtty exports the TextInput widget", () => {
+  assert.equal(typeof TextInput, "function");
 });
 
 test("createApp returns lifecycle methods without rendering by default", () => {
@@ -697,6 +708,41 @@ test("terminal mode dispatches Button onPress and repaints updated signal label"
   await nextMicrotask();
 
   assert.equal(terminal.writes.length, 2);
+});
+
+test("terminal mode dispatches TextInput changes and submit value", async () => {
+  const terminal = createMockTerminal(18, 6);
+  const value = createSignal("");
+  const submitted = createSignal("idle");
+  const app = createApp(
+    elementTemplate("vstack", {}, [
+      TextInput({
+        value,
+        placeholder: "Name",
+        onChange(nextValue) {
+          value.set(nextValue);
+        },
+        onSubmit(nextValue) {
+          submitted.set(`sent:${nextValue}`);
+        }
+      }),
+      elementTemplate("text", { value: submitted })
+    ]),
+    { terminal }
+  );
+
+  app.start();
+  terminal.emitKey(keyEvent("h"));
+  await nextMicrotask();
+  terminal.emitKey(keyEvent("i"));
+  await nextMicrotask();
+
+  assert.match(terminal.writes.at(-1) ?? "", /i/);
+
+  terminal.emitKey(keyEvent("\r", { name: "return" }));
+  await nextMicrotask();
+
+  assert.match(stripVTControlCharacters(terminal.writes.at(-1) ?? ""), /sent:hi/);
 });
 
 test("terminal resize triggers app resize and full repaint", () => {

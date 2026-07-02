@@ -130,6 +130,10 @@ style props:
   直接转发给 intrinsic element，用于 layout / renderer。
   例如 border、padding、color、background、bold。
 
+paint-only props:
+  只影响 renderer paint，不影响 layout。
+  例如 focusStyle。
+
 interaction props:
   转发给最终接收键盘的 intrinsic element。
   例如 id、onKey、onFocusChange。
@@ -147,6 +151,8 @@ widget custom props:
 3. disabled 不作为 interaction 通用 prop。
 4. disabled 由 widget 决定是否让 onKey 变为 false。
 5. focusable 不作为单独 prop；是否可聚焦仍由 onKey 决定。
+6. focusStyle 是 renderer paint prop；复杂控件可用 focusStyle="none" 关闭默认 focused inverse。
+7. TextInput MVP 不暴露 width；固定宽度等 layout 能力等待 layout width 支持后再加入。
 ```
 
 ## 5. Focus 与 Disabled
@@ -215,8 +221,10 @@ MVP 建议：
 
 ```text
 1. Button 先使用 renderer 默认 inverse focused 样式。
-2. TextInput 未来可能需要自定义 focused 样式和 cursor 样式。
-3. 不在 widgets 内引入 hooks。
+2. TextInput 不使用默认整块 inverse；它应通过 focusStyle="none" 关闭 renderer 默认 focus paint。
+3. TextInput 的 focused 样式由组件内部手动实现：onFocusChange 更新 focused signal，cursor text 根据 focused signal 自己设置样式。
+4. 其它复杂控件如果需要局部 focused 样式，也应优先使用 focusStyle="none" 后自行绘制。
+5. 不在 widgets 内引入 hooks。
 ```
 
 ## 7. 第一批 Widgets
@@ -541,10 +549,36 @@ npm test
 
 ### 阶段 5：TextInput 设计
 
+状态：已完成。
+
 ```text
 1. 单独补 TextInput 设计。
 2. 明确 controlled value / onInput / cursor / key map。
-3. 暂不支持 IME preedit。
+3. 明确 TextInput 使用 focusStyle="none"，focused 样式由组件内部手动实现。
+4. 暂不支持 IME preedit。
+```
+
+### 阶段 6：TextInput MVP
+
+状态：已完成。
+
+```text
+1. renderer / layout 支持 focusStyle="none" 前置改造。
+2. @bindtty/widgets 导出 TextInput。
+3. TextInput 支持受控 value、onChange(nextValue)、onSubmit(value)。
+4. TextInput 支持 printable char、Backspace、Delete、Left / Right、Home / End。
+5. TextInput 使用 focusStyle="none"，cursor 样式由组件内部手动实现。
+6. bindtty 顶层 re-export TextInput。
+7. 补 widgets 单元测试、bindtty app 集成测试、e2e 测试。
+```
+
+验收：
+
+```text
+npm test --workspace @bindtty/widgets
+npm test --workspace bindtty
+npm test --workspace @bindtty/e2e
+npm test
 ```
 
 ## 13. MVP 完成标准

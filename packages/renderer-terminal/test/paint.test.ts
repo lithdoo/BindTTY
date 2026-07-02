@@ -213,6 +213,27 @@ test("paintLayout applies inverse style to focused text", () => {
   });
 });
 
+test("paintLayout can disable default focused inverse with focusStyle none", () => {
+  const root = layout(
+    element("text", { value: "A", color: "red", focusStyle: "none" }),
+    rect(0, 0, 1, 1)
+  );
+  const frame = paintLayout(root, {
+    viewport,
+    isFocused: (mounted) => mounted === root.mounted
+  });
+
+  assert.deepEqual(frameToLines(frame), [
+    "A       ",
+    "        ",
+    "        ",
+    "        "
+  ]);
+  assert.deepEqual(getCell(frame, 0, 0)?.style, {
+    foreground: "red"
+  });
+});
+
 test("paintLayout applies inverse style to focused container rects", () => {
   const child = layout(element("text", { value: "A" }), rect(1, 0, 1, 1));
   const root = layout(

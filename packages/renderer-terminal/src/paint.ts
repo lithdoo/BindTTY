@@ -196,6 +196,13 @@ function paintFocusedState(
     return;
   }
 
+  if (
+    node.mounted.kind === "element" &&
+    readPaintStyle(node.mounted.props).focusStyle === "none"
+  ) {
+    return;
+  }
+
   const { x, y, width, height } = node.rect;
 
   for (let row = y; row < y + height; row += 1) {

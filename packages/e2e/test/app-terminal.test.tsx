@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { stripVTControlCharacters } from "node:util";
 
-import { Button, createApp } from "bindtty";
+import { Button, TextInput, createApp } from "bindtty";
 import { createSignal } from "@bindtty/signal";
 import { ANSI, createNodeTerminal } from "@bindtty/terminal";
 import type {
@@ -355,6 +355,73 @@ test("tsx app dispatches terminal keys through Button widgets", async () => {
   const writeCountAfterDispose = stdout.writes.length;
 
   stdin.emitKey(" ", { name: "space" });
+  await nextMicrotask();
+
+  assert.equal(stdout.writes.length, writeCountAfterDispose);
+});
+
+test("tsx app dispatches terminal keys through TextInput widgets", async () => {
+  const stdout = createFakeStdout(32, 14);
+  const stdin = createFakeStdin();
+  const value = createSignal("");
+  const submitted = createSignal("idle");
+  const action = createSignal("ready");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <vstack>
+      <TextInput
+        value={value}
+        placeholder="Name"
+        onChange={(nextValue) => {
+          value.set(nextValue);
+        }}
+        onSubmit={(nextValue) => {
+          submitted.set(`sent:${nextValue}`);
+        }}
+      />
+      <Button
+        label={action}
+        onPress={() => {
+          action.set("clicked");
+        }}
+      />
+      <text value={submitted} />
+    </vstack>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /ready/);
+
+  stdin.emitKey("h");
+  await nextMicrotask();
+  stdin.emitKey("i");
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.join("")), /h/);
+  assert.match(visibleText(stdout.writes.join("")), /i/);
+
+  stdin.emitKey("\r", { name: "return" });
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /sent:hi/);
+
+  stdin.emitKey(undefined, { name: "tab" });
+  stdin.emitKey(" ", { name: "space" });
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /clicked/);
+
+  app.dispose();
+  const writeCountAfterDispose = stdout.writes.length;
+
+  stdin.emitKey("!");
   await nextMicrotask();
 
   assert.equal(stdout.writes.length, writeCountAfterDispose);

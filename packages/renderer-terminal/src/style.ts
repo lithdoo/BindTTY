@@ -7,6 +7,7 @@ const kebabStyleAliases = new Map<string, string>([
 export interface PaintStyle extends CellStyle {
   border?: boolean | number;
   borderColor?: string;
+  focusStyle?: "inverse" | "none";
 }
 
 export function readPaintStyle(props: Record<string, unknown>): PaintStyle {
@@ -34,6 +35,11 @@ export function readPaintStyle(props: Record<string, unknown>): PaintStyle {
   setBooleanStyle(style, normalized, "italic");
   setBooleanStyle(style, normalized, "underline");
   setBooleanStyle(style, normalized, "inverse");
+
+  const focusStyle = normalized.focusStyle;
+  if (focusStyle === "inverse" || focusStyle === "none") {
+    style.focusStyle = focusStyle;
+  }
 
   const border = normalized.border;
   if (typeof border === "boolean" || typeof border === "number") {

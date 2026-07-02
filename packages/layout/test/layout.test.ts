@@ -367,6 +367,7 @@ test("ignores non-layout paint props while measuring layout", () => {
 test("ignores interaction props while measuring layout", () => {
   const root = createMountedElement("box", {
     id: "panel",
+    focusStyle: "none",
     onKey: true,
     onFocusChange: () => {},
     padding: 1

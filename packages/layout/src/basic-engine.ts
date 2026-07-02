@@ -84,6 +84,7 @@ const layoutPropAliases = new Map<string, string>([
 
 const nonLayoutProps = new Set<string>([
   "id",
+  "focusStyle",
   "onKey",
   "onFocusChange"
 ]);

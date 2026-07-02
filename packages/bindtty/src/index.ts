@@ -1,5 +1,5 @@
 export { createApp } from "./app.js";
-export { Button } from "@bindtty/widgets";
+export { Button, TextInput } from "@bindtty/widgets";
 export type {
   AppStdin,
   AppStdout,
@@ -9,4 +9,9 @@ export type {
   CreateAppTerminalOptions,
   CreateAppOptions
 } from "./app.js";
-export type { ButtonProps, ButtonStyleProps } from "@bindtty/widgets";
+export type {
+  ButtonProps,
+  ButtonStyleProps,
+  TextInputProps,
+  TextInputStyleProps
+} from "@bindtty/widgets";
