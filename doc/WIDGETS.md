@@ -140,7 +140,7 @@ interaction props:
 
 widget custom props:
   只属于 widget 自己。
-  例如 label、disabled、onPress、value、onInput、placeholder。
+  例如 label、disabled、onPress、value、onChange、placeholder。
 ```
 
 规则：
@@ -310,31 +310,41 @@ disabled=false:
 
 ### 7.2 TextInput
 
-TextInput 不作为第一阶段实现目标。
+状态：已完成。
 
-原因：
+TextInput 是第二个落地控件，在 Button 之后实现。
 
-```text
-1. 需要编辑缓冲区。
-2. 需要 cursor position。
-3. 需要 Backspace / Delete / Left / Right / Home / End。
-4. 需要 value / onInput / onChange 的受控语义。
-5. 未来还会遇到 IME、宽字符、selection。
-```
-
-建议在 Button 完成后单独写 TextInput 设计。
-
-第一版 TextInput 可以暂定目标：
+已实现目标：
 
 ```text
-1. controlled value。
-2. onInput(nextValue)。
-3. printable char append。
-4. Backspace。
-5. Left / Right cursor。
-6. focused 时显示 cursor。
-7. 不支持 IME preedit。
+1. controlled value（受控模式，value 必填）。
+2. onChange(nextValue) 每次编辑通知父组件。
+3. printable char 在 cursor 位置插入。
+4. Backspace / Delete 编辑。
+5. Left / Right / Home / End 光标移动。
+6. focused 时拆分三 text 节点（beforeCursor / cursorChar / afterCursor）显示反显光标。
+7. blur 时光标隐藏、cursor 重置。
+8. placeholder 显示（未聚焦 + 空值）。
+9. disabled 映射为 onKey=false + dim。
+10. onSubmit(value) 回调。
+11. focusStyle="none" 关闭 renderer 默认整块 inverse。
+12. 单元测试 + App 集成测试 + E2E 测试全覆盖。
 ```
+
+不纳入当前版本：
+
+```text
+1. IME preedit / 候选窗。
+2. 文本选区（Shift+方向键）。
+3. 鼠标定位光标。
+4. 多行编辑。
+5. 密码遮蔽模式。
+6. 输入校验 / mask / maxLength。
+7. Ctrl+U / Ctrl+W 等高级编辑快捷键。
+8. width / 固定宽度 / 横向滚动（等待 layout width 支持）。
+```
+
+详细设计见 [TEXT_INPUT.md](./TEXT_INPUT.md)。
 
 ### 7.3 Checkbox / Select / List
 
@@ -391,7 +401,7 @@ intrinsic <button>
 
 ## 9. 包结构
 
-建议结构：
+实际结构：
 
 ```text
 packages/widgets/
@@ -399,22 +409,15 @@ packages/widgets/
   tsconfig.json
   src/
     index.ts
-    button.tsx
-    types.ts
+    button.ts
+    text-input.ts
   test/
-    button.test.tsx
+    widgets.test.ts
+    text-input.test.ts
     tsconfig.json
 ```
 
-后续 TextInput 可以扩展：
-
-```text
-src/
-  input/
-    text-input.tsx
-    edit-buffer.ts
-    keys.ts
-```
+ButtonProps / TextInputProps 等类型定义直接内联在各组件文件中（button.ts / text-input.ts），不使用独立的 types.ts。
 
 ## 10. JSX 与导出方式
 
@@ -581,9 +584,9 @@ npm test --workspace @bindtty/e2e
 npm test
 ```
 
-## 13. MVP 完成标准
+## 13. 完成标准
 
-`@bindtty/widgets` Button MVP 完成标准：
+`@bindtty/widgets` 当前完成标准：
 
 ```text
 1. @bindtty/widgets 独立包可构建、可测试。
@@ -596,32 +599,24 @@ npm test
 8. dynamic disabled 在 runtime flush 后生效。
 9. App 集成测试覆盖 terminal key。
 10. E2E 覆盖 TSX + createApp + createNodeTerminal + Button press。
-```
-
-不纳入 Button MVP：
-
-```text
-1. TextInput。
-2. Checkbox / Select / List。
-3. Mouse click。
-4. Pressed visual state。
-5. Focus scope / roving focus。
-6. Hooks API。
-7. Intrinsic button layout/paint。
+11. TextInput 受控模式：value + onChange + onSubmit。
+12. TextInput 拆分光标渲染（focusStyle="none" + 三个 text 节点）。
+13. TextInput 键盘编辑：字符插入、Backspace、Delete、方向键、Home、End。
+14. TextInput placeholder / disabled / focus 生命周期。
+15. TextInput 单元测试 + App 集成 + E2E 全覆盖。
+16. bindtty 顶层 re-export Button 和 TextInput。
 ```
 
 ## 14. 后续方向
 
-Button 跑通后，下一步建议优先做 Checkbox 或 TextInput。
-
-建议判断：
+Button 和 TextInput 跑通后，下一步建议：
 
 ```text
 如果目标是验证更多交互组件模式：
   先做 Checkbox。
 
-如果目标是尽快支持表单输入：
-  单独设计并实现 TextInput。
+如果目标是丰富表单输入能力：
+  增强 TextInput（width、selection、多行）。
 ```
 
-TextInput 复杂度明显高于 Button，不应和 Button MVP 混在同一阶段。
+Checkbox 比 TextInput 简单，可用于进一步验证 `onChange` 与 dynamic style。

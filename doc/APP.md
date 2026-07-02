@@ -1,6 +1,6 @@
 # bindtty createApp 落地设计
 
-本文档描述顶层 `bindtty` 包中的 `createApp` 设计。它不是新的底层能力包，而是把当前已经完成的 runtime、layout、renderer-terminal 组合成一个可运行 TUI 应用的用户入口。
+本文档描述顶层 `bindtty` 包中的 `createApp` 设计。它把当前已经完成的 runtime、layout、renderer-terminal、terminal、interaction 组合成一个可运行 TUI 应用的用户入口。
 
 相关文档：
 
@@ -9,6 +9,8 @@
 - [RUNTIME.md](./RUNTIME.md) — Template → MountedNode、binding、dirty、scheduler
 - [LAYOUT.md](./LAYOUT.md) — MountedNode → LayoutNode
 - [RENDERER.md](./RENDERER.md) — LayoutNode → Frame → ANSI Patch
+- [TERMINAL.md](./TERMINAL.md) — TerminalHost 生命周期、viewport、keypress
+- [INTERACTION.md](./INTERACTION.md) — keyboard focus、onKey dispatch
 - [DESIGN.md](./DESIGN.md) — 视图树总体设计
 
 ## 1. 当前基础
@@ -25,6 +27,8 @@ MountedNode
 LayoutNode
   ↓ @bindtty/renderer-terminal
 ANSI string
+  ↓ @bindtty/terminal (write + stdin key events)
+  ↓ @bindtty/interaction (focus + key dispatch)
 ```
 
 各包已经完成的职责：
@@ -179,13 +183,29 @@ stdout / viewport adapter 类型
 
 ```text
 export createApp
-export signal APIs
-export commonly used template / runtime APIs if needed
+export { Button, TextInput } from @bindtty/widgets
+export type { AppStdout, AppStdin, AppViewport, BindTTYApp, CreateAppStdoutOptions, CreateAppTerminalOptions, CreateAppOptions }
+export type { ButtonProps, ButtonStyleProps, TextInputProps, TextInputStyleProps }
 ```
 
-MVP 可以先只导出 `createApp`，再逐步整理统一入口导出面。
+`package.json` 运行时依赖：
 
-`package.json` 需要从 placeholder 改为可构建包：
+```text
+@bindtty/runtime
+@bindtty/layout
+@bindtty/renderer-terminal
+@bindtty/signal
+@bindtty/vnode
+@bindtty/interaction
+@bindtty/terminal
+@bindtty/widgets
+```
+
+dev 依赖：
+
+```text
+@bindtty/jsx-runtime
+```
 
 ```json
 {
@@ -243,24 +263,35 @@ stdout.write(ANSI)
 7. dispose 时释放 runtime 和监听器。
 ```
 
+它负责（已实现）：
+
+```text
+1. 组合 runtime、layout、renderer、terminal。
+2. 接入 interaction controller 管理 keyboard focus。
+3. 管理 terminal key event → interaction dispatch → repaint 闭环。
+4. 管理 terminal resize → layout → repaint 闭环。
+5. runtime flush 后 refresh interaction + render。
+6. 两种模式：stdout 模式（write 到 stdout）和 terminal 模式（使用 TerminalHost）。
+7. dispose 时释放 runtime、interaction、terminal 和监听器。
+8. 从顶层 re-export Button、TextInput 等 widgets。
+```
+
 它不负责：
 
 ```text
 1. layout 计算细节。
 2. ANSI diff 细节。
-3. widget 行为。
-4. interaction focus manager。
-5. keyboard input。
-6. stdin raw mode。
-7. alternate screen。
-8. cursor hide / show 生命周期。
+3. widget 行为（由 @bindtty/widgets 负责）。
+4. stdin raw mode（由 @bindtty/terminal 负责）。
+5. alternate screen（由 @bindtty/terminal 负责）。
+6. cursor hide / show 生命周期（由 @bindtty/terminal 负责）。
 ```
-
-这些能力后续再分阶段加入。
 
 ## 6. 对外 API
 
-建议 MVP API：
+`CreateAppOptions` 是联合类型，支持两种互斥模式：
+
+### stdout 模式（直接写 stdout）
 
 ```ts
 export interface AppStdout {
@@ -271,18 +302,34 @@ export interface AppStdout {
   off?(event: "resize", listener: () => void): unknown;
 }
 
-export interface AppStdin {
-  // MVP 暂不读取 stdin，先作为 future 入口保留。
-}
-
-export interface CreateAppOptions {
+export interface CreateAppStdoutOptions {
   stdout: AppStdout;
   stdin?: AppStdin;
-  fallbackViewport?: {
-    width: number;
-    height: number;
-  };
+  fallbackViewport?: AppViewport;
   autoStart?: boolean;
+}
+```
+
+### terminal 模式（使用 TerminalHost）
+
+```ts
+export interface CreateAppTerminalOptions {
+  terminal: TerminalHost;
+}
+```
+
+两种模式共享的 `CreateAppOptions`：
+
+```ts
+export type CreateAppOptions = CreateAppStdoutOptions | CreateAppTerminalOptions;
+```
+
+terminal 模式下：
+- `terminal.start()` 处理 alternate screen、cursor hide、raw mode
+- `terminal.onResize()` 驱动 app resize → layout → repaint
+- `terminal.onKey()` 驱动 interaction.handleKey → dispatch → repaint
+- `terminal.write()` 替代 `stdout.write`
+- `terminal.stop()` / `terminal.dispose()` 清理终端状态
 }
 
 export interface BindTTYApp {

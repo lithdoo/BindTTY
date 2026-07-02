@@ -20,15 +20,11 @@
   dirty
   dispose
   show runtime
-  for runtime
+  for runtime (含 MountedForNode 完整实现)
   RuntimeRoot
   root-owned scheduler
-  flush records for layout / renderer
-
-下一阶段计划:
-  layout tree
-  renderer frame
-  createApp
+  flush records → layout → renderer → ANSI (完整链路已打通)
+  createApp (已完成)
 ```
 
 如果只关心当前代码应如何工作，阅读：
@@ -589,7 +585,7 @@ MountedFragmentNode
 MountedShowNode
 ```
 
-`MountedForNode` 留给后续 control runtime。
+`MountedForNode` 已完整实现（含 keyed item reuse、removed item dispose、reappearing key remount、structure dirty）。
 
 如果实现时发现 vnode 的 MountedNode 类型字段不够，可以优先小幅扩展 `@bindtty/vnode` 类型，但不要把 mount 行为移回 vnode 包。
 
@@ -1505,7 +1501,7 @@ dirty queue
 microtask flush
 ```
 
-下一阶段再让 flush 驱动 layout / paint：
+当前 flush 已驱动完整链路（由 createApp 组合）：
 
 ```text
 flush dirty nodes

@@ -64,10 +64,12 @@ layout 负责回答：
   fragment / show / for structure layout
   unsupported button / input 抛错
   runtime flush integration
+  renderer-terminal 对接（已完成）
+  createApp 组合 runtime / layout / renderer（已完成）
+  focusStyle / onKey / onFocusChange 作为非 layout prop 忽略
 
-下一阶段:
-  renderer-terminal 对接
-  createApp 组合 runtime / layout / renderer
+注意：文档中 LayoutStyle 接口（含 width/height/minWidth/flexbox 等 40+ 字段）属于远期设计，
+当前 MVP 未实现。实际 layout props 通过 basic-engine.ts 中的 supportedPropsByTag 和 BoxEdges 校验。
 ```
 
 ## 2. 包位置

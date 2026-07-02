@@ -24,7 +24,9 @@ Frame
 ANSI Patch
 ```
 
-@vnode 包负责 Template → MountedNode 这一段：声明结构、类型定义、mount、binding subscription、dirty、dispose。
+@vnode 包负责 Template 层的类型定义、构造与归一化。
+
+**注意：** mount、binding subscription、dirty 传播、dispose 等运行时行为实际由 `@bindtty/runtime` 包实现。vnode 只提供 `MountedNode` 类型定义（含 `state`、`binding`、`dirty` 等字段），不包含运行时 mount 函数。
 
 ## 2. 包职责
 
@@ -32,19 +34,23 @@ ANSI Patch
 Template 层（声明）:
   ViewTemplate 类型、BindingValue、control node、normalize 规则、element schema
 
-MountedNode 层（运行时）:
-  mount、binding、dirty、dispose、MountedElementNode / ShowNode / ForNode
+MountedNode 层（类型）:
+  MountedElementNode / ShowNode / ForNode 类型定义（含 state、binding、dirty 等字段）
+
+运行时行为（由 @bindtty/runtime 实现）:
+  mount、binding subscription、dirty 传播、dispose
 ```
 
 与相邻包的边界：
 
 ```text
 @bindtty/jsx-runtime:  TSX → Template
-@bindtty/vnode:        Template → MountedNode
-@bindtty/runtime:      createApp、scheduler、渲染调度
+@bindtty/vnode:        Template 类型、构造、MountedNode 类型定义
+@bindtty/runtime:      Template → MountedNode mount、binding、dirty、scheduler、dispose
 @bindtty/interaction:  keyboard focus、onKey 派发
 @bindtty/widgets:      高层控件语义
-@bindtty/layout:       MountedNode → LayoutNode → Frame → ANSI diff
+@bindtty/layout:       MountedNode → LayoutNode
+@bindtty/renderer-terminal: LayoutNode → Frame → ANSI diff
 ```
 
 ---

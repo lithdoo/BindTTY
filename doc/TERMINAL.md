@@ -316,7 +316,9 @@ if rawMode and stdin.setRawMode:
 
 register stdout resize listener
 register stdin keypress listener
-register process restore hooks
+// 注意：process restore hooks (process.on("exit") 等) 当前未实现。
+// 如果进程收到 SIGTERM 或以其他方式退出而未调用 dispose()，
+// 终端可能留在 unclean state（alternate screen、cursor、raw mode 未恢复）。
 ```
 
 写入顺序建议：

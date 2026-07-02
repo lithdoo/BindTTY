@@ -85,7 +85,7 @@ packages/renderer-terminal/
   README.md
 ```
 
-建议第一阶段扩展为：
+实际结构（完整实现）：
 
 ```text
 packages/renderer-terminal/
@@ -94,6 +94,7 @@ packages/renderer-terminal/
     types.ts
     frame.ts
     paint.ts
+    style.ts      # PaintStyle、readPaintStyle、focusStyle 处理
     diff.ts
     ansi.ts
     renderer.ts
@@ -101,6 +102,9 @@ packages/renderer-terminal/
     renderer.test.ts
     frame.test.ts
     diff.test.ts
+    ansi.test.ts
+    paint.test.ts
+    integration.test.ts
 ```
 
 模块职责：
@@ -206,12 +210,14 @@ focused mounted element
 该默认策略必须允许按节点关闭，供 TextInput 等复杂控件自行绘制 focused 样式：
 
 ```ts
-export type FocusStyle = "inverse" | "none";
-
+// focusStyle 已实现，类型内联在 PaintStyle 中（非独立导出）
 export interface PaintStyle {
-  focusStyle?: FocusStyle;
+  focusStyle?: "inverse" | "none";
+  // ... 其他 paint 字段
 }
 ```
+
+注意：`focusStyle` 在 vnode schema 中作为 `commonElementProps` 共享，layout 忽略它，renderer 通过 `readPaintStyle()` 解析。TextInput 通过 `focusStyle="none"` 关闭默认 inverse，然后自己通过 `onFocusChange` + signal 手动控制 cursor 样式的反显。
 
 规则：
 

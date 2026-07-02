@@ -356,6 +356,8 @@ View 层 `bind(() => ...)` 如果存在，也应返回 `ReadableSignal<T>`。JSX
 
 ## 9. JSX 类型约束
 
+**注意：** 以下类型定义为文档简化版。实际代码中所有 intrinsic element 都会通过共享的 `IntrinsicInteractionProps` 获得 `id`、`onKey`、`onFocusChange` 三个交互 prop，且 `box`/`text` 等元素通过 `IntrinsicPaintProps` 额外获得 `color`、`background`、`bold`、`focusStyle` 等 paint prop。详情见各包源码。
+
 `@bindtty/jsx-runtime` 应提供 JSX namespace 类型，让常见错误尽量在编译期暴露。
 
 示例：

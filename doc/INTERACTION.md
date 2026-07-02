@@ -153,20 +153,17 @@ MVP 推荐 App 负责 repaint，不让 interaction 直接访问 runtime schedule
 
 ## 5. 包结构
 
-建议结构：
+实际结构：
 
 ```text
 packages/interaction/
   src/
     index.ts
-    controller.ts
-    focus.ts
-    keyboard.ts
-    types.ts
+    controller.ts      # focus list、key dispatch、controller 全部逻辑
+    keyboard.ts        # isTabKey / isEnterKey / isTextInputKey 等
+    types.ts           # InteractionController、InteractionResult 等类型
   test/
-    interaction.test.ts
-    focus.test.ts
-    keyboard.test.ts
+    interaction.test.ts  # 所有测试（30+）在一个文件中
     tsconfig.json
   package.json
   tsconfig.json
@@ -178,15 +175,14 @@ packages/interaction/
 types.ts
   InteractionController、InteractionResult、InteractionKeyHandler、KeyFocusEntry、focus change types。
 
-focus.ts
-  收集 key-focus targets、focus traversal、focus restore。
+controller.ts
+  收集 key-focus targets、focus traversal、focus restore、key dispatch、InteractionController 实现。
 
 keyboard.ts
-  判断 Tab / Shift+Tab / printable char / special key。
-
-controller.ts
-  createInteractionController，协调 refresh、focus 与 key dispatch。
+  判断 Tab / Shift+Tab / Enter / printable char / special key。
 ```
+
+注意：设计文档中原计划拆出独立的 `focus.ts` 模块，但实际实现将 focus 逻辑全部内联在 `controller.ts` 中。测试也合并为单一的 `interaction.test.ts` 文件。
 
 ## 6. onKey 模型
 
