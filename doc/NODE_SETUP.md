@@ -742,19 +742,19 @@ state -> layout -> state
 
 任务：
 
-- [ ] 在 vnode 类型中新增 `MountedElementApi`。
-- [ ] 在 vnode 类型中新增 `MountedElementRefHandler`。
-- [ ] 在 `MountedElementNode` 上新增可选 `api`。
-- [ ] 在 common element props 中加入 lifecycle prop `ref`。
-- [ ] 补充 TSX intrinsic 类型，使 `<box ref={...} />` 可通过类型检查。
-- [ ] 单测：`ref` 不进入 `node.props` / `node.bindings`。
-- [ ] 单测：`ref` 不进入 `node.propSources`。
+- [x] 在 vnode 类型中新增 `MountedElementApi`。
+- [x] 在 vnode 类型中新增 `MountedElementRefHandler`。
+- [x] 在 `MountedElementNode` 上新增可选 `api`。
+- [x] 在 common element props 中加入 lifecycle prop `ref`。
+- [x] 补充 TSX intrinsic 类型，使 `<box ref={...} />` 可通过类型检查。
+- [x] 单测：`ref` 不进入 `node.props` / `node.bindings`。
+- [x] 单测：`ref` 不进入 `node.propSources`。
 
 验收：
 
-- [ ] 现有测试通过。
-- [ ] TSX 可编译 `ref` prop。
-- [ ] `ref` 不被当成 React ref 特殊处理。
+- [x] 现有测试通过。
+- [x] TSX 可编译 `ref` prop。
+- [x] `ref` 不被当成 React ref 特殊处理。
 
 ### 阶段 2：runtime ref 执行与 unmount callback
 
@@ -762,26 +762,26 @@ state -> layout -> state
 
 任务：
 
-- [ ] 创建 `MountedElementApi`。
-- [ ] 如果 element 定义了 `ref`，在 mounted element 上保存稳定 `api`。
-- [ ] 从 `template.props` 中抽取 `ref`，普通 props binding 不处理 `ref`。
-- [ ] 验证 `ref` 是函数；非函数静态值抛错。
-- [ ] mount element 时调用静态 `ref(api)`。
-- [ ] 支持用户给 `api.onUnmount` 赋值。
-- [ ] dispose 时执行 `api.onUnmount?.()`。
-- [ ] dispose 时清空 api callback slots。
-- [ ] 显式禁止 `BindingValue<MountedElementRefHandler>`。
+- [x] 创建 `MountedElementApi`。
+- [x] 如果 element 定义了 `ref`，在 mounted element 上保存稳定 `api`。
+- [x] 从 `template.props` 中抽取 `ref`，普通 props binding 不处理 `ref`。
+- [x] 验证 `ref` 是函数；非函数静态值抛错。
+- [x] mount element 时调用静态 `ref(api)`。
+- [x] 支持用户给 `api.onUnmount` 赋值。
+- [x] dispose 时执行 `api.onUnmount?.()`。
+- [x] dispose 时清空 api callback slots。
+- [x] 显式禁止 `BindingValue<MountedElementRefHandler>`。
 
 验收：
 
-- [ ] ref mount 时只执行一次。
-- [ ] binding 更新不重复执行 ref。
-- [ ] `ref` 不进入 `node.props` / `node.bindings`。
-- [ ] `ref` 不进入 `node.propSources`。
-- [ ] signal ref 抛错。
-- [ ] 非函数 ref 抛错。
-- [ ] `api.onUnmount` 在 dispose 时执行一次。
-- [ ] show / for 重新 mount 时 ref 重新执行。
+- [x] ref mount 时只执行一次。
+- [x] binding 更新不重复执行 ref。
+- [x] `ref` 不进入 `node.props` / `node.bindings`。
+- [x] `ref` 不进入 `node.propSources`。
+- [x] signal ref 抛错。
+- [x] 非函数 ref 抛错。
+- [x] `api.onUnmount` 在 dispose 时执行一次。
+- [x] show / for 重新 mount 时 ref 重新执行。
 
 ### 阶段 3：api.onMounted
 
@@ -789,17 +789,17 @@ state -> layout -> state
 
 任务：
 
-- [ ] 支持用户给 `api.onMounted` 赋值。
-- [ ] element children mount 完成后触发 `api.onMounted?.()`。
-- [ ] mounted 后再给 `api.onMounted` 赋值不会自动触发。
-- [ ] 明确并测试 mounted 顺序：child `onMounted` 先于 parent `onMounted`。
+- [x] 支持用户给 `api.onMounted` 赋值。
+- [x] element children mount 完成后触发 `api.onMounted?.()`。
+- [x] mounted 后再给 `api.onMounted` 赋值不会自动触发。
+- [x] 明确并测试 mounted 顺序：child `onMounted` 先于 parent `onMounted`。
 
 验收：
 
-- [ ] ref 阶段设置的 `api.onMounted` 会在 children mount 后触发。
-- [ ] mounted 后修改 `api.onMounted` 不会补触发。
-- [ ] unmount 后 `api.onMounted` 被清空。
-- [ ] child mounted callback 先于 parent mounted callback。
+- [x] ref 阶段设置的 `api.onMounted` 会在 children mount 后触发。
+- [x] mounted 后修改 `api.onMounted` 不会补触发。
+- [x] unmount 后 `api.onMounted` 被清空。
+- [x] child mounted callback 先于 parent mounted callback。
 
 ### 阶段 4：app layout 派发
 
@@ -807,23 +807,23 @@ state -> layout -> state
 
 任务：
 
-- [ ] runtime 保存 latest layout。
-- [ ] runtime 实现 `notifyElementLayout(node, layout)`。
-- [ ] app 每次 layoutRoot 后遍历 layout tree 派发 layout。
-- [ ] app 在本轮 dirty 清理后派发 layout，避免 onLayout 中产生的新 dirty 被清掉。
-- [ ] `api.getLayout()` 返回最新 layout。
-- [ ] 没有 `api` 的 element 在 layout 派发时 no-op。
-- [ ] unmount 后 `api.onLayout` 不再触发。
-- [ ] dispose 后 layout callback 被清空。
+- [x] runtime 保存 latest layout。
+- [x] runtime 实现 `notifyElementLayout(node, layout)`。
+- [x] app 每次 layoutRoot 后遍历 layout tree 派发 layout。
+- [x] app 在本轮 dirty 清理后派发 layout，避免 onLayout 中产生的新 dirty 被清掉。
+- [x] `api.getLayout()` 返回最新 layout。
+- [x] 没有 `api` 的 element 在 layout 派发时 no-op。
+- [x] unmount 后 `api.onLayout` 不再触发。
+- [x] dispose 后 layout callback 被清空。
 
 验收：
 
-- [ ] 初次 render 后收到 layout。
-- [ ] signal 更新触发 relayout 后收到新 layout。
-- [ ] 没有定义 `ref` 的 element 不会创建 `api`，layout 派发也不报错。
-- [ ] unmount 后不再收到 layout。
-- [ ] `api.getLayout()` 返回最新 layout。
-- [ ] `api.onLayout` 中 set signal 会进入下一轮 flush，不会被本轮 clearDirty 清掉。
+- [x] 初次 render 后收到 layout。
+- [x] signal 更新触发 relayout 后收到新 layout。
+- [x] 没有定义 `ref` 的 element 不会创建 `api`，layout 派发也不报错。
+- [x] unmount 后不再收到 layout。
+- [x] `api.getLayout()` 返回最新 layout。
+- [x] `api.onLayout` 中 set signal 会进入下一轮 flush，不会被本轮 clearDirty 清掉。
 
 ### 阶段 5：ScrollView 迁移
 
@@ -831,19 +831,19 @@ state -> layout -> state
 
 任务：
 
-- [ ] `ScrollView` 内部设置 `ref`。
-- [ ] `api.onLayout` 记录 `appliedY` / `maxY` / `pageY`。
-- [ ] 键盘滚动基于 `appliedY` / `maxY` / `pageY` 计算 next offset。
-- [ ] `End` 改为 `onOffsetChange(maxY)`。
-- [ ] 测试通过后移除或停止调用 `syncClampedScrollBindings()`。
-- [ ] 更新 M7 scroll 文档中的受控规则。
+- [x] `ScrollView` 内部设置 `ref`。
+- [x] `api.onLayout` 记录 `appliedY` / `maxY` / `pageY`。
+- [x] 键盘滚动基于 `appliedY` / `maxY` / `pageY` 计算 next offset。
+- [x] `End` 改为 `onOffsetChange(maxY)`。
+- [x] 测试通过后移除或停止调用 `syncClampedScrollBindings()`。
+- [x] 更新 M7 scroll 文档中的受控规则。
 
 验收：
 
-- [ ] offset 过大时画面 clamp，但用户 signal 不被隐式改写。
-- [ ] Down / Up / PageUp / PageDown / Home / End 正确。
-- [ ] List 动态删除数据后，下一次键盘滚动基于 applied offset。
-- [ ] mock e2e 和 real PTY scroll/list 测试通过。
+- [x] offset 过大时画面 clamp，但用户 signal 不被隐式改写。
+- [x] Down / Up / PageUp / PageDown / Home / End 正确。
+- [x] List 动态删除数据后，下一次键盘滚动基于 applied offset。
+- [x] mock e2e 和 real PTY scroll/list 测试通过。
 
 ### 阶段 6：文档与示例
 
@@ -851,48 +851,48 @@ state -> layout -> state
 
 任务：
 
-- [ ] 更新 [VNODE.md](./VNODE.md) 的 common props。
-- [ ] 更新 [RUNTIME.md](./RUNTIME.md) 的 mount / dispose 语义。
-- [ ] 更新 [APP.md](./APP.md) 的 layout dispatch。
-- [ ] 更新 [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md) 的 scroll 数据流。
-- [ ] 新增一个 ref 示例。
+- [x] 更新 [VNODE.md](./VNODE.md) 的 common props。
+- [x] 更新 [RUNTIME.md](./RUNTIME.md) 的 mount / dispose 语义。
+- [x] 更新 [APP.md](./APP.md) 的 layout dispatch。
+- [x] 更新 [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md) 的 scroll 数据流。
+- [x] 新增一个 ref 示例。
 
 验收：
 
-- [ ] 文档与代码一致。
-- [ ] 示例可运行。
+- [x] 文档与代码一致。
+- [x] 示例可运行。
 
 ## 13. 测试清单
 
 runtime 单测：
 
-- [ ] ref mount 时执行。
-- [ ] props binding 更新不重复 ref。
-- [ ] ref 是 signal 时抛错。
-- [ ] `api.onUnmount` 在 dispose 时执行。
-- [ ] `api.onMounted` 在 children mount 后触发。
-- [ ] mounted 后修改 `api.onMounted` 不会补触发。
-- [ ] show 切换重新 mount 时重新 ref。
-- [ ] for key 保留时 ref 不重复，key 移除后再次出现会重新 ref。
+- [x] ref mount 时执行。
+- [x] props binding 更新不重复 ref。
+- [x] ref 是 signal 时抛错。
+- [x] `api.onUnmount` 在 dispose 时执行。
+- [x] `api.onMounted` 在 children mount 后触发。
+- [x] mounted 后修改 `api.onMounted` 不会补触发。
+- [x] show 切换重新 mount 时重新 ref。
+- [x] for key 保留时 ref 不重复，key 移除后再次出现会重新 ref。
 
 app 单测：
 
-- [ ] `api.onLayout` 初次 render 后触发。
-- [ ] layout 尺寸变化后 callback 收到新 rect。
-- [ ] unmount 后 `api.onLayout` 不再触发。
-- [ ] `api.getLayout()` 返回最新 layout。
-- [ ] unmount 后 `api.getLayout()` 返回 null。
-- [ ] `onLayout` 中 set signal 不递归 render，而是进入下一轮 flush。
+- [x] `api.onLayout` 初次 render 后触发。
+- [x] layout 尺寸变化后 callback 收到新 rect。
+- [x] unmount 后 `api.onLayout` 不再触发。
+- [x] `api.getLayout()` 返回最新 layout。
+- [x] unmount 后 `api.getLayout()` 返回 null。
+- [x] `onLayout` 中 set signal 不递归 render，而是进入下一轮 flush。
 
 widget / e2e：
 
-- [ ] ScrollView offset 过大时 signal 不被隐式改写。
-- [ ] ScrollView End 后 `onOffsetChange(maxY)`。
-- [ ] ScrollView Down 在底部保持 maxY。
-- [ ] ScrollView Up 在顶部保持 0。
-- [ ] PageUp / PageDown 使用实际 viewport height。
-- [ ] List 删除 item 后下一次滚动基于 appliedY。
-- [ ] real PTY 下方向键滚动仍通过。
+- [x] ScrollView offset 过大时 signal 不被隐式改写。
+- [x] ScrollView End 后 `onOffsetChange(maxY)`。
+- [x] ScrollView Down 在底部保持 maxY。
+- [x] ScrollView Up 在顶部保持 0。
+- [x] PageUp / PageDown 使用实际 viewport height。
+- [x] List 删除 item 后下一次滚动基于 appliedY。
+- [x] real PTY 下方向键滚动仍通过。
 
 ## 14. 风险与约束
 

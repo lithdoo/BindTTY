@@ -616,6 +616,48 @@ test("tsx app scrolls ScrollView with pageup end and up keys", async () => {
   app.dispose();
 });
 
+test("tsx app uses applied ScrollView layout when controlled offset is out of range", async () => {
+  const stdout = createFakeStdout(12, 5);
+  const stdin = createFakeStdin();
+  const offset = createSignal(99);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <ScrollView
+      height={2}
+      offset={offset}
+      onOffsetChange={(nextOffset) => {
+        offset.set(nextOffset);
+      }}
+    >
+      <text value="A" />
+      <text value="B" />
+      <text value="C" />
+      <text value="D" />
+    </ScrollView>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.equal(offset.get(), 99);
+  assert.match(visibleText(stdout.writes.at(-1)), /C/);
+  assert.match(visibleText(stdout.writes.at(-1)), /D/);
+
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 2);
+  assert.match(visibleText(stdout.writes.at(-1)), /C/);
+  assert.match(visibleText(stdout.writes.at(-1)), /D/);
+
+  app.dispose();
+});
+
 test("tsx app does not scroll ScrollView when scrollOnArrow is false", async () => {
   const stdout = createFakeStdout(12, 5);
   const stdin = createFakeStdin();

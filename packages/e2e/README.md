@@ -70,6 +70,7 @@ npm run test:e2e:real:wsl
 | `focus-app.tsx` | Tab 切换 Button focus + Enter |
 | `textedit-app.tsx` | TextInput Backspace 后提交 |
 | `scroll-app.tsx` | ScrollView Down 键滚动 |
+| `scroll-clamp-app.tsx` | ScrollView 受控 offset 超界时只 clamp 画面，按键后基于 applied offset 更新 |
 | `list-app.tsx` | List Down 键滚动 |
 
 ## 目录结构
