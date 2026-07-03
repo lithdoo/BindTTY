@@ -14,6 +14,7 @@
 | [APP.md](./APP.md) | bindtty createApp 落地设计（runtime + layout + renderer + terminal + interaction） |
 | [TERMINAL.md](./TERMINAL.md) | @bindtty/terminal 落地设计（terminal lifecycle + input + resize） |
 | [INTERACTION.md](./INTERACTION.md) | @bindtty/interaction 落地设计（keyboard focus + onKey dispatch） |
+| [NODE_SETUP.md](./NODE_SETUP.md) | 节点级 onSetup 设计（实例访问、layout/focus/lifecycle 扩展入口） |
 | [WIDGETS.md](./WIDGETS.md) | @bindtty/widgets 落地设计（Button / TextInput 等高层控件） |
 | [TEXT_INPUT.md](./TEXT_INPUT.md) | TextInput 控件详细设计（拆分光标渲染方案） |
 | [E2E_TESTING.md](./E2E_TESTING.md) | E2E 测试计划（mock + real PTY） |
