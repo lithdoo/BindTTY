@@ -1297,6 +1297,20 @@ mounted node dirty
 layout / paint / frame patch
 ```
 
+## M7 当前实现：box layout props
+
+`box` schema 已增加 M7 所需 layout props：
+
+```text
+height   layout dirty
+width    layout dirty
+overflow layout dirty
+scrollX  layout dirty
+scrollY  layout dirty
+```
+
+这些 props 不新增 intrinsic tag；`ScrollView` / `List` 在 `@bindtty/widgets` 中组合为普通 `box` + metadata props。
+
 为了实现这个模型，运行时必须有一棵“活的视图树”。
 
 这棵树需要保存：

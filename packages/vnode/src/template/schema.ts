@@ -32,7 +32,12 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
     props: {
       ...commonElementProps,
       border: { dirty: "paint" },
-      padding: { dirty: "layout" }
+      padding: { dirty: "layout" },
+      height: { dirty: "layout" },
+      width: { dirty: "layout" },
+      overflow: { dirty: "layout" },
+      scrollX: { dirty: "layout" },
+      scrollY: { dirty: "layout" }
     }
   },
   vstack: {

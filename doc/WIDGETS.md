@@ -604,19 +604,50 @@ npm test
 13. TextInput 键盘编辑：字符插入、Backspace、Delete、方向键、Home、End。
 14. TextInput placeholder / disabled / focus 生命周期。
 15. TextInput 单元测试 + App 集成 + E2E 全覆盖。
-16. bindtty 顶层 re-export Button 和 TextInput。
+16. bindtty 顶层 re-export Button、TextInput、ScrollView 和 List。
+17. ScrollView 受控 offset、clip、键盘滚动已覆盖。
+18. List 作为 ScrollView + forTemplate 语法糖已覆盖。
 ```
 
 ## 14. 后续方向
 
-Button 和 TextInput 跑通后，下一步建议：
+Button、TextInput、ScrollView 和 List 跑通后，下一步建议：
 
 ```text
 如果目标是验证更多交互组件模式：
   先做 Checkbox。
+
+如果目标是增强长内容体验：
+  增强 Scroll/List（stickToBottom、scrollbar、virtualization、selected row）。
 
 如果目标是丰富表单输入能力：
   增强 TextInput（width、selection、多行）。
 ```
 
 Checkbox 比 TextInput 简单，可用于进一步验证 `onChange` 与 dynamic style。
+
+## M7 当前实现：ScrollView / List
+
+已实现：
+
+```tsx
+<ScrollView height={10} offset={vm.offset} onOffsetChange={vm.setOffset}>
+  <text value="row" />
+</ScrollView>
+
+<List
+  height={10}
+  offset={vm.offset}
+  onOffsetChange={vm.setOffset}
+  items={vm.logs}
+  getKey={(log) => log.id}
+  render={(log) => <text value={log.message} />}
+/>
+```
+
+实现边界：
+
+1. `ScrollView` 是受控组件，offset 由外部 signal 持有。
+2. 键盘滚动调用 `onOffsetChange(nextOffset)`，layout 负责 clamp。
+3. `List` 是 `ScrollView + forTemplate` 语法糖，不做虚拟化。
+4. `ScrollView` / `List` 已从 `@bindtty/widgets` 和 `bindtty` 顶层入口导出。

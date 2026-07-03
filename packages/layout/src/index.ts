@@ -8,5 +8,7 @@ export type {
   LayoutNode,
   LayoutOptions,
   LayoutRect,
+  LayoutScrollOffset,
+  LayoutSize,
   LayoutViewport
 } from "./types.js";

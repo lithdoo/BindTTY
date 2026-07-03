@@ -25,6 +25,11 @@ export const interactionPropsView = (
     }}
     border
     padding={1}
+    height={3}
+    width={20}
+    overflow="clip"
+    scrollX={0}
+    scrollY={1}
   >
     <text value="Focusable" color="green" />
   </box>

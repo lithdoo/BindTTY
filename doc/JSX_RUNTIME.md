@@ -605,3 +605,15 @@ ViewTemplate
 ```
 
 下一步再进入 `@bindtty/runtime` 的 `Template -> MountedNode`。
+
+## M7 当前实现：box TSX props
+
+`box` 的 TSX 类型已支持 M7 layout props：
+
+```tsx
+<box height={3} width={20} overflow="clip" scrollY={offset}>
+  <text value="row" />
+</box>
+```
+
+用户优先使用 `@bindtty/widgets` 的 `ScrollView` / `List`；这些组件内部仍生成普通 `box` Template。

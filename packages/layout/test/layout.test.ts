@@ -251,6 +251,45 @@ test("lays out empty boxes using padding and border only", () => {
   assert.deepEqual(layout?.children, []);
 });
 
+test("lays out boxes with fixed width and height", () => {
+  const child = createMountedText("Long child");
+  const root = createMountedElement("box", {
+    width: 6,
+    height: 3
+  }, [child]);
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 6,
+    height: 3
+  });
+  assert.deepEqual(layout?.contentRect, layout?.rect);
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 0,
+    y: 0,
+    width: 10,
+    height: 1
+  });
+});
+
+test("treats invalid and negative box fixed sizes as zero", () => {
+  const root = createMountedElement("box", {
+    width: "wide",
+    height: -2
+  }, [createMountedText("Hidden")]);
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0
+  });
+  assert.deepEqual(layout?.contentRect, layout?.rect);
+});
+
 test("lays out screen at viewport size", () => {
   const child = createMountedText("A");
   const root = createMountedElement("screen", {}, [child]);
@@ -346,6 +385,113 @@ test("throws for unsupported future layout props and duplicate aliases", () => {
       ),
     /Duplicate layout prop: paddingTop \/ padding-top/
   );
+});
+
+test("throws for unsupported overflow values", () => {
+  assert.throws(
+    () => layoutRoot(createMountedElement("box", { overflow: "scroll" }), { viewport }),
+    /Unsupported overflow value: scroll/
+  );
+});
+
+test("outputs clip and content size for clipped boxes", () => {
+  const root = createMountedElement("box", {
+    height: 2,
+    overflow: "clip"
+  }, [
+    createMountedText("A"),
+    createMountedText("BC"),
+    createMountedText("DEF")
+  ]);
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 3,
+    height: 2
+  });
+  assert.deepEqual(layout?.clip, {
+    x: 0,
+    y: 0,
+    width: 3,
+    height: 2
+  });
+  assert.deepEqual(layout?.contentSize, {
+    width: 3,
+    height: 3
+  });
+  assert.deepEqual(layout?.children[2]?.rect, {
+    x: 0,
+    y: 2,
+    width: 3,
+    height: 1
+  });
+});
+
+test("clamps scroll offset using content size and clip height", () => {
+  const root = createMountedElement("box", {
+    height: 2,
+    overflow: "clip",
+    scrollY: 99
+  }, [
+    createMountedText("A"),
+    createMountedText("B"),
+    createMountedText("C"),
+    createMountedText("D")
+  ]);
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.contentSize, {
+    width: 1,
+    height: 4
+  });
+  assert.deepEqual(layout?.scrollOffset, {
+    x: 0,
+    y: 2
+  });
+});
+
+test("clamps scroll offset to zero when content fits", () => {
+  const root = createMountedElement("box", {
+    height: 5,
+    overflow: "clip",
+    scrollY: 3
+  }, [createMountedText("A")]);
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.contentSize, {
+    width: 1,
+    height: 1
+  });
+  assert.deepEqual(layout?.scrollOffset, {
+    x: 0,
+    y: 0
+  });
+});
+
+test("records content size for for nodes inside clipped boxes", () => {
+  const root = createMountedElement("box", {
+    height: 1,
+    overflow: "clip"
+  }, [
+    createMountedFor([
+      createMountedText("A"),
+      createMountedText("BCD")
+    ])
+  ]);
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.contentSize, {
+    width: 3,
+    height: 2
+  });
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 0,
+    y: 0,
+    width: 3,
+    height: 2
+  });
 });
 
 test("ignores non-layout paint props while measuring layout", () => {

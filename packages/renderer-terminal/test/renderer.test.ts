@@ -3,7 +3,9 @@ import test from "node:test";
 
 import type { LayoutNode, LayoutRect, LayoutViewport } from "@bindtty/layout";
 import {
-  createTerminalRenderer
+  createTerminalRenderer,
+  frameToLines,
+  paintLayout
 } from "@bindtty/renderer-terminal";
 import type { MountedElementNode, MountedNode } from "@bindtty/vnode";
 
@@ -43,12 +45,14 @@ function layout(
   mounted: MountedNode,
   nodeRect: LayoutRect,
   children: LayoutNode[] = [],
-  contentRect: LayoutRect = nodeRect
+  contentRect: LayoutRect = nodeRect,
+  extra: Partial<Omit<LayoutNode, "mounted" | "rect" | "contentRect" | "children">> = {}
 ): LayoutNode {
   return {
     mounted,
     rect: nodeRect,
     contentRect,
+    ...extra,
     children
   };
 }
@@ -152,4 +156,115 @@ test("TerminalRenderer emits full patch when viewport size changes", () => {
     }),
     "\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[0m"
   );
+});
+
+test("paintLayout clips child text to node clip rects", () => {
+  const child = layout(element("text", { value: "ABCDE" }), rect(0, 0, 5, 1));
+  const root = layout(
+    element("box", {}, [child.mounted]),
+    rect(0, 0, 5, 1),
+    [child],
+    rect(0, 0, 5, 1),
+    {
+      clip: rect(0, 0, 3, 1)
+    }
+  );
+  const frame = paintLayout(root, {
+    viewport: {
+      width: 5,
+      height: 1
+    }
+  });
+
+  assert.deepEqual(frameToLines(frame), ["ABC  "]);
+});
+
+test("paintLayout clips box background and border through parent clip", () => {
+  const child = layout(
+    element("box", { background: "blue", border: true }),
+    rect(1, 0, 4, 3)
+  );
+  const root = layout(
+    element("box", {}, [child.mounted]),
+    rect(0, 0, 5, 3),
+    [child],
+    rect(0, 0, 5, 3),
+    {
+      clip: rect(0, 0, 3, 2)
+    }
+  );
+  const frame = paintLayout(root, {
+    viewport: {
+      width: 5,
+      height: 3
+    }
+  });
+
+  assert.deepEqual(frameToLines(frame), [
+    " ┌─  ",
+    " │   ",
+    "     "
+  ]);
+});
+
+test("paintLayout clips focused inverse state", () => {
+  const childMounted = element("text", { value: "ABCDE" });
+  const child = layout(childMounted, rect(0, 0, 5, 1));
+  const root = layout(
+    element("box", {}, [child.mounted]),
+    rect(0, 0, 5, 1),
+    [child],
+    rect(0, 0, 5, 1),
+    {
+      clip: rect(0, 0, 3, 1)
+    }
+  );
+  const frame = paintLayout(root, {
+    viewport: {
+      width: 5,
+      height: 1
+    },
+    isFocused: (node) => node === childMounted
+  });
+
+  assert.equal(frame.cells[0]?.style.inverse, true);
+  assert.equal(frame.cells[1]?.style.inverse, true);
+  assert.equal(frame.cells[2]?.style.inverse, true);
+  assert.equal(frame.cells[3]?.style.inverse, undefined);
+  assert.equal(frame.cells[4]?.style.inverse, undefined);
+});
+
+test("paintLayout scrolls children while keeping box border fixed", () => {
+  const first = layout(element("text", { value: "A" }), rect(1, 1, 1, 1));
+  const second = layout(element("text", { value: "B" }), rect(1, 2, 1, 1));
+  const third = layout(element("text", { value: "C" }), rect(1, 3, 1, 1));
+  const root = layout(
+    element("box", { border: true }, [
+      first.mounted,
+      second.mounted,
+      third.mounted
+    ]),
+    rect(0, 0, 3, 3),
+    [first, second, third],
+    rect(1, 1, 1, 1),
+    {
+      clip: rect(1, 1, 1, 1),
+      scrollOffset: {
+        x: 0,
+        y: 1
+      }
+    }
+  );
+  const frame = paintLayout(root, {
+    viewport: {
+      width: 3,
+      height: 3
+    }
+  });
+
+  assert.deepEqual(frameToLines(frame), [
+    "┌─┐",
+    "│B│",
+    "└─┘"
+  ]);
 });

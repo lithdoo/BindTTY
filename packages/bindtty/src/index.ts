@@ -1,5 +1,5 @@
 export { createApp } from "./app.js";
-export { Button, TextInput } from "@bindtty/widgets";
+export { Button, List, ScrollView, TextInput } from "@bindtty/widgets";
 export type {
   AppStdin,
   AppStdout,
@@ -12,6 +12,9 @@ export type {
 export type {
   ButtonProps,
   ButtonStyleProps,
+  ListProps,
+  ScrollViewProps,
+  ScrollViewStyleProps,
   TextInputProps,
   TextInputStyleProps
 } from "@bindtty/widgets";

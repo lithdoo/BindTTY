@@ -6,3 +6,5 @@ Currently exported widgets:
 
 - `Button`
 - `TextInput`
+- `ScrollView`
+- `List`

@@ -834,7 +834,7 @@ dispose:
 
 ## 13. 当前结论
 
-`createApp` 已在顶层 `bindtty` 包实现，M1–M6 主链路已打通。
+`createApp` 已在顶层 `bindtty` 包实现，M1–M7 主链路已打通。
 
 用户可写：
 

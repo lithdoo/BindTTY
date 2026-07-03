@@ -1261,3 +1261,30 @@ LayoutNode
 ```
 
 下一阶段由 `@bindtty/renderer-terminal` 实现 paint / frame / ANSI diff。
+
+## M7 当前实现：Clip / Scroll Metadata
+
+M7 已在 `BasicLayoutEngine` 中补齐滚动窗口所需的最小 layout props：
+
+```text
+box:
+  height / width        fixed number size
+  overflow="clip"      输出 LayoutNode.clip
+  scrollX / scrollY    输出 LayoutNode.scrollOffset
+```
+
+`LayoutNode` 当前额外包含：
+
+```ts
+clip?: LayoutRect;
+scrollOffset?: { x: number; y: number };
+contentSize?: { width: number; height: number };
+```
+
+规则：
+
+1. `height` / `width` 第一版只支持固定数值。
+2. `overflow="clip"` 使用 `contentRect` 作为 clip。
+3. children 仍按自然尺寸排列，可以超出 parent。
+4. `scrollY` 在 layout 阶段按 `contentSize.height - clip.height` clamp。
+5. renderer 负责真正裁剪与应用 scroll offset。

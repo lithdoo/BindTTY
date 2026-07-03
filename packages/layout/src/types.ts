@@ -12,10 +12,23 @@ export interface LayoutViewport {
   height: number;
 }
 
+export interface LayoutSize {
+  width: number;
+  height: number;
+}
+
+export interface LayoutScrollOffset {
+  x: number;
+  y: number;
+}
+
 export interface LayoutNode {
   mounted: MountedNode;
   rect: LayoutRect;
   contentRect: LayoutRect;
+  clip?: LayoutRect;
+  scrollOffset?: LayoutScrollOffset;
+  contentSize?: LayoutSize;
   children: LayoutNode[];
 }
 

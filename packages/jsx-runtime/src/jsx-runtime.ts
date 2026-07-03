@@ -67,6 +67,11 @@ interface IntrinsicPaintProps {
 interface IntrinsicBoxStyleProps {
   border?: BindingValue<boolean | number>;
   padding?: BindingValue<number>;
+  height?: BindingValue<number>;
+  width?: BindingValue<number>;
+  overflow?: BindingValue<"visible" | "clip">;
+  scrollX?: BindingValue<number>;
+  scrollY?: BindingValue<number>;
 }
 
 export function jsx(

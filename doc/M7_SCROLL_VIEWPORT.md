@@ -1,6 +1,8 @@
 # Milestone 7：Scroll / Viewport / List 计划与设计
 
-本文档汇总 BindTTY **Milestone 7** 的目标、分层设计、稳定接口契约、实现阶段与验收标准。M1–M6 主链路已完成；M7 是「从可运行 demo 到可承载真实长内容 UI」的关键一步。
+本文档汇总 BindTTY **Milestone 7** 的目标、分层设计、稳定接口契约、实现阶段与验收标准。M1–M7 主链路已完成；M7 是「从可运行 demo 到可承载真实长内容 UI」的关键一步。
+
+当前状态：**已落地**。实现包括 `box` clip/scroll layout props、renderer clip stack、`ScrollView`、`List`、mock E2E 覆盖；虚拟化、scrollbar、stickToBottom 仍为后续增强。
 
 相关文档：
 
@@ -800,14 +802,14 @@ const app = createApp(
 
 M7 落地时同步更新：
 
-- [ ] [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) — M7 勾选子项
-- [ ] [LAYOUT.md](./LAYOUT.md) — overflow/scroll 从「后续」改为已实现
-- [ ] [RENDERER.md](./RENDERER.md) — clip/scroll paint 规则
-- [ ] [WIDGETS.md](./WIDGETS.md) — ScrollView / List API
-- [ ] [VNODE.md](./VNODE.md) — box 新 layout props schema
-- [ ] [JSX_RUNTIME.md](./JSX_RUNTIME.md) — box TSX props 增量
-- [ ] [E2E_TESTING.md](./E2E_TESTING.md) — 新增场景列表
-- [ ] 根 [README.md](../README.md) — 当前完成状态
+- [x] [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) — M7 勾选子项
+- [x] [LAYOUT.md](./LAYOUT.md) — overflow/scroll 从「后续」改为已实现
+- [x] [RENDERER.md](./RENDERER.md) — clip/scroll paint 规则
+- [x] [WIDGETS.md](./WIDGETS.md) — ScrollView / List API
+- [x] [VNODE.md](./VNODE.md) — box 新 layout props schema
+- [x] [JSX_RUNTIME.md](./JSX_RUNTIME.md) — box TSX props 增量
+- [x] [E2E_TESTING.md](./E2E_TESTING.md) — 新增场景列表
+- [x] 根 [README.md](../README.md) — 当前完成状态
 
 ---
 

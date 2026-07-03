@@ -162,3 +162,15 @@ E2E 负责：
 - 包导出是否正确。
 - TSX 用户写法是否真实可用。
 - 多包组合是否能稳定渲染、更新、停止、释放。
+
+## M7 当前覆盖
+
+mock E2E 已覆盖：
+
+- `box overflow="clip"` 静态裁剪。
+- `scrollY` signal 更新后可见窗口变化。
+- `ScrollView` focus 后方向键滚动。
+- `TextInput` focused 时方向键优先由输入框消费，不滚动外层 `ScrollView`。
+- `List` 动态 push/delete 与 scroll clamp 组合。
+
+real PTY E2E 仍保持 smoke 范围；方向键细节继续由 mock E2E 覆盖。

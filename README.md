@@ -80,6 +80,8 @@ packages/interaction/
 packages/widgets/
   src/button.ts       # Button 组件 + 类型
   src/text-input.ts   # TextInput 组件 + 类型（拆分光标方案）
+  src/scroll-view.ts  # ScrollView 裁剪与滚动窗口
+  src/list.ts         # List 语法糖（ScrollView + for）
 ~~~
 
 当前完成状态：
@@ -89,12 +91,12 @@ packages/widgets/
 @bindtty/vnode:             Template 类型、MountedNode 类型、normalize
 @bindtty/jsx-runtime:       TSX → Template（jsx/jsxs/Fragment）
 @bindtty/runtime:           mount、binding、dirty、dispose、show/for control、scheduler
-@bindtty/layout:            MountedNode → LayoutNode（box/text/hstack/vstack/screen/spacer）
-@bindtty/renderer-terminal: LayoutNode → Frame → ANSI diff（含 focusStyle）
+@bindtty/layout:            MountedNode → LayoutNode（含 clip/contentSize/scrollOffset）
+@bindtty/renderer-terminal: LayoutNode → Frame → ANSI diff（含 focusStyle/clip/scrollOffset）
 @bindtty/terminal:          TerminalHost（alt screen/cursor/raw mode/resize/keypress）
 @bindtty/interaction:       keyboard focus、onKey dispatch、Tab/Shift+Tab traversal
-@bindtty/widgets:           Button（onPress）、TextInput（受控 value/onChange/光标拆分）
-bindtty:                    createApp（stdout + terminal 双模式）、re-export Button/TextInput
+@bindtty/widgets:           Button、TextInput、ScrollView、List
+bindtty:                    createApp（stdout + terminal 双模式）、re-export widgets
 ```
 
 ## 实现进度
@@ -107,7 +109,7 @@ bindtty:                    createApp（stdout + terminal 双模式）、re-expo
 | M4 | `<show>` / `<for key>` | ✅ |
 | M5 | terminal + interaction + Button | ✅ |
 | M6 | TextInput 双向绑定 | ✅ |
-| M7 | scroll / list / viewport | ❌ 见 [M7_SCROLL_VIEWPORT.md](./doc/M7_SCROLL_VIEWPORT.md) |
+| M7 | scroll / list / viewport | ✅ |
 
 详见 [TUI_IMPLEMENTATION_PLAN.md](./doc/TUI_IMPLEMENTATION_PLAN.md) 与 [M7_SCROLL_VIEWPORT.md](./doc/M7_SCROLL_VIEWPORT.md)。
 

@@ -4,8 +4,13 @@ import test from "node:test";
 import { createSignal } from "@bindtty/signal";
 import {
   Button,
+  List,
+  ScrollView,
   type ButtonProps,
-  type ButtonStyleProps
+  type ButtonStyleProps,
+  type ListProps,
+  type ScrollViewProps,
+  type ScrollViewStyleProps
 } from "@bindtty/widgets";
 import type { InteractionKeyBinding } from "@bindtty/interaction";
 import type { InteractionKeyHandler } from "@bindtty/interaction";
@@ -31,6 +36,16 @@ function resolveSignal<T>(value: unknown): T {
   assert.equal(typeof value, "object");
   assert.notEqual(value, null);
   return (value as ReadableSignal<T>).get();
+}
+
+function key(name: string): Parameters<InteractionKeyHandler>[0] {
+  return {
+    input: "",
+    name,
+    ctrl: false,
+    meta: false,
+    shift: false
+  };
 }
 
 test("Button renders as a focusable box with text label", () => {
@@ -169,4 +184,185 @@ test("Button forwards style props to the correct intrinsic elements", () => {
   assert.equal(label.props.color, "green");
   assert.equal(label.props.bold, true);
   assert.equal(label.props.dim, true);
+});
+
+test("ScrollView renders as a clipped box with scroll metadata", () => {
+  const onFocusChange = () => {};
+  const child = asElement({
+    kind: "element",
+    tag: "text",
+    props: {
+      value: "Row"
+    },
+    children: []
+  });
+  const template = asElement(
+    ScrollView({
+      id: "logs",
+      height: 3,
+      width: 20,
+      offset: 2,
+      onOffsetChange() {},
+      onFocusChange,
+      children: child
+    })
+  );
+
+  assert.equal(template.tag, "box");
+  assert.equal(template.props.id, "logs");
+  assert.equal(template.props.height, 3);
+  assert.equal(template.props.width, 20);
+  assert.equal(template.props.overflow, "clip");
+  assert.equal(template.props.scrollX, 0);
+  assert.equal(template.props.scrollY, 2);
+  assert.equal(typeof template.props.onKey, "function");
+  assert.equal(template.props.onFocusChange, onFocusChange);
+  assert.equal(template.children[0], child);
+});
+
+test("ScrollView exposes the planned props types", () => {
+  const style: ScrollViewStyleProps = {
+    background: "blue",
+    borderColor: "cyan",
+    padding: 1,
+    border: true
+  };
+  const props: ScrollViewProps = {
+    ...style,
+    id: "typed",
+    height: 3,
+    width: 20,
+    offset: 1,
+    scrollOnArrow: true,
+    onOffsetChange() {}
+  };
+
+  assert.equal(asElement(ScrollView(props)).props.id, "typed");
+});
+
+test("ScrollView emits offset intents for scroll keys", () => {
+  const offset = createSignal(5);
+  const height = createSignal(3);
+  const changes: number[] = [];
+  const template = asElement(
+    ScrollView({
+      height,
+      offset,
+      onOffsetChange(nextOffset) {
+        changes.push(nextOffset);
+      }
+    })
+  );
+  const onKey = readOnKeyHandler(template);
+
+  assert.equal(onKey(key("up"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("down"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("pageup"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("pagedown"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("home"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("end"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("left"), { node: {} as never, isFocused: true }), false);
+
+  assert.deepEqual(changes, [
+    4,
+    6,
+    2,
+    8,
+    0,
+    Number.MAX_SAFE_INTEGER
+  ]);
+});
+
+test("ScrollView is not focusable without an offset change handler", () => {
+  const template = asElement(
+    ScrollView({
+      height: 3,
+      offset: 0
+    })
+  );
+
+  assert.equal(template.props.onKey, false);
+});
+
+test("ScrollView supports dynamic scrollOnArrow values", () => {
+  const scrollOnArrow = createSignal(true);
+  const template = asElement(
+    ScrollView({
+      height: 3,
+      offset: 0,
+      scrollOnArrow,
+      onOffsetChange() {}
+    })
+  );
+
+  assert.equal(typeof resolveSignal<InteractionKeyBinding>(template.props.onKey), "function");
+
+  scrollOnArrow.set(false);
+
+  assert.equal(resolveSignal<InteractionKeyBinding>(template.props.onKey), false);
+});
+
+test("List renders as ScrollView with an internal for template", () => {
+  const items = createSignal([
+    { id: 1, label: "One" }
+  ]);
+  const template = asElement(
+    List({
+      height: 4,
+      offset: 1,
+      items,
+      getKey: (item) => item.id,
+      render: (item) => ({
+        kind: "element",
+        tag: "text",
+        props: {
+          value: item.label
+        },
+        children: []
+      })
+    })
+  );
+  const child = template.children[0]!;
+
+  assert.equal(template.tag, "box");
+  assert.equal(template.props.height, 4);
+  assert.equal(template.props.scrollY, 1);
+  assert.equal(child.kind, "for");
+
+  if (child.kind !== "for") {
+    throw new Error("Expected list child to be a for template.");
+  }
+
+  assert.equal(child.each, items);
+  assert.equal(child.key?.(items.get()[0]!, 0), 1);
+  assert.deepEqual(child.renderItem(items.get()[0]!, 0), {
+    kind: "element",
+    tag: "text",
+    props: {
+      value: "One"
+    },
+    children: []
+  });
+});
+
+test("List exposes the planned props types", () => {
+  const props: ListProps<{ id: number; label: string }> = {
+    id: "typed",
+    items: [{ id: 1, label: "One" }],
+    getKey: (item) => item.id,
+    render: (item) => ({
+      kind: "element",
+      tag: "text",
+      props: {
+        value: item.label
+      },
+      children: []
+    }),
+    height: 3,
+    width: 12,
+    offset: 0,
+    onOffsetChange() {}
+  };
+
+  assert.equal(asElement(List(props)).props.id, "typed");
 });

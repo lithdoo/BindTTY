@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { stripVTControlCharacters } from "node:util";
 
-import { Button, TextInput, createApp } from "bindtty";
+import { Button, List, ScrollView, TextInput, createApp } from "bindtty";
 import { createSignal } from "@bindtty/signal";
 import { ANSI, createNodeTerminal } from "@bindtty/terminal";
 import type {
@@ -425,6 +425,211 @@ test("tsx app dispatches terminal keys through TextInput widgets", async () => {
   await nextMicrotask();
 
   assert.equal(stdout.writes.length, writeCountAfterDispose);
+});
+
+test("tsx app clips and scrolls box content with signal offset", async () => {
+  const stdout = createFakeStdout(8, 4);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <box height={2} overflow="clip" scrollY={offset}>
+      <text value="A" />
+      <text value="B" />
+      <text value="C" />
+      <text value="D" />
+    </box>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /A/);
+  assert.match(visibleText(stdout.writes.at(-1)), /B/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /C/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /D/);
+
+  offset.set(2);
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /C/);
+  assert.match(visibleText(stdout.writes.at(-1)), /D/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /A/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /B/);
+
+  app.dispose();
+});
+
+test("tsx app scrolls ScrollView with keyboard focus", async () => {
+  const stdout = createFakeStdout(12, 5);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <ScrollView
+      height={2}
+      offset={offset}
+      onOffsetChange={(nextOffset) => {
+        offset.set(nextOffset);
+      }}
+    >
+      <text value="A" />
+      <text value="B" />
+      <text value="C" />
+      <text value="D" />
+    </ScrollView>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /A/);
+  assert.match(visibleText(stdout.writes.at(-1)), /B/);
+
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 1);
+  assert.match(visibleText(stdout.writes.at(-1)), /C/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /A/);
+
+  stdin.emitKey(undefined, { name: "pagedown" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 3);
+  assert.match(visibleText(stdout.writes.at(-1)), /D/);
+
+  stdin.emitKey(undefined, { name: "home" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 0);
+  assert.match(visibleText(stdout.writes.at(-1)), /A/);
+
+  app.dispose();
+});
+
+test("tsx app keeps TextInput arrow keys from scrolling ScrollView", async () => {
+  const stdout = createFakeStdout(24, 8);
+  const stdin = createFakeStdin();
+  const value = createSignal("abc");
+  const offset = createSignal(0);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <vstack>
+      <TextInput
+        value={value}
+        onChange={(nextValue) => {
+          value.set(nextValue);
+        }}
+      />
+      <ScrollView
+        height={2}
+        offset={offset}
+        onOffsetChange={(nextOffset) => {
+          offset.set(nextOffset);
+        }}
+      >
+        <text value="A" />
+        <text value="B" />
+        <text value="C" />
+      </ScrollView>
+    </vstack>,
+    { terminal }
+  );
+
+  app.start();
+
+  stdin.emitKey(undefined, { name: "right" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 0);
+
+  stdin.emitKey(undefined, { name: "tab" });
+  await nextMicrotask();
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 1);
+
+  app.dispose();
+});
+
+test("tsx app scrolls dynamic List data with for keys", async () => {
+  const stdout = createFakeStdout(12, 5);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const items = createSignal<readonly Item[]>([
+    { id: 1, label: "A" },
+    { id: 2, label: "B" },
+    { id: 3, label: "C" },
+    { id: 4, label: "D" }
+  ]);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <List
+      height={2}
+      offset={offset}
+      items={items}
+      getKey={(item) => (item as Item).id}
+      render={(item) => <text value={(item as Item).label} />}
+      onOffsetChange={(nextOffset) => {
+        offset.set(nextOffset);
+      }}
+    />,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /A/);
+  assert.match(visibleText(stdout.writes.at(-1)), /B/);
+
+  offset.set(2);
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /C/);
+  assert.match(visibleText(stdout.writes.at(-1)), /D/);
+
+  items.set([
+    ...items.get(),
+    { id: 5, label: "E" }
+  ]);
+  offset.set(3);
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /E/);
+
+  items.set([
+    { id: 3, label: "C" },
+    { id: 4, label: "D" },
+    { id: 5, label: "E" }
+  ]);
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /D/);
+  assert.match(visibleText(stdout.writes.at(-1)), /E/);
+
+  app.dispose();
 });
 
 test("tsx app edits TextInput with backspace arrows shift tab placeholder and empty submit", async () => {

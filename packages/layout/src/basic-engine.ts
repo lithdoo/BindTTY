@@ -1,11 +1,12 @@
 import type { MountedElementNode, MountedNode } from "@bindtty/vnode";
-import type { LayoutFlow, LayoutSize } from "./intrinsic.js";
+import type { LayoutFlow } from "./intrinsic.js";
 import { clampNonNegative, toNonNegativeNumber } from "./measure.js";
 import type {
   LayoutEngine,
   LayoutEngineOptions,
   LayoutNode,
-  LayoutRect
+  LayoutRect,
+  LayoutSize
 } from "./types.js";
 
 interface BoxEdges {
@@ -23,7 +24,15 @@ const supportedPropsByTag: Record<MountedElementNode["tag"], Set<string>> = {
   screen: new Set(),
   vstack: new Set(),
   hstack: new Set(),
-  box: new Set(["padding", "border"]),
+  box: new Set([
+    "padding",
+    "border",
+    "height",
+    "width",
+    "overflow",
+    "scrollX",
+    "scrollY"
+  ]),
   text: new Set(["value", "color", "bold"]),
   spacer: new Set(["size"]),
   button: new Set(["value", "disabled"]),
@@ -57,6 +66,8 @@ const futureLayoutProps = new Set<string>([
   "flexGrow",
   "flexShrink"
 ]);
+
+type LayoutOverflow = "visible" | "clip";
 
 const layoutPropAliases = new Map<string, string>([
   ["padding-top", "paddingTop"],
@@ -179,10 +190,12 @@ function measureBox(
   const contentConstraint = shrinkConstraint(constraint, edges);
   const childrenSize = measureFlowChildren(node.children, "column", contentConstraint);
   const inset = getBoxInset(edges);
+  const width = readOptionalSize(node.props.width);
+  const height = readOptionalSize(node.props.height);
 
   return {
-    width: childrenSize.width + inset * 2,
-    height: childrenSize.height + inset * 2
+    width: width ?? childrenSize.width + inset * 2,
+    height: height ?? childrenSize.height + inset * 2
   };
 }
 
@@ -283,12 +296,38 @@ function arrangeBox(
     width: clampNonNegative(rect.width - inset * 2),
     height: clampNonNegative(rect.height - inset * 2)
   };
-
-  return arrangeFlowElement(node, rect, contentRect, "column", {
+  const contentConstraint = {
     ...constraint,
     width: contentRect.width,
     height: contentRect.height
-  });
+  };
+  const layout = arrangeFlowElement(node, rect, contentRect, "column", contentConstraint);
+  const overflow = readOverflow(node.props.overflow);
+  const hasScrollX = hasOwn(node.props, "scrollX");
+  const hasScrollY = hasOwn(node.props, "scrollY");
+
+  if (overflow === "clip") {
+    layout.clip = contentRect;
+  }
+
+  if (overflow === "clip" || hasScrollX || hasScrollY) {
+    layout.contentSize = measureFlowChildren(node.children, "column", contentConstraint);
+  }
+
+  if (hasScrollX || hasScrollY) {
+    const contentSize = layout.contentSize ?? {
+      width: contentRect.width,
+      height: contentRect.height
+    };
+    const maxY = clampNonNegative(contentSize.height - contentRect.height);
+
+    layout.scrollOffset = {
+      x: 0,
+      y: clamp(readScrollOffset(node.props.scrollY), 0, maxY)
+    };
+  }
+
+  return layout;
 }
 
 function arrangeFlowElement(
@@ -447,4 +486,40 @@ function validateElementProps(node: MountedElementNode): void {
       throw new Error(`Unsupported layout prop: ${canonicalName}`);
     }
   }
+
+  if (node.tag === "box") {
+    readOverflow(node.props.overflow);
+  }
+}
+
+function readOptionalSize(value: unknown): number | undefined {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+
+  return toNonNegativeNumber(value);
+}
+
+function readOverflow(value: unknown): LayoutOverflow {
+  if (value === null || value === undefined) {
+    return "visible";
+  }
+
+  if (value === "visible" || value === "clip") {
+    return value;
+  }
+
+  throw new Error(`Unsupported overflow value: ${String(value)}`);
+}
+
+function readScrollOffset(value: unknown): number {
+  return Math.floor(toNonNegativeNumber(value));
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function hasOwn(object: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(object, key);
 }
