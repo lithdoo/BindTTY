@@ -12,13 +12,13 @@ import {
 } from "bindtty";
 import { createSignal } from "@bindtty/signal";
 import type { Dispose, TerminalHost, TerminalKeyEvent, TerminalViewport } from "@bindtty/terminal";
+import { createYogaLayoutEngine, type LayoutEngine, type LayoutViewport } from "@bindtty/layout";
 import {
   elementTemplate,
   forTemplate,
   showTemplate,
   type MountedElementApi
 } from "@bindtty/vnode";
-import type { LayoutEngine, LayoutViewport } from "@bindtty/layout";
 import type { RuntimeLifecycleError } from "@bindtty/runtime";
 
 interface MockStdout extends AppStdout {
@@ -1072,6 +1072,42 @@ test("terminal mode scrolls from applied offset without implicit signal writebac
 
   terminal.emitKey(keyEvent("", { name: "down" }));
   assert.equal(offset.get(), 2);
+
+  app.dispose();
+});
+
+test("terminal mode scrolls wrapped content with Yoga layout engine", () => {
+  const terminal = createMockTerminal(8, 4);
+  const offset = createSignal(0);
+  const app = createApp(
+    ScrollView({
+      height: 2,
+      width: 5,
+      offset,
+      onOffsetChange: (nextOffset) => {
+        offset.set(nextOffset);
+      },
+      children: elementTemplate("text", {
+        value: "one two three four",
+        wrap: "wrap"
+      })
+    }),
+    {
+      terminal,
+      layoutEngine: createYogaLayoutEngine()
+    }
+  );
+
+  app.start();
+
+  terminal.emitKey(keyEvent("", { name: "end" }));
+  assert.equal(offset.get(), 2);
+
+  terminal.emitKey(keyEvent("", { name: "down" }));
+  assert.equal(offset.get(), 2);
+
+  terminal.emitKey(keyEvent("", { name: "home" }));
+  assert.equal(offset.get(), 0);
 
   app.dispose();
 });

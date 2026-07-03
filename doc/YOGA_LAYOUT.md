@@ -1596,33 +1596,33 @@ examples/yoga-layout
 
 任务：
 
-- [ ] 新建 `packages/text`。
-- [ ] 新增 `measureText()`。
-- [ ] 新增 `measureTextWidth()`。
-- [ ] 新增 `layoutText()`。
-- [ ] 支持 `legacy`。
-- [ ] 支持 `none`。
-- [ ] 支持 `wrap`。
-- [ ] 支持 `hard`。
-- [ ] 支持 `truncate-end`。
-- [ ] 支持 `truncate-middle`。
-- [ ] 支持 `truncate-start`。
-- [ ] 增加文本测量缓存。
+- [x] 新建 `packages/text`。
+- [x] 新增 `measureText()`。
+- [x] 新增 `measureTextWidth()`。
+- [x] 新增 `layoutText()`。
+- [x] 支持 `legacy`。
+- [x] 支持 `none`。
+- [x] 支持 `wrap`。
+- [x] 支持 `hard`。
+- [x] 支持 `truncate-end`。
+- [x] 支持 `truncate-middle`。
+- [x] 支持 `truncate-start`。
+- [x] 增加文本测量缓存。
 - [ ] 选定 Node 18 兼容依赖版本。
-- [ ] 导出完整类型。
-- [ ] 增加 unit tests。
+- [x] 导出完整类型。
+- [x] 增加 unit tests。
 
 验收：
 
-- [ ] `@bindtty/text` 可 build。
-- [ ] `@bindtty/text` 可 test。
-- [ ] ASCII width 正确。
-- [ ] newline height 在非 legacy 模式正确。
-- [ ] legacy 模式只取第一行。
-- [ ] wrap 后 lines / width / height 一致。
-- [ ] truncate 行为稳定。
-- [ ] 空字符串返回 `{ width: 0, height: 0 }`。
-- [ ] 不把 CJK / emoji / ANSI escape 作为 MVP 必过项。
+- [x] `@bindtty/text` 可 build。
+- [x] `@bindtty/text` 可 test。
+- [x] ASCII width 正确。
+- [x] newline height 在非 legacy 模式正确。
+- [x] legacy 模式只取第一行。
+- [x] wrap 后 lines / width / height 一致。
+- [x] truncate 行为稳定。
+- [x] 空字符串返回 `{ width: 0, height: 0 }`。
+- [x] 不把 CJK / emoji / ANSI escape 作为 MVP 必过项。
 
 ## 阶段 2：text.wrap 接入 BasicLayoutEngine 与 renderer
 
@@ -1630,28 +1630,28 @@ examples/yoga-layout
 
 任务：
 
-- [ ] `@bindtty/vnode` 的 text schema 增加 `wrap`。
-- [ ] `@bindtty/jsx-runtime` 的 text intrinsic type 增加 `wrap`。
-- [ ] `BasicLayoutEngine` 的 text measure 使用 `layoutText()`。
-- [ ] `BasicLayoutEngine` 在 wrap 未设置时保持 legacy height。
-- [ ] `BasicLayoutEngine` 在 `wrap="none"` / `wrap="wrap"` 时返回多行 height。
-- [ ] `renderer-terminal/paint.ts` import `layoutText()`。
-- [ ] `paintText()` 支持多行绘制。
-- [ ] 添加 renderer snapshot tests。
+- [x] `@bindtty/vnode` 的 text schema 增加 `wrap`。
+- [x] `@bindtty/jsx-runtime` 的 text intrinsic type 增加 `wrap`。
+- [x] `BasicLayoutEngine` 的 text measure 使用 `layoutText()`。
+- [x] `BasicLayoutEngine` 在 wrap 未设置时保持 legacy height。
+- [x] `BasicLayoutEngine` 在 `wrap="none"` / `wrap="wrap"` 时返回多行 height。
+- [x] `renderer-terminal/paint.ts` import `layoutText()`。
+- [x] `paintText()` 支持多行绘制。
+- [x] 添加 renderer snapshot tests。
 - [ ] 添加 text wrap 示例。
 
 验收：
 
-- [ ] `text` 默认仍 single-line。
-- [ ] `text` 默认忽略第一个 newline 后内容。
-- [ ] `text wrap="none"` 保留显式 newline 并产生多行 height。
-- [ ] `text wrap="wrap"` 可以在 BasicLayoutEngine 下产生多行 height。
-- [ ] renderer 可以绘制多行。
-- [ ] layout height 与 renderer lines 一致。
-- [ ] clip 与多行 text 协同正确。
-- [ ] text 样式在多行中保持一致。
-- [ ] focusStyle 对多行 text rect 生效。
-- [ ] 现有 renderer 测试不回退。
+- [x] `text` 默认仍 single-line。
+- [x] `text` 默认忽略第一个 newline 后内容。
+- [x] `text wrap="none"` 保留显式 newline 并产生多行 height。
+- [x] `text wrap="wrap"` 可以在 BasicLayoutEngine 下产生多行 height。
+- [x] renderer 可以绘制多行。
+- [x] layout height 与 renderer lines 一致。
+- [x] clip 与多行 text 协同正确。
+- [x] text 样式在多行中保持一致。
+- [x] focusStyle 对多行 text rect 生效。
+- [x] 现有 renderer 测试不回退。
 
 ## 阶段 3：app 级 layoutEngine 注入
 
@@ -1659,19 +1659,19 @@ examples/yoga-layout
 
 任务：
 
-- [ ] `CreateAppOptions` 增加 `layoutEngine?: LayoutEngine`。
-- [ ] `createApp()` 调用 `layoutRoot(runtime.root, { viewport, engine: options.layoutEngine })`。
-- [ ] stdout mode 支持 layoutEngine。
-- [ ] terminal mode 支持 layoutEngine。
-- [ ] 增加 app 层测试。
-- [ ] 文档标注该选项为 experimental 或正式 API。
+- [x] `CreateAppOptions` 增加 `layoutEngine?: LayoutEngine`。
+- [x] `createApp()` 调用 `layoutRoot(runtime.root, { viewport, engine: options.layoutEngine })`。
+- [x] stdout mode 支持 layoutEngine。
+- [x] terminal mode 支持 layoutEngine。
+- [x] 增加 app 层测试。
+- [x] 文档标注该选项为 experimental 或正式 API。
 
 验收：
 
-- [ ] 不传 layoutEngine 时行为不变。
-- [ ] 传入 custom layoutEngine 时 app 使用该 engine。
-- [ ] 可用 `createYogaLayoutEngine()` 跑 app render path。
-- [ ] 为 ScrollView under Yoga e2e 打通入口。
+- [x] 不传 layoutEngine 时行为不变。
+- [x] 传入 custom layoutEngine 时 app 使用该 engine。
+- [x] 可用 `createYogaLayoutEngine()` 跑 app render path。
+- [x] 为 ScrollView under Yoga e2e 打通入口。
 
 ## 阶段 4：YogaLayoutEngine MVP
 
@@ -1679,35 +1679,35 @@ examples/yoga-layout
 
 任务：
 
-- [ ] `@bindtty/layout` 增加 `yoga-layout` 依赖。
-- [ ] 新增 `src/yoga-engine.ts`。
-- [ ] 实现 `createYogaLayoutEngine()`。
-- [ ] 支持 `screen`。
-- [ ] 支持 `vstack`。
-- [ ] 支持 `hstack`。
-- [ ] 支持 `box`。
-- [ ] 支持 `text` measure function。
-- [ ] 支持 `spacer`。
-- [ ] 支持 `fragment`。
-- [ ] 支持 `show`。
-- [ ] 支持 `for`。
-- [ ] 输出现有 `LayoutNode`。
-- [ ] 每次 layout 后 `freeRecursive()`。
-- [ ] 保留 `createBasicLayoutEngine()`。
+- [x] `@bindtty/layout` 增加 `yoga-layout` 依赖。
+- [x] 新增 `src/yoga-engine.ts`。
+- [x] 实现 `createYogaLayoutEngine()`。
+- [x] 支持 `screen`。
+- [x] 支持 `vstack`。
+- [x] 支持 `hstack`。
+- [x] 支持 `box`。
+- [x] 支持 `text` measure function。
+- [x] 支持 `spacer`。
+- [x] 支持 `fragment`。
+- [x] 支持 `show`。
+- [x] 支持 `for`。
+- [x] 输出现有 `LayoutNode`。
+- [x] 每次 layout 后 `freeRecursive()`。
+- [x] 保留 `createBasicLayoutEngine()`。
 
 验收：
 
-- [ ] `layoutRoot(root, { engine: createYogaLayoutEngine() })` 可用。
-- [ ] `createApp(view, { layoutEngine: createYogaLayoutEngine() })` 可用。
-- [ ] screen rect 等于 viewport。
-- [ ] vstack column 排布正确。
-- [ ] hstack row 排布正确。
-- [ ] box padding / border / contentRect 正确。
-- [ ] text wrap 后 height 正确。
-- [ ] spacer 行为与当前语义兼容。
-- [ ] show / for 动态结构 layout 正确。
-- [ ] Yoga node 不泄漏。
-- [ ] Basic engine 仍可使用。
+- [x] `layoutRoot(root, { engine: createYogaLayoutEngine() })` 可用。
+- [x] `createApp(view, { layoutEngine: createYogaLayoutEngine() })` 可用。
+- [x] screen rect 等于 viewport。
+- [x] vstack column 排布正确。
+- [x] hstack row 排布正确。
+- [x] box padding / border / contentRect 正确。
+- [x] text wrap 后 height 正确。
+- [x] spacer 行为与当前语义兼容。
+- [x] show / for 动态结构 layout 正确。
+- [x] Yoga node 不泄漏。
+- [x] Basic engine 仍可使用。
 
 ## 阶段 5：Yoga 下的 ScrollView / contentSize / scrollOffset
 
@@ -1715,14 +1715,14 @@ examples/yoga-layout
 
 任务：
 
-- [ ] Yoga engine 计算 `clip`。
-- [ ] Yoga engine 基于 children union 或自然内容测量计算 `contentSize`。
-- [ ] Yoga engine 不能直接使用 container computed size 作为 scroll contentSize。
-- [ ] Yoga engine 计算 `scrollOffset`。
-- [ ] 保持 `scrollY` clamp。
-- [ ] 保持 `scrollX` clamp。
-- [ ] `ScrollView` 在 Yoga engine 下继续使用 `api.onLayout`。
-- [ ] 增加 wrapped text inside ScrollView 测试。
+- [x] Yoga engine 计算 `clip`。
+- [x] Yoga engine 基于 children union 或自然内容测量计算 `contentSize`。
+- [x] Yoga engine 不能直接使用 container computed size 作为 scroll contentSize。
+- [x] Yoga engine 计算 `scrollOffset`。
+- [x] 保持 `scrollY` clamp。
+- [x] 保持 `scrollX` clamp。
+- [x] `ScrollView` 在 Yoga engine 下继续使用 `api.onLayout`。
+- [x] 增加 wrapped text inside ScrollView 测试。
 - [ ] 增加 flexShrink + scroll container 测试。
 - [ ] 增加 fixed height scroll container 测试。
 - [ ] 增加 dynamic content shrink / expand 测试。
@@ -1730,11 +1730,11 @@ examples/yoga-layout
 
 验收：
 
-- [ ] 长 wrapped text 可以撑高 `contentSize.height`。
-- [ ] `End` 滚动到 `maxY`。
+- [x] 长 wrapped text 可以撑高 `contentSize.height`。
+- [x] `End` 滚动到 `maxY`。
 - [ ] 内容缩短后 appliedY 被 clamp。
-- [ ] `api.onLayout` 拿到正确 `scrollOffset`。
-- [ ] 不反写用户 signal。
+- [x] `api.onLayout` 拿到正确 `scrollOffset`。
+- [x] 不反写用户 signal。
 - [ ] PageUp / PageDown 使用实际 viewport height。
 - [ ] List 动态数据变更后滚动状态正确。
 - [ ] fixed height scroll container 下 contentSize 与 rect.height 区分正确。
@@ -1746,27 +1746,27 @@ examples/yoga-layout
 
 任务：
 
-- [ ] schema 增加 `gap`。
-- [ ] schema 增加 `flexGrow`。
-- [ ] schema 增加 `flexShrink`。
-- [ ] schema 增加 `alignItems`。
-- [ ] schema 增加 `justifyContent`。
-- [ ] schema 增加 `flexWrap`。
-- [ ] JSX 类型同步。
-- [ ] Yoga engine 映射这些 props。
-- [ ] layout validator 更新 supported props。
+- [x] schema 增加 `gap`。
+- [x] schema 增加 `flexGrow`。
+- [x] schema 增加 `flexShrink`。
+- [x] schema 增加 `alignItems`。
+- [x] schema 增加 `justifyContent`。
+- [x] schema 增加 `flexWrap`。
+- [x] JSX 类型同步。
+- [x] Yoga engine 映射这些 props。
+- [x] layout validator 更新 supported props。
 - [ ] 更新文档示例。
 
 验收：
 
-- [ ] hstack gap 正确。
+- [x] hstack gap 正确。
 - [ ] vstack gap 正确。
 - [ ] hstack flexWrap 可以换行。
 - [ ] flexGrow 分配剩余空间。
 - [ ] flexShrink 在空间不足时收缩。
-- [ ] alignItems 基本行为正确。
-- [ ] justifyContent 基本行为正确。
-- [ ] 未支持 prop 仍给出明确错误。
+- [x] alignItems 基本行为正确。
+- [x] justifyContent 基本行为正确。
+- [x] 未支持 prop 仍给出明确错误。
 
 ## 阶段 7：默认 engine 切换
 
@@ -1774,17 +1774,17 @@ examples/yoga-layout
 
 前置条件：
 
-- [ ] Yoga engine 覆盖现有 Basic engine 的核心行为。
-- [ ] ScrollView / List e2e 通过。
-- [ ] renderer snapshot 通过。
+- [x] Yoga engine 覆盖现有 Basic engine 的核心行为。
+- [x] ScrollView / List e2e 通过。
+- [x] renderer snapshot 通过。
 - [ ] examples 全部通过。
 - [ ] Node 18 环境通过。
-- [ ] real PTY e2e 通过。
+- [x] real PTY e2e 通过。
 
 任务：
 
-- [ ] `layoutRoot()` 默认 engine 从 Basic 切到 Yoga。
-- [ ] `createBasicLayoutEngine()` 保留导出。
+- [x] `layoutRoot()` 默认 engine 从 Basic 切到 Yoga。
+- [x] `createBasicLayoutEngine()` 保留导出。
 - [ ] 文档标注 Basic 为 legacy。
 - [ ] 更新 [LAYOUT.md](./LAYOUT.md)。
 - [ ] 更新 [RENDERER.md](./RENDERER.md)。
@@ -1795,10 +1795,10 @@ examples/yoga-layout
 
 验收：
 
-- [ ] 默认 app 使用 Yoga。
-- [ ] 用户无需显式传 engine。
+- [x] 默认 app 使用 Yoga。
+- [x] 用户无需显式传 engine。
 - [ ] 现有示例表现不回退。
-- [ ] Basic engine 仍可通过显式 engine 使用。
+- [x] Basic engine 仍可通过显式 engine 使用。
 - [ ] 文档与代码一致。
 
 ## 阶段 8：BasicLayoutEngine 退场评估

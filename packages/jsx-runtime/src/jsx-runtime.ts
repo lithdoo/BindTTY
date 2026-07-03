@@ -83,6 +83,25 @@ interface IntrinsicBoxStyleProps {
   scrollY?: BindingValue<number>;
 }
 
+interface IntrinsicFlexItemProps {
+  flexGrow?: BindingValue<number>;
+  flexShrink?: BindingValue<number>;
+}
+
+interface IntrinsicFlexContainerProps {
+  gap?: BindingValue<number>;
+  alignItems?: BindingValue<"flex-start" | "center" | "flex-end" | "stretch">;
+  justifyContent?: BindingValue<
+    | "flex-start"
+    | "center"
+    | "flex-end"
+    | "space-between"
+    | "space-around"
+    | "space-evenly"
+  >;
+  flexWrap?: BindingValue<"nowrap" | "wrap" | "wrap-reverse">;
+}
+
 export function jsx(
   type: JsxType,
   rawProps: JsxProps | null,
@@ -184,19 +203,19 @@ export namespace JSX {
       children?: TemplateChildren;
     };
 
-    box: IntrinsicInteractionProps & IntrinsicBoxStyleProps & IntrinsicPaintProps & {
+    box: IntrinsicInteractionProps & IntrinsicBoxStyleProps & IntrinsicPaintProps & IntrinsicFlexItemProps & IntrinsicFlexContainerProps & {
       children?: TemplateChildren;
     };
 
-    vstack: IntrinsicInteractionProps & {
+    vstack: IntrinsicInteractionProps & IntrinsicFlexItemProps & IntrinsicFlexContainerProps & {
       children?: TemplateChildren;
     };
 
-    hstack: IntrinsicInteractionProps & {
+    hstack: IntrinsicInteractionProps & IntrinsicFlexItemProps & IntrinsicFlexContainerProps & {
       children?: TemplateChildren;
     };
 
-    text: IntrinsicInteractionProps & IntrinsicPaintProps & {
+    text: IntrinsicInteractionProps & IntrinsicPaintProps & IntrinsicFlexItemProps & {
       value: BindingValue<string | number>;
       wrap?: BindingValue<PublicTextWrapMode>;
       children?: never;
@@ -215,7 +234,7 @@ export namespace JSX {
       children?: never;
     };
 
-    spacer: IntrinsicInteractionProps & {
+    spacer: IntrinsicInteractionProps & IntrinsicFlexItemProps & {
       size?: BindingValue<number>;
       children?: never;
     };

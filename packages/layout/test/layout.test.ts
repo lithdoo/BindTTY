@@ -5,6 +5,7 @@ import { createRuntimeRoot } from "@bindtty/runtime";
 import { createSignal } from "@bindtty/signal";
 import {
   createBasicLayoutEngine,
+  createYogaLayoutEngine,
   layoutRoot,
   type LayoutEngine,
   type LayoutViewport
@@ -85,7 +86,7 @@ test("layoutRoot returns null for null roots", () => {
   assert.equal(layoutRoot(null, { viewport }), null);
 });
 
-test("layoutRoot uses BasicLayoutEngine by default", () => {
+test("layoutRoot uses YogaLayoutEngine by default", () => {
   const root = createMountedText();
   const layout = layoutRoot(root, { viewport });
 
@@ -152,6 +153,221 @@ test("lays out text with legacy single-line behavior by default", () => {
     height: 1
   });
   assert.deepEqual(layout?.contentRect, layout?.rect);
+});
+
+test("createYogaLayoutEngine exposes the layout engine contract", () => {
+  const root = createMountedText();
+  const engine = createYogaLayoutEngine();
+  const layout = engine.layout(root, { viewport });
+
+  assert.equal(layout?.mounted, root);
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 5,
+    height: 1
+  });
+  assert.deepEqual(layout?.contentRect, layout?.rect);
+});
+
+test("Yoga engine lays out screen at viewport size", () => {
+  const root = createMountedElement("screen", {}, [createMountedText("A")]);
+  const layout = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 80,
+    height: 24
+  });
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1
+  });
+});
+
+test("Yoga engine lays out vstack and hstack flow", () => {
+  const column = createMountedElement("vstack", {}, [
+    createMountedText("A"),
+    createMountedText("Long")
+  ]);
+  const row = createMountedElement("hstack", {}, [
+    createMountedText("A"),
+    createMountedText("BC")
+  ]);
+
+  const columnLayout = layoutRoot(column, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+  const rowLayout = layoutRoot(row, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(columnLayout?.rect, {
+    x: 0,
+    y: 0,
+    width: 4,
+    height: 2
+  });
+  assert.deepEqual(columnLayout?.children[1]?.rect, {
+    x: 0,
+    y: 1,
+    width: 4,
+    height: 1
+  });
+  assert.deepEqual(rowLayout?.rect, {
+    x: 0,
+    y: 0,
+    width: 3,
+    height: 1
+  });
+  assert.deepEqual(rowLayout?.children[1]?.rect, {
+    x: 1,
+    y: 0,
+    width: 2,
+    height: 1
+  });
+});
+
+test("Yoga engine lays out box content rect and wrapped text", () => {
+  const root = createMountedElement("box", {
+    width: 7,
+    padding: 1,
+    border: true
+  }, [
+    createMountedElement("text", {
+      value: "hello world",
+      wrap: "wrap"
+    })
+  ]);
+  const layout = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 7,
+    height: 8
+  });
+  assert.deepEqual(layout?.contentRect, {
+    x: 2,
+    y: 2,
+    width: 3,
+    height: 4
+  });
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 2,
+    y: 2,
+    width: 3,
+    height: 4
+  });
+});
+
+test("Yoga engine outputs clip content size and scroll offsets", () => {
+  const root = createMountedElement("box", {
+    height: 2,
+    overflow: "clip",
+    scrollY: 99
+  }, [
+    createMountedText("A"),
+    createMountedText("B"),
+    createMountedText("C"),
+    createMountedText("D")
+  ]);
+  const layout = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(layout?.clip, {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 2
+  });
+  assert.deepEqual(layout?.contentSize, {
+    width: 1,
+    height: 4
+  });
+  assert.deepEqual(layout?.scrollOffset, {
+    x: 0,
+    y: 2
+  });
+});
+
+test("Yoga engine supports gap on row containers", () => {
+  const root = createMountedElement("hstack", {
+    gap: 2
+  }, [
+    createMountedText("A"),
+    createMountedText("B")
+  ]);
+  const layout = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 4,
+    height: 1
+  });
+  assert.deepEqual(layout?.children[1]?.rect, {
+    x: 3,
+    y: 0,
+    width: 1,
+    height: 1
+  });
+});
+
+test("Yoga engine supports alignItems on box containers", () => {
+  const root = createMountedElement("box", {
+    width: 5,
+    alignItems: "center"
+  }, [
+    createMountedText("A")
+  ]);
+  const layout = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 2,
+    y: 0,
+    width: 1,
+    height: 1
+  });
+});
+
+test("Yoga engine supports justifyContent on box containers", () => {
+  const root = createMountedElement("box", {
+    height: 5,
+    justifyContent: "center"
+  }, [
+    createMountedText("A")
+  ]);
+  const layout = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 0,
+    y: 2,
+    width: 1,
+    height: 1
+  });
 });
 
 test("lays out text wrap none with explicit newlines", () => {

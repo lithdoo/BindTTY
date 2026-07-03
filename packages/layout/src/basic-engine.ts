@@ -65,7 +65,8 @@ const futureLayoutProps = new Set<string>([
   "justifyContent",
   "alignItems",
   "flexGrow",
-  "flexShrink"
+  "flexShrink",
+  "flexWrap"
 ]);
 
 type LayoutOverflow = "visible" | "clip";

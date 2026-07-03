@@ -1,8 +1,8 @@
-import { createBasicLayoutEngine } from "./basic-engine.js";
+import { createYogaLayoutEngine } from "./yoga-engine.js";
 import type { LayoutNode, LayoutOptions } from "./types.js";
 import type { MountedNode } from "@bindtty/vnode";
 
-const defaultEngine = createBasicLayoutEngine();
+const defaultEngine = createYogaLayoutEngine();
 
 export function layoutRoot(
   root: MountedNode | null,

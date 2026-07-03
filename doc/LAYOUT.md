@@ -138,9 +138,9 @@ export function layoutRoot(
 ): LayoutNode | null;
 ```
 
-`layoutRoot()` 是稳定入口。第一版默认使用 `BasicLayoutEngine`，后续可以传入 `YogaLayoutEngine`，上层 runtime / renderer 不需要改变调用方式。
+`layoutRoot()` 是稳定入口。当前默认使用 `YogaLayoutEngine`，也可以通过 `options.engine` 显式传入 `BasicLayoutEngine` 或自定义 engine，上层 runtime / renderer 不需要改变调用方式。
 
-`BasicLayoutEngine` 已实现 screen、box、vstack、hstack、text、spacer 及 fragment/show/for 结构的 measure / arrange。intrinsic `button` / `input` 会抛 `Unsupported layout element`。
+`YogaLayoutEngine` 已实现 screen、box、vstack、hstack、text、spacer 及 fragment/show/for 结构的 measure / arrange。`BasicLayoutEngine` 仍作为 legacy fallback 保留导出。intrinsic `button` / `input` 会抛 `Unsupported layout element`。
 
 使用方式：
 
@@ -365,7 +365,7 @@ export function createBasicLayoutEngine(): LayoutEngine;
 默认入口：
 
 ```ts
-const defaultEngine = createBasicLayoutEngine();
+const defaultEngine = createYogaLayoutEngine();
 
 export function layoutRoot(root, options) {
   return (options.engine ?? defaultEngine).layout(root, {
@@ -374,10 +374,12 @@ export function layoutRoot(root, options) {
 }
 ```
 
-未来 Yoga backend：
+上面的结构表示 `options.engine` 可替换 backend 的稳定 contract。
+
+legacy fallback：
 
 ```ts
-export function createYogaLayoutEngine(): LayoutEngine;
+export function createBasicLayoutEngine(): LayoutEngine;
 ```
 
 整体边界：
@@ -390,19 +392,19 @@ LayoutEngine
   internal/backend API
 
 BasicLayoutEngine
-  MVP 手写排版
+  legacy fallback / compatibility backend
 
 YogaLayoutEngine
-  future Flexbox backend
+  default Flexbox backend
 ```
 
 为什么先抽接口：
 
 ```text
 1. 现在可以快速实现基础布局。
-2. 后续切到 Yoga 不影响 runtime / renderer。
+2. 默认切到 Yoga 不影响 runtime / renderer。
 3. 测试可以复用同一组 layout contract。
-4. BasicLayoutEngine 可以长期作为无原生依赖 fallback。
+4. BasicLayoutEngine 可以长期作为 legacy fallback。
 ```
 
 ## 7. 内建基础元素与控件边界
@@ -554,15 +556,24 @@ export interface LayoutStyle {
 }
 ```
 
-MVP 的 `BasicLayoutEngine` 只读取其中一部分：
+`YogaLayoutEngine` 当前公开第一批 flex props，并继续支持 M7 所需的 `box` 尺寸与 scroll metadata：
 
 ```text
-padding
-paddingX / paddingY / paddingTop / paddingRight / paddingBottom / paddingLeft
-border
+box:
+  width / height / padding / border / overflow / scrollX / scrollY
+  gap / flexGrow / flexShrink / alignItems / justifyContent / flexWrap
+
+vstack / hstack:
+  gap / flexGrow / flexShrink / alignItems / justifyContent / flexWrap
+
+text:
+  value / wrap / flexGrow / flexShrink
+
+spacer:
+  size / flexGrow / flexShrink
 ```
 
-其他字段可以先保留在类型设计里，但不从 vnode props 暴露，或者暴露后明确标记为 future unsupported。实现时遇到尚未支持的布局字段，应选择抛错或忽略；第一版建议抛错，避免用户误以为 Flexbox 已完整生效。
+其他尚未支持的布局字段应明确抛错，避免用户误以为完整 CSS/Flexbox 已生效。
 
 ### 9.1 margin 策略
 
@@ -614,7 +625,7 @@ vstack = box flexDirection="column"
 hstack = box flexDirection="row"
 ```
 
-第一版仍可以直接实现 `vstack` / `hstack` 分支，保证落地简单。未来 Yoga backend 可以把它们映射成 Yoga node 的 `flexDirection`。
+当前 Yoga backend 已将 `vstack` / `hstack` 映射成 Yoga node 的 `flexDirection`，Basic fallback 仍保留直接分支实现。
 
 ### 9.3 layout prop 命名
 
@@ -692,13 +703,13 @@ justify-content -> justifyContent
 align-items -> alignItems
 ```
 
-## 10. BasicLayoutEngine MVP 语义
+## 10. BasicLayoutEngine Legacy 语义
 
-`BasicLayoutEngine` 是默认 engine。它的目标是跑通 `MountedNode -> LayoutNode` 主链路，不实现完整 Flexbox。
+`BasicLayoutEngine` 现在是显式 fallback engine。它的目标是保留第一版 `MountedNode -> LayoutNode` 主链路能力，不实现完整 Flexbox。
 
 ### 10.1 Props 使用范围
 
-MVP 只从 `MountedElementNode.props` 读取以下字段：
+Basic legacy engine 只从 `MountedElementNode.props` 读取以下字段：
 
 | tag | props used by BasicLayoutEngine |
 | --- | --- |
@@ -711,7 +722,7 @@ MVP 只从 `MountedElementNode.props` 读取以下字段：
 
 `LayoutStyle` 是未来 Yoga / Flexbox 的内部归一化目标，不等于当前公开 props。
 
-当前 vnode schema 中 `box` 已公开 M7 所需的固定尺寸与滚动 metadata props，但仍不公开 `margin` / `gap` / `alignItems` 等 future props。
+当前 vnode schema 已公开 M7 所需的固定尺寸与滚动 metadata props，以及第一批 Yoga flex props。`BasicLayoutEngine` 尚未支持的 layout prop 应明确抛错，而不是静默忽略。
 
 实现时应先执行 layout prop 归一化：
 
@@ -786,7 +797,7 @@ for
 
 ### 10.4 Viewport、overflow 与 scroll metadata
 
-当前 BasicLayoutEngine 已支持 `overflow="clip"` 输出 `LayoutNode.clip`，并在存在 `scrollX` / `scrollY` 时输出 clamp 后的 `LayoutNode.scrollOffset` 与自然内容尺寸 `contentSize`。
+当前 BasicLayoutEngine 与 YogaLayoutEngine 都支持 `overflow="clip"` 输出 `LayoutNode.clip`，并在存在 `scrollX` / `scrollY` 时输出 clamp 后的 `LayoutNode.scrollOffset` 与自然内容尺寸 `contentSize`。
 
 规则：
 
@@ -1208,12 +1219,12 @@ structure dirty:
    RuntimeRoot flush 后可调用 layoutRoot(root, viewport)
 
 12. engine abstraction:
-   layoutRoot 默认使用 BasicLayoutEngine
+   layoutRoot 默认使用 YogaLayoutEngine
    options.engine 可以替换 backend
    custom engine 收到 root 和 viewport
 
-13. BasicLayoutEngine MVP:
-   只读取 MVP props
+13. BasicLayoutEngine legacy:
+   只读取 legacy props
    camelCase / kebab-case alias 归一化为 camelCase
    duplicate alias 抛错
    非 box contentRect = rect
@@ -1237,7 +1248,7 @@ structure dirty:
 1. 新增 packages/layout。
 2. 导出 LayoutNode / LayoutRect / LayoutOptions / LayoutEngine。
 3. 导出 layoutRoot(root, options)。
-4. 默认使用 BasicLayoutEngine。
+4. 默认使用 YogaLayoutEngine。
 5. 支持自定义 engine 替换。
 6. 支持 screen / vstack / hstack / box / text / spacer。
 7. 支持 fragment / show / for structure nodes。
@@ -1245,8 +1256,8 @@ structure dirty:
 9. layout 是纯函数，不依赖 terminal IO。
 10. runtime flush 后可以重新 layout。
 11. 盒模型实现 padding / border / content。
-12. 文档预留 Yoga / Flexbox / margin / gap / alignment 方向。
-13. BasicLayoutEngine 只读取 MVP props。
+12. 文档预留后续 margin 方向，首批 Yoga gap / alignment props 已公开。
+13. BasicLayoutEngine 只读取 legacy props。
 14. camelCase / kebab-case layout prop alias 有归一化和冲突测试。
 15. contentRect / flow / viewport / unsupported 策略有测试覆盖。
 16. renderer contract 有文档和测试覆盖。
@@ -1275,7 +1286,7 @@ LayoutNode
 
 ## M7 当前实现：Clip / Scroll Metadata
 
-M7 已在 `BasicLayoutEngine` 中补齐滚动窗口所需的最小 layout props：
+M7 已在 layout engine 中补齐滚动窗口所需的最小 layout props：
 
 ```text
 box:
