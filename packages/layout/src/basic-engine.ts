@@ -336,7 +336,12 @@ function arrangeBox(
   }
 
   if (overflow === "clip" || hasScrollX || hasScrollY) {
-    layout.contentSize = measureFlowChildren(node.children, "column", contentConstraint);
+    const naturalContentSize = measureFlowChildren(node.children, "column", contentConstraint);
+
+    layout.contentSize = {
+      width: Math.max(contentRect.width, naturalContentSize.width),
+      height: Math.max(contentRect.height, naturalContentSize.height)
+    };
   }
 
   if (hasScrollX || hasScrollY) {

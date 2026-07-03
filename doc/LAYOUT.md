@@ -800,7 +800,27 @@ for
 
 ### 10.4 Viewport、overflow 与 scroll metadata
 
-当前 BasicLayoutEngine 已支持 `overflow="clip"` 输出 `LayoutNode.clip`，并在存在 `scrollX` / `scrollY` 时输出 clamp 后的 `LayoutNode.scrollOffset` 与自然内容尺寸 `contentSize`。
+`contentRect` / `contentSize` / `scrollOffset` 采用 DOM-like scroll 语义：
+
+```text
+contentRect.width   ≈ clientWidth
+contentRect.height  ≈ clientHeight
+
+contentSize.width   ≈ scrollWidth
+contentSize.height  ≈ scrollHeight
+
+scrollOffset.x      ≈ scrollLeft
+scrollOffset.y      ≈ scrollTop
+```
+
+因此 `contentSize` 表示 scroll content size，不表示单纯的 children 自然尺寸。即使内容小于可视区域，`contentSize` 也必须至少等于 `contentRect`：
+
+```text
+contentSize.width  = max(contentRect.width, naturalContentWidth)
+contentSize.height = max(contentRect.height, naturalContentHeight)
+```
+
+当前 BasicLayoutEngine 与 YogaLayoutEngine 均支持 `overflow="clip"` 输出 `LayoutNode.clip`，并在存在 `scrollX` / `scrollY` 时输出 clamp 后的 `LayoutNode.scrollOffset` 与 DOM-like `contentSize`。
 
 规则：
 
