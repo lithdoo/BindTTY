@@ -34,6 +34,29 @@ function layoutRootWithBasic(
   });
 }
 
+function layoutRootWithYoga(
+  root: MountedNode | null,
+  nextViewport: LayoutViewport = viewport
+): ReturnType<typeof layoutRoot> {
+  return layoutRoot(root, {
+    viewport: nextViewport,
+    engine: createYogaLayoutEngine()
+  });
+}
+
+function layoutRootWithBasicAndYoga(
+  root: MountedNode,
+  nextViewport: LayoutViewport = viewport
+): {
+  basicLayout: ReturnType<typeof layoutRoot>;
+  yogaLayout: ReturnType<typeof layoutRoot>;
+} {
+  return {
+    basicLayout: layoutRootWithBasic(root, nextViewport),
+    yogaLayout: layoutRootWithYoga(root, nextViewport)
+  };
+}
+
 function createMountedElement(
   tag: MountedElementNode["tag"],
   props: Record<string, unknown> = {},
@@ -580,6 +603,88 @@ test("clamps scroll offset to zero when content fits", () => {
     x: 0,
     y: 0
   });
+});
+
+test("contentSize is at least contentRect size when content fits", () => {
+  const root = createMountedElement("box", {
+    height: 5,
+    overflow: "clip",
+    scrollY: 3
+  }, [createMountedText("A")]);
+  const { basicLayout, yogaLayout } = layoutRootWithBasicAndYoga(root);
+
+  assert.deepEqual(basicLayout?.contentRect, {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 5
+  });
+  assert.deepEqual(yogaLayout?.contentRect, basicLayout?.contentRect);
+  assert.deepEqual(basicLayout?.contentSize, {
+    width: 1,
+    height: 5
+  });
+  assert.deepEqual(yogaLayout?.contentSize, basicLayout?.contentSize);
+  assert.deepEqual(basicLayout?.scrollOffset, {
+    x: 0,
+    y: 0
+  });
+  assert.deepEqual(yogaLayout?.scrollOffset, basicLayout?.scrollOffset);
+});
+
+test("contentSize grows beyond contentRect when content overflows", () => {
+  const root = createMountedElement("box", {
+    height: 2,
+    overflow: "clip",
+    scrollY: 99
+  }, [
+    createMountedText("A"),
+    createMountedText("B"),
+    createMountedText("C"),
+    createMountedText("D")
+  ]);
+  const { basicLayout, yogaLayout } = layoutRootWithBasicAndYoga(root);
+
+  assert.deepEqual(basicLayout?.contentSize, {
+    width: 1,
+    height: 4
+  });
+  assert.deepEqual(yogaLayout?.contentSize, basicLayout?.contentSize);
+  assert.deepEqual(basicLayout?.scrollOffset, {
+    x: 0,
+    y: 2
+  });
+  assert.deepEqual(yogaLayout?.scrollOffset, basicLayout?.scrollOffset);
+});
+
+test("wrapped text contributes to scroll content size", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      width: 5,
+      height: 1,
+      overflow: "clip",
+      scrollY: 99
+    },
+    [
+      createMountedElement("text", {
+        value: "hello world",
+        wrap: "wrap"
+      })
+    ]
+  );
+  const { basicLayout, yogaLayout } = layoutRootWithBasicAndYoga(root);
+
+  assert.deepEqual(basicLayout?.contentSize, {
+    width: 5,
+    height: 2
+  });
+  assert.deepEqual(yogaLayout?.contentSize, basicLayout?.contentSize);
+  assert.deepEqual(basicLayout?.scrollOffset, {
+    x: 0,
+    y: 1
+  });
+  assert.deepEqual(yogaLayout?.scrollOffset, basicLayout?.scrollOffset);
 });
 
 test("records content size for for nodes inside clipped boxes", () => {
