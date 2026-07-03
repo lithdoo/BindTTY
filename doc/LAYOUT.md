@@ -57,16 +57,20 @@ layout 负责回答：
   LayoutEngine / LayoutEngineOptions
   layoutRoot()
   createBasicLayoutEngine()
+  createYogaLayoutEngine()
   自定义 engine 替换测试
+  默认 engine 使用 YogaLayoutEngine
   text / vstack / hstack / box / spacer / screen layout
   fragment / show / for structure layout
+  第一批 Yoga flex props: gap / flexGrow / flexShrink / alignItems / justifyContent / flexWrap
   unsupported intrinsic button / input 抛错
   renderer-terminal 对接
   createApp 组合 runtime / layout / renderer / interaction
   focusStyle / onKey / onFocusChange 作为非 layout prop 忽略
 
-注意：文档中 LayoutStyle 接口（含 width/height/minWidth/flexbox 等 40+ 字段）属于远期设计，
-当前 MVP 未实现。实际 layout props 通过 basic-engine.ts 中的 supportedPropsByTag 和 BoxEdges 校验。
+注意：文档中 LayoutStyle 接口（含完整 width/height/minWidth/flexbox 等 40+ 字段）仍属于远期设计。
+当前已默认使用 YogaLayoutEngine，但只打开第一批 flex props。BasicLayoutEngine 保留为 legacy fallback，
+并继续对 Yoga-only props 给出明确错误。
 ```
 
 ## 2. 包位置
@@ -85,8 +89,8 @@ packages/layout/
     index.ts
     types.ts
     layout.ts
-    engine.ts
     basic-engine.ts
+    yoga-engine.ts
     measure.ts
     intrinsic.ts
   test/
@@ -95,10 +99,16 @@ packages/layout/
   tsconfig.json
 ```
 
-后续 Yoga backend 可以扩展为：
+当前默认 backend：
 
 ```text
 src/yoga-engine.ts
+```
+
+legacy fallback：
+
+```text
+src/basic-engine.ts
 ```
 
 ## 3. 输入与输出
@@ -138,9 +148,9 @@ export function layoutRoot(
 ): LayoutNode | null;
 ```
 
-`layoutRoot()` 是稳定入口。第一版默认使用 `BasicLayoutEngine`，后续可以传入 `YogaLayoutEngine`，上层 runtime / renderer 不需要改变调用方式。
+`layoutRoot()` 是稳定入口。当前默认使用 `YogaLayoutEngine`；如需旧版轻量布局语义，可以显式传入 `createBasicLayoutEngine()`。上层 runtime / renderer 不需要改变调用方式。
 
-`BasicLayoutEngine` 已实现 screen、box、vstack、hstack、text、spacer 及 fragment/show/for 结构的 measure / arrange。intrinsic `button` / `input` 会抛 `Unsupported layout element`。
+`YogaLayoutEngine` 已实现 screen、box、vstack、hstack、text、spacer 及 fragment/show/for 结构的 layout，并支持第一批 Yoga flex props。`BasicLayoutEngine` 作为 legacy fallback 保留，intrinsic `button` / `input` 仍会抛 `Unsupported layout element`。
 
 使用方式：
 
@@ -346,7 +356,7 @@ node.mounted.props
 
 ## 6. LayoutEngine 接口
 
-layout 需要先抽离排版接口，再实现基础版本。这样第一版可以手写轻量布局，未来也可以接 Yoga。
+layout 已抽离排版接口。当前默认 backend 是 Yoga，BasicLayoutEngine 保留为 legacy fallback 和语义对照。
 
 核心接口：
 
@@ -360,12 +370,13 @@ export interface LayoutEngineOptions {
 }
 
 export function createBasicLayoutEngine(): LayoutEngine;
+export function createYogaLayoutEngine(): LayoutEngine;
 ```
 
 默认入口：
 
 ```ts
-const defaultEngine = createBasicLayoutEngine();
+const defaultEngine = createYogaLayoutEngine();
 
 export function layoutRoot(root, options) {
   return (options.engine ?? defaultEngine).layout(root, {
@@ -374,10 +385,13 @@ export function layoutRoot(root, options) {
 }
 ```
 
-未来 Yoga backend：
+显式使用 Basic fallback：
 
 ```ts
-export function createYogaLayoutEngine(): LayoutEngine;
+layoutRoot(root, {
+  viewport,
+  engine: createBasicLayoutEngine()
+});
 ```
 
 整体边界：
@@ -390,10 +404,10 @@ LayoutEngine
   internal/backend API
 
 BasicLayoutEngine
-  MVP 手写排版
+  legacy 手写排版 / fallback
 
 YogaLayoutEngine
-  future Flexbox backend
+  默认 Flexbox backend
 ```
 
 为什么先抽接口：
@@ -614,7 +628,7 @@ vstack = box flexDirection="column"
 hstack = box flexDirection="row"
 ```
 
-第一版仍可以直接实现 `vstack` / `hstack` 分支，保证落地简单。未来 Yoga backend 可以把它们映射成 Yoga node 的 `flexDirection`。
+当前 Yoga backend 将 `vstack` / `hstack` 映射为 Yoga node 的 `flexDirection`。BasicLayoutEngine legacy 仍保留直接分支实现。
 
 ### 9.3 layout prop 命名
 
@@ -692,9 +706,9 @@ justify-content -> justifyContent
 align-items -> alignItems
 ```
 
-## 10. BasicLayoutEngine MVP 语义
+## 10. BasicLayoutEngine Legacy 语义
 
-`BasicLayoutEngine` 是默认 engine。它的目标是跑通 `MountedNode -> LayoutNode` 主链路，不实现完整 Flexbox。
+`BasicLayoutEngine` 已不再是默认 engine。它保留为 legacy fallback，用于对照旧的轻量布局语义，不实现完整 Flexbox。
 
 ### 10.1 Props 使用范围
 
@@ -711,7 +725,7 @@ MVP 只从 `MountedElementNode.props` 读取以下字段：
 
 `LayoutStyle` 是未来 Yoga / Flexbox 的内部归一化目标，不等于当前公开 props。
 
-当前 vnode schema 中 `box` 已公开 M7 所需的固定尺寸与滚动 metadata props，但仍不公开 `margin` / `gap` / `alignItems` 等 future props。
+当前 vnode schema 已公开 M7 所需的固定尺寸与滚动 metadata props，并公开第一批 Yoga flex props。BasicLayoutEngine 遇到 Yoga-only props 时继续明确抛错，不做静默忽略。
 
 实现时应先执行 layout prop 归一化：
 
@@ -719,7 +733,7 @@ MVP 只从 `MountedElementNode.props` 读取以下字段：
 raw props
   ↓ normalize camelCase / kebab-case aliases
 LayoutStyle
-  ↓ BasicLayoutEngine reads supported fields
+  ↓ BasicLayoutEngine reads legacy supported fields
 LayoutNode
 ```
 
@@ -1208,11 +1222,11 @@ structure dirty:
    RuntimeRoot flush 后可调用 layoutRoot(root, viewport)
 
 12. engine abstraction:
-   layoutRoot 默认使用 BasicLayoutEngine
+   layoutRoot 默认使用 YogaLayoutEngine
    options.engine 可以替换 backend
    custom engine 收到 root 和 viewport
 
-13. BasicLayoutEngine MVP:
+13. BasicLayoutEngine legacy:
    只读取 MVP props
    camelCase / kebab-case alias 归一化为 camelCase
    duplicate alias 抛错
@@ -1237,7 +1251,7 @@ structure dirty:
 1. 新增 packages/layout。
 2. 导出 LayoutNode / LayoutRect / LayoutOptions / LayoutEngine。
 3. 导出 layoutRoot(root, options)。
-4. 默认使用 BasicLayoutEngine。
+4. 默认使用 YogaLayoutEngine。
 5. 支持自定义 engine 替换。
 6. 支持 screen / vstack / hstack / box / text / spacer。
 7. 支持 fragment / show / for structure nodes。

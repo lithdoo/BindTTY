@@ -7,6 +7,7 @@ import {
   appView,
   customButtonView,
   interactionView,
+  layoutPropsView,
   loading,
   textView,
   title
@@ -18,7 +19,8 @@ test("compiled TSX creates Template values through the automatic runtime", () =>
     tag: "text",
     props: {
       value: title,
-      color: "green"
+      color: "green",
+      wrap: "wrap"
     },
     children: []
   });
@@ -43,6 +45,28 @@ test("compiled TSX preserves shared style and interaction props", () => {
   assert.equal(root.props.padding, 1);
   assert.equal(root.props.background, "blue");
   assert.equal(root.children.length, 1);
+});
+
+test("compiled TSX preserves Yoga layout props and kebab-case aliases", () => {
+  const root = layoutPropsView as {
+    kind: "element";
+    tag: string;
+    props: Record<string, unknown>;
+    children: Array<{
+      kind: "element";
+      tag: string;
+      props: Record<string, unknown>;
+    }>;
+  };
+
+  assert.equal(root.kind, "element");
+  assert.equal(root.tag, "hstack");
+  assert.equal(root.props.gap, 1);
+  assert.equal(root.props.flexWrap, "wrap");
+  assert.equal(root.props.alignItems, "center");
+  assert.equal(root.props["justify-content"], "space-between");
+  assert.equal(root.children[0]?.props["flex-grow"], 1);
+  assert.equal(root.children[0]?.props.flexShrink, 1);
 });
 
 test("compiled TSX keeps custom component props on the component boundary", () => {

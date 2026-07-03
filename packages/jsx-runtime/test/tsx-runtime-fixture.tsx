@@ -45,7 +45,7 @@ export function CustomButton(props: {
   );
 }
 
-export const textView = <text value={title} color="green" />;
+export const textView = <text value={title} color="green" wrap="wrap" />;
 
 export const interactionView = (
   <box
@@ -60,6 +60,13 @@ export const interactionView = (
   >
     <text value="Focusable" />
   </box>
+);
+
+export const layoutPropsView = (
+  <hstack gap={1} flexWrap="wrap" alignItems="center" justify-content="space-between">
+    <text value="A" flex-grow={1} flexShrink={1} />
+    <text value="B" />
+  </hstack>
 );
 
 export const customButtonView = (

@@ -5,6 +5,7 @@ import { createRuntimeRoot } from "@bindtty/runtime";
 import { createSignal } from "@bindtty/signal";
 import {
   createBasicLayoutEngine,
+  createYogaLayoutEngine,
   layoutRoot,
   type LayoutEngine,
   type LayoutViewport
@@ -22,6 +23,16 @@ const viewport: LayoutViewport = {
   width: 80,
   height: 24
 };
+
+function layoutRootWithBasic(
+  root: MountedNode | null,
+  nextViewport: LayoutViewport = viewport
+): ReturnType<typeof layoutRoot> {
+  return layoutRoot(root, {
+    viewport: nextViewport,
+    engine: createBasicLayoutEngine()
+  });
+}
 
 function createMountedElement(
   tag: MountedElementNode["tag"],
@@ -85,7 +96,7 @@ test("layoutRoot returns null for null roots", () => {
   assert.equal(layoutRoot(null, { viewport }), null);
 });
 
-test("layoutRoot uses BasicLayoutEngine by default", () => {
+test("layoutRoot uses YogaLayoutEngine by default", () => {
   const root = createMountedText();
   const layout = layoutRoot(root, { viewport });
 
@@ -104,6 +115,24 @@ test("layoutRoot uses BasicLayoutEngine by default", () => {
       height: 1
     },
     children: []
+  });
+});
+
+test("layoutRoot default supports Yoga-only props", () => {
+  const root = createMountedElement(
+    "hstack",
+    {
+      gap: 1
+    },
+    [createMountedText("A"), createMountedText("B")]
+  );
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.children[1]?.rect, {
+    x: 2,
+    y: 0,
+    width: 1,
+    height: 1
   });
 });
 
@@ -143,7 +172,7 @@ test("createBasicLayoutEngine exposes the layout engine contract", () => {
 
 test("lays out text as a single line using string length", () => {
   const root = createMountedText("BindTTY");
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -154,11 +183,94 @@ test("lays out text as a single line using string length", () => {
   assert.deepEqual(layout?.contentRect, layout?.rect);
 });
 
+test("lays out text wrap none with explicit newlines", () => {
+  const root = createMountedElement("text", {
+    value: "A\nLong",
+    wrap: "none"
+  });
+  const layout = layoutRootWithBasic(root);
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 4,
+    height: 2
+  });
+});
+
+test("lays out wrapped text using available constraint width", () => {
+  const first = createMountedElement("text", {
+    value: "hello world",
+    wrap: "wrap"
+  });
+  const second = createMountedText("Z");
+  const root = createMountedElement("box", { width: 5 }, [first, second]);
+  const layout = layoutRootWithBasic(root);
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 5,
+    height: 3
+  });
+  assert.deepEqual(layout.children[0]?.rect, {
+    x: 0,
+    y: 0,
+    width: 5,
+    height: 2
+  });
+  assert.deepEqual(layout.children[1]?.rect, {
+    x: 0,
+    y: 2,
+    width: 1,
+    height: 1
+  });
+});
+
+test("records clipped box content size from wrapped text", () => {
+  const child = createMountedElement("text", {
+    value: "hello world",
+    wrap: "wrap"
+  });
+  const root = createMountedElement(
+    "box",
+    {
+      width: 5,
+      height: 1,
+      overflow: "clip",
+      scrollY: 9
+    },
+    [child]
+  );
+  const layout = layoutRootWithBasic(root);
+
+  assert.deepEqual(layout?.contentSize, {
+    width: 5,
+    height: 2
+  });
+  assert.deepEqual(layout?.scrollOffset, {
+    x: 0,
+    y: 1
+  });
+});
+
+test("throws for unsupported text wrap values", () => {
+  const root = createMountedElement("text", {
+    value: "A",
+    wrap: "later"
+  });
+
+  assert.throws(
+    () => layoutRoot(root, { viewport }),
+    /Unsupported text wrap mode/
+  );
+});
+
 test("lays out vstack children in column flow", () => {
   const first = createMountedText("A");
   const second = createMountedText("Long");
   const root = createMountedElement("vstack", {}, [first, second]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -185,7 +297,7 @@ test("lays out hstack children in row flow", () => {
   const first = createMountedText("A");
   const second = createMountedText("BC");
   const root = createMountedElement("hstack", {}, [first, second]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -210,7 +322,7 @@ test("lays out hstack children in row flow", () => {
 test("lays out box content using padding and border", () => {
   const child = createMountedText("Hi");
   const root = createMountedElement("box", { padding: 1, border: true }, [child]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -234,7 +346,7 @@ test("lays out box content using padding and border", () => {
 
 test("lays out empty boxes using padding and border only", () => {
   const root = createMountedElement("box", { padding: 1, border: true });
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -257,7 +369,7 @@ test("lays out boxes with fixed width and height", () => {
     width: 6,
     height: 3
   }, [child]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -279,7 +391,7 @@ test("treats invalid and negative box fixed sizes as zero", () => {
     width: "wide",
     height: -2
   }, [createMountedText("Hidden")]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -293,7 +405,7 @@ test("treats invalid and negative box fixed sizes as zero", () => {
 test("lays out screen at viewport size", () => {
   const child = createMountedText("A");
   const root = createMountedElement("screen", {}, [child]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -316,8 +428,8 @@ test("lays out spacer according to parent flow", () => {
   const columnRoot = createMountedElement("vstack", {}, [columnSpacer]);
   const rowRoot = createMountedElement("hstack", {}, [rowSpacer]);
 
-  const columnLayout = layoutRoot(columnRoot, { viewport });
-  const rowLayout = layoutRoot(rowRoot, { viewport });
+  const columnLayout = layoutRootWithBasic(columnRoot);
+  const rowLayout = layoutRootWithBasic(rowRoot);
 
   assert.deepEqual(columnLayout?.children[0]?.rect, {
     x: 0,
@@ -337,7 +449,7 @@ test("treats invalid and negative spacer sizes as zero", () => {
   const negativeSpacer = createMountedElement("spacer", { size: -2 });
   const invalidSpacer = createMountedElement("spacer", { size: "large" });
   const root = createMountedElement("vstack", {}, [negativeSpacer, invalidSpacer]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -403,7 +515,7 @@ test("outputs clip and content size for clipped boxes", () => {
     createMountedText("BC"),
     createMountedText("DEF")
   ]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -462,7 +574,7 @@ test("clamps scroll offset to zero when content fits", () => {
 
   assert.deepEqual(layout?.contentSize, {
     width: 1,
-    height: 1
+    height: 5
   });
   assert.deepEqual(layout?.scrollOffset, {
     x: 0,
@@ -480,7 +592,7 @@ test("records content size for for nodes inside clipped boxes", () => {
       createMountedText("BCD")
     ])
   ]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.contentSize, {
     width: 3,
@@ -500,7 +612,7 @@ test("ignores non-layout paint props while measuring layout", () => {
     color: "green",
     bold: true
   });
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -518,7 +630,7 @@ test("ignores interaction props while measuring layout", () => {
     onFocusChange: () => {},
     padding: 1
   }, [createMountedText("A")]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -533,7 +645,7 @@ test("lays out fragment roots with column fallback flow", () => {
     createMountedText("A"),
     createMountedText("BC")
   ]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.equal(layout?.mounted, root);
   assert.deepEqual(layout?.rect, {
@@ -587,7 +699,7 @@ test("lays out for roots with column fallback flow", () => {
     createMountedText("A"),
     createMountedText("BCD")
   ]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.equal(layout?.mounted, root);
   assert.deepEqual(layout?.rect, {
@@ -659,7 +771,7 @@ test("structure nodes inherit column flow from vstack parents", () => {
     createMountedText("Top"),
     fragment
   ]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   assert.deepEqual(layout?.rect, {
     x: 0,
@@ -808,7 +920,7 @@ test("keeps structure nodes as transparent renderer-facing layout nodes", () => 
   ]);
   const show = createMountedShow(fragment);
   const root = createMountedElement("box", { padding: 1 }, [show]);
-  const layout = layoutRoot(root, { viewport });
+  const layout = layoutRootWithBasic(root);
 
   const showLayout = layout?.children[0];
   const fragmentLayout = showLayout?.children[0];
@@ -950,4 +1062,327 @@ test("runtime flush can relayout for item updates", async () => {
     width: 3,
     height: 1
   });
+});
+
+test("createYogaLayoutEngine exposes the optional layout engine contract", () => {
+  const root = createMountedText();
+  const engine = createYogaLayoutEngine();
+  const layout = engine.layout(root, { viewport });
+
+  assert.equal(layout?.mounted, root);
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 5,
+    height: 1
+  });
+  assert.deepEqual(layout?.contentRect, layout?.rect);
+  assert.deepEqual(layout?.children, []);
+});
+
+test("layoutRoot accepts YogaLayoutEngine as an injected engine", () => {
+  const root = createMountedElement("vstack", {}, [
+    createMountedText("A"),
+    createMountedText("BC")
+  ]);
+  const layout = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 2,
+    height: 2
+  });
+  assert.deepEqual(layout?.children[1]?.rect, {
+    x: 0,
+    y: 1,
+    width: 2,
+    height: 1
+  });
+});
+
+test("YogaLayoutEngine lays out wrapped text through the text measure function", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      width: 5
+    },
+    [
+      createMountedElement("text", {
+        value: "hello world",
+        wrap: "wrap"
+      })
+    ]
+  );
+  const layout = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 5,
+    height: 2
+  });
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 0,
+    y: 0,
+    width: 5,
+    height: 2
+  });
+});
+
+test("YogaLayoutEngine keeps structure nodes as wrapper flex items", () => {
+  const first = createMountedFragment([createMountedText("A"), createMountedText("BB")]);
+  const second = createMountedText("C");
+  const root = createMountedElement("hstack", {}, [first, second]);
+  const layout = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.equal(layout?.children[0]?.mounted.kind, "fragment");
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 0,
+    y: 0,
+    width: 3,
+    height: 1
+  });
+  assert.deepEqual(layout?.children[1]?.rect, {
+    x: 3,
+    y: 0,
+    width: 1,
+    height: 1
+  });
+});
+
+test("YogaLayoutEngine records clipped scroll metadata", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      width: 5,
+      height: 1,
+      overflow: "clip",
+      scrollY: 9
+    },
+    [
+      createMountedElement("text", {
+        value: "hello world",
+        wrap: "wrap"
+      })
+    ]
+  );
+  const layout = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(layout?.clip, {
+    x: 0,
+    y: 0,
+    width: 5,
+    height: 1
+  });
+  assert.deepEqual(layout?.contentSize, {
+    width: 5,
+    height: 2
+  });
+  assert.deepEqual(layout?.scrollOffset, {
+    x: 0,
+    y: 1
+  });
+});
+
+test("YogaLayoutEngine rejects unsupported layout elements and props", () => {
+  assert.throws(
+    () =>
+      layoutRoot(createMountedElement("button", { value: "Go" }), {
+        viewport,
+        engine: createYogaLayoutEngine()
+      }),
+    /Unsupported layout element: button/
+  );
+
+  assert.throws(
+    () =>
+      layoutRoot(createMountedElement("box", { margin: 1 }), {
+        viewport,
+        engine: createYogaLayoutEngine()
+      }),
+    /Unsupported layout prop: margin/
+  );
+});
+
+test("YogaLayoutEngine supports hstack gap with kebab-case aliases", () => {
+  const root = createMountedElement(
+    "hstack",
+    {
+      gap: 2
+    },
+    [createMountedText("A"), createMountedText("B")]
+  );
+  const layout = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 4,
+    height: 1
+  });
+  assert.deepEqual(layout?.children[1]?.rect, {
+    x: 3,
+    y: 0,
+    width: 1,
+    height: 1
+  });
+});
+
+test("YogaLayoutEngine supports alignItems and justifyContent", () => {
+  const root = createMountedElement(
+    "screen",
+    {
+      alignItems: "center",
+      justifyContent: "center"
+    },
+    [createMountedText("A")]
+  );
+  const layout = layoutRoot(root, {
+    viewport: {
+      width: 5,
+      height: 5
+    },
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 2,
+    y: 2,
+    width: 1,
+    height: 1
+  });
+});
+
+test("YogaLayoutEngine supports flexGrow and flexShrink", () => {
+  const growing = createMountedElement("box", { flexGrow: 1 });
+  const fixed = createMountedElement("box", { height: 1 });
+  const root = createMountedElement("screen", {}, [growing, fixed]);
+  const layout = layoutRoot(root, {
+    viewport: {
+      width: 6,
+      height: 5
+    },
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 0,
+    y: 0,
+    width: 6,
+    height: 4
+  });
+  assert.deepEqual(layout?.children[1]?.rect, {
+    x: 0,
+    y: 4,
+    width: 6,
+    height: 1
+  });
+
+  const shrinking = createMountedElement("text", {
+    value: "ABCDE",
+    flexShrink: 1
+  });
+  const rootWithShrink = createMountedElement("box", { width: 3 }, [shrinking]);
+  const shrinkLayout = layoutRoot(rootWithShrink, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(shrinkLayout?.children[0]?.rect, {
+    x: 0,
+    y: 0,
+    width: 3,
+    height: 1
+  });
+});
+
+test("YogaLayoutEngine supports flexWrap", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      width: 3
+    },
+    [
+      createMountedElement(
+        "hstack",
+        {
+          flexWrap: "wrap"
+        },
+        [createMountedText("AA"), createMountedText("BB")]
+      )
+    ]
+  );
+  const layout = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+  const hstackLayout = layout?.children[0];
+
+  assert.deepEqual(hstackLayout?.rect, {
+    x: 0,
+    y: 0,
+    width: 3,
+    height: 2
+  });
+  assert.deepEqual(hstackLayout?.children[1]?.rect, {
+    x: 0,
+    y: 1,
+    width: 2,
+    height: 1
+  });
+});
+
+test("YogaLayoutEngine rejects invalid Yoga flex prop values", () => {
+  assert.throws(
+    () =>
+      layoutRoot(createMountedElement("hstack", { flexWrap: "sideways" }), {
+        viewport,
+        engine: createYogaLayoutEngine()
+      }),
+    /Unsupported flexWrap value/
+  );
+  assert.throws(
+    () =>
+      layoutRoot(createMountedElement("hstack", { alignItems: "middle" }), {
+        viewport,
+        engine: createYogaLayoutEngine()
+      }),
+    /Unsupported alignItems value/
+  );
+  assert.throws(
+    () =>
+      layoutRoot(createMountedElement("hstack", { justifyContent: "between" }), {
+        viewport,
+        engine: createYogaLayoutEngine()
+      }),
+    /Unsupported justifyContent value/
+  );
+});
+
+test("BasicLayoutEngine rejects Yoga-only flex props", () => {
+  assert.throws(
+    () => layoutRootWithBasic(createMountedElement("hstack", { gap: 1 })),
+    /Unsupported layout prop: gap/
+  );
+  assert.throws(
+    () =>
+      layoutRootWithBasic(createMountedElement("hstack", { "flex-wrap": "wrap" })),
+    /Unsupported layout prop: flexWrap/
+  );
 });

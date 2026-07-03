@@ -11,6 +11,12 @@ import {
   type CreateAppOptions
 } from "bindtty";
 import { createSignal } from "@bindtty/signal";
+import {
+  createYogaLayoutEngine,
+  type LayoutEngine,
+  type LayoutNode,
+  type LayoutViewport
+} from "@bindtty/layout";
 import type { Dispose, TerminalHost, TerminalKeyEvent, TerminalViewport } from "@bindtty/terminal";
 import {
   elementTemplate,
@@ -162,6 +168,40 @@ async function nextMicrotask(): Promise<void> {
   await Promise.resolve();
 }
 
+function createRecordingLayoutEngine(
+  calls: Array<{ root: unknown; viewport: LayoutViewport }>
+): LayoutEngine {
+  return {
+    layout(root, options): LayoutNode | null {
+      calls.push({
+        root,
+        viewport: options.viewport
+      });
+
+      if (!root) {
+        return null;
+      }
+
+      return {
+        mounted: root,
+        rect: {
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 1
+        },
+        contentRect: {
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 1
+        },
+        children: []
+      };
+    }
+  };
+}
+
 test("bindtty exports the createApp entrypoint", () => {
   assert.equal(typeof createApp, "function");
 });
@@ -257,6 +297,25 @@ test("default viewport is used when stdout and fallback sizes are unavailable", 
 
   assert.equal(stdout.writes.length, 1);
   assert.match(stdout.writes[0], /\x1b\[24;80H/);
+});
+
+test("stdout mode uses the injected layout engine", () => {
+  const stdout = createMockStdout(7, 3);
+  const calls: Array<{ root: unknown; viewport: LayoutViewport }> = [];
+  const view = elementTemplate("text", { value: "A" });
+  const app = createApp(view, {
+    stdout,
+    layoutEngine: createRecordingLayoutEngine(calls)
+  });
+
+  app.start();
+
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0]?.viewport, {
+    width: 7,
+    height: 3
+  });
+  assert.equal((calls[0]?.root as { kind?: string }).kind, "element");
 });
 
 test("signal updates render through the runtime flush listener", async () => {
@@ -563,6 +622,24 @@ test("terminal mode uses terminal viewport for rendering", () => {
   assert.equal(terminal.writes.length, 1);
   assert.match(terminal.writes[0], /A/);
   assert.doesNotMatch(terminal.writes[0], /B/);
+});
+
+test("terminal mode uses the injected layout engine", () => {
+  const terminal = createMockTerminal(9, 4);
+  const calls: Array<{ root: unknown; viewport: LayoutViewport }> = [];
+  const app = createApp(elementTemplate("text", { value: "A" }), {
+    terminal,
+    layoutEngine: createRecordingLayoutEngine(calls)
+  });
+
+  app.start();
+
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0]?.viewport, {
+    width: 9,
+    height: 4
+  });
+  assert.equal((calls[0]?.root as { kind?: string }).kind, "element");
 });
 
 test("terminal mode render is a no-op when the frame is unchanged", () => {
@@ -899,6 +976,67 @@ test("terminal mode reports layout callback errors without stopping sibling layo
   assert.equal(errors[0]?.phase, "layout");
   assert.match(String((errors[0]?.error as Error).message), /layout failed/);
   assert.equal(terminal.writes.length, 1);
+
+  app.dispose();
+});
+
+test("terminal mode renders with YogaLayoutEngine injection", () => {
+  const terminal = createMockTerminal(6, 3);
+  const app = createApp(
+    elementTemplate("box", { width: 5 }, [
+      elementTemplate("text", {
+        value: "hello world",
+        wrap: "wrap"
+      })
+    ]),
+    {
+      terminal,
+      layoutEngine: createYogaLayoutEngine()
+    }
+  );
+
+  app.start();
+
+  const output = stripVTControlCharacters(terminal.writes.join(""));
+  assert.match(output, /hello/);
+  assert.match(output, /world/);
+
+  app.dispose();
+});
+
+test("terminal mode ScrollView uses YogaLayoutEngine scroll metadata", () => {
+  const terminal = createMockTerminal(12, 8);
+  const offset = createSignal(0);
+  const app = createApp(
+    ScrollView({
+      height: 2,
+      offset,
+      onOffsetChange: (nextOffset) => {
+        offset.set(nextOffset);
+      },
+      children: [
+        elementTemplate("text", { value: "A" }),
+        elementTemplate("text", { value: "B" }),
+        elementTemplate("text", { value: "C" }),
+        elementTemplate("text", { value: "D" })
+      ]
+    }),
+    {
+      terminal,
+      layoutEngine: createYogaLayoutEngine()
+    }
+  );
+
+  app.start();
+
+  terminal.emitKey(keyEvent("", { name: "end" }));
+  assert.equal(offset.get(), 2);
+
+  terminal.emitKey(keyEvent("", { name: "down" }));
+  assert.equal(offset.get(), 2);
+
+  terminal.emitKey(keyEvent("", { name: "home" }));
+  assert.equal(offset.get(), 0);
 
   app.dispose();
 });

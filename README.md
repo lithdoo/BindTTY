@@ -32,7 +32,7 @@ layout / paint / frame patch
 
 ## Monorepo 包结构（MVP）
 
-MVP 阶段收敛为 **10 个包**。renderer 已独立为 `@bindtty/renderer-terminal`，terminal lifecycle 独立为 `@bindtty/terminal`，键盘 focus 与 `onKey` 派发独立为 `@bindtty/interaction`，调度器先放在 `@bindtty/runtime`。
+MVP 阶段收敛为 **11 个包**。text measurement 独立为 `@bindtty/text`，layout 默认使用 Yoga backend，renderer 已独立为 `@bindtty/renderer-terminal`，terminal lifecycle 独立为 `@bindtty/terminal`，键盘 focus 与 `onKey` 派发独立为 `@bindtty/interaction`，调度器先放在 `@bindtty/runtime`。
 
 | 包 | 职责 |
 | --- | --- |
@@ -40,7 +40,8 @@ MVP 阶段收敛为 **10 个包**。renderer 已独立为 `@bindtty/renderer-ter
 | `@bindtty/vnode` | 声明层：`ViewTemplate`、`BindingValue`、control node 类型 |
 | `@bindtty/jsx-runtime` | TSX → `ViewTemplate` |
 | `@bindtty/runtime` | `mount`、binding subscription、dirty、dispose、microtask 调度 |
-| `@bindtty/layout` | `MountedNode` → `LayoutNode` |
+| `@bindtty/text` | terminal plain text measurement / wrapping / truncation |
+| `@bindtty/layout` | `MountedNode` → `LayoutNode`，默认 Yoga backend |
 | `@bindtty/renderer-terminal` | `LayoutNode` → `Frame` → ANSI diff |
 | `@bindtty/terminal` | Terminal lifecycle、viewport、resize、input event adapter |
 | `@bindtty/interaction` | keyboard focus、onKey dispatch、focused state |
@@ -63,6 +64,7 @@ packages/layout/
   src/measure.ts
   src/intrinsic.ts
   src/basic-engine.ts
+  src/yoga-engine.ts
 
 packages/renderer-terminal/
   src/frame.ts
@@ -91,7 +93,8 @@ packages/widgets/
 @bindtty/vnode:             Template 类型、MountedNode 类型、normalize
 @bindtty/jsx-runtime:       TSX → Template（jsx/jsxs/Fragment）
 @bindtty/runtime:           mount、binding、dirty、dispose、show/for control、scheduler
-@bindtty/layout:            MountedNode → LayoutNode（含 clip/contentSize/scrollOffset）
+@bindtty/text:              plain text measurement / wrapping / truncation
+@bindtty/layout:            MountedNode → LayoutNode（默认 Yoga，含 clip/contentSize/scrollOffset）
 @bindtty/renderer-terminal: LayoutNode → Frame → ANSI diff（含 focusStyle/clip/scrollOffset）
 @bindtty/terminal:          TerminalHost（alt screen/cursor/raw mode/resize/keypress）
 @bindtty/interaction:       keyboard focus、onKey dispatch、Tab/Shift+Tab traversal

@@ -1142,7 +1142,7 @@ renderer 适合从 MVP 阶段就独立分包。
 原因：
 
 ```text
-1. layout 后续可能接 Yoga，复杂度会上升。
+1. layout 默认已接入 Yoga，复杂度与 renderer 分离。
 2. renderer 的核心复杂度在 Frame / diff / ANSI，与 layout backend 无关。
 3. 独立包可以稳定 `LayoutNode → ANSI Patch` 接口。
 4. 测试可以分别验证几何正确性和绘制正确性。

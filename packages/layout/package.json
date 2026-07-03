@@ -18,10 +18,12 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build --workspace @bindtty/vnode && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/runtime && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
+    "test": "npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/vnode && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/runtime && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
   },
   "dependencies": {
-    "@bindtty/vnode": "0.1.0-alpha.0"
+    "@bindtty/text": "0.1.0-alpha.0",
+    "@bindtty/vnode": "0.1.0-alpha.0",
+    "yoga-layout": "3.2.1"
   },
   "devDependencies": {
     "@bindtty/jsx-runtime": "0.1.0-alpha.0",

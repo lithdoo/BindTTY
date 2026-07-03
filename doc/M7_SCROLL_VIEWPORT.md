@@ -414,16 +414,26 @@ scroll 容器：
 
 ### 6.4 Flow 与结构节点
 
-`fragment` / `show` / `for` 仍是 transparent layout node：
+`fragment` / `show` / `for` 在 renderer 视角仍是透明节点：它们保留 `LayoutNode` 结构身份，但自身不绘制内容。layout backend 对几何的处理有两套语义：
+
+BasicLayoutEngine legacy 语义：
 
 1. 当它们作为 root 节点时，默认 column flow。
 2. 当它们位于父级内部时，沿用父级 flow。
 3. 它们不主动产生 clip / scrollOffset。
 4. 如果 `for` 的 children 高度超过外层 `ScrollView`，由外层 box 的 clip 裁剪。
 
-### 6.5 与现有 BasicLayoutEngine 的关系
+YogaLayoutEngine 默认语义：
 
-- 只在 `box` 上增加 `height` / `width` / `overflow` / `scrollX` / `scrollY`
+1. `fragment` / `show` / `for` 会成为 wrapper flex item。
+2. wrapper 仍不绘制内容，不主动产生 clip / scrollOffset。
+3. wrapper 子树继续由最近明确 flow 或 Yoga flex direction 参与布局。
+4. 外层 scroll container 仍通过 `contentSize` / `clip` / `scrollOffset` 与 renderer 协作。
+
+### 6.5 与 layout backend 的关系
+
+- M7 只在 `box` 上增加 `height` / `width` / `overflow` / `scrollX` / `scrollY`
+- 默认 YogaLayoutEngine 已支持第一批 flex props；BasicLayoutEngine 作为 legacy fallback 仍不消费 Yoga-only props
 - 不实现 `maxHeight`，避免与未来 min/max layout props 混在一起
 - 不改变 `screen` 占满 terminal viewport 的语义
 - 参考 [LAYOUT.md](./LAYOUT.md) §10.4：children 可超出 parent，overflow 由 renderer/scroll 处理

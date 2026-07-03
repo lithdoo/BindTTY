@@ -1,3 +1,4 @@
+import { layoutText, readTextWrapMode } from "@bindtty/text";
 import type { MountedElementNode, MountedNode } from "@bindtty/vnode";
 import type { LayoutFlow } from "./intrinsic.js";
 import { clampNonNegative, toNonNegativeNumber } from "./measure.js";
@@ -33,7 +34,7 @@ const supportedPropsByTag: Record<MountedElementNode["tag"], Set<string>> = {
     "scrollX",
     "scrollY"
   ]),
-  text: new Set(["value", "color", "bold"]),
+  text: new Set(["value", "wrap", "color", "bold"]),
   spacer: new Set(["size"]),
   button: new Set(["value", "disabled"]),
   input: new Set(["value", "placeholder"])
@@ -61,6 +62,7 @@ const futureLayoutProps = new Set<string>([
   "marginLeft",
   "gap",
   "flexDirection",
+  "flexWrap",
   "justifyContent",
   "alignItems",
   "flexGrow",
@@ -83,6 +85,7 @@ const layoutPropAliases = new Map<string, string>([
   ["margin-x", "marginX"],
   ["margin-y", "marginY"],
   ["flex-direction", "flexDirection"],
+  ["flex-wrap", "flexWrap"],
   ["justify-content", "justifyContent"],
   ["align-items", "alignItems"],
   ["flex-grow", "flexGrow"],
@@ -145,10 +148,7 @@ function measureElement(
         height: constraint.height
       };
     case "text":
-      return {
-        width: String(node.props.value ?? "").length,
-        height: 1
-      };
+      return measureTextElement(node, constraint);
     case "spacer":
       return measureSpacer(node, constraint);
     case "vstack":
@@ -161,6 +161,23 @@ function measureElement(
     case "input":
       throw new Error(`Unsupported layout element: ${node.tag}`);
   }
+}
+
+function measureTextElement(
+  node: MountedElementNode,
+  constraint: LayoutConstraint
+): LayoutSize {
+  const text = String(node.props.value ?? "");
+  const wrap = readTextWrapMode(node.props.wrap);
+  const layout = layoutText(text, {
+    width: wrap === "legacy" ? undefined : constraint.width,
+    wrap
+  });
+
+  return {
+    width: layout.width,
+    height: layout.height
+  };
 }
 
 function measureSpacer(
@@ -187,11 +204,19 @@ function measureBox(
   constraint: LayoutConstraint
 ): LayoutSize {
   const edges = getBoxEdges(node);
-  const contentConstraint = shrinkConstraint(constraint, edges);
-  const childrenSize = measureFlowChildren(node.children, "column", contentConstraint);
   const inset = getBoxInset(edges);
   const width = readOptionalSize(node.props.width);
   const height = readOptionalSize(node.props.height);
+  const contentConstraint = {
+    ...shrinkConstraint(constraint, edges),
+    ...(width === undefined
+      ? {}
+      : { width: clampNonNegative(width - inset * 2) }),
+    ...(height === undefined
+      ? {}
+      : { height: clampNonNegative(height - inset * 2) })
+  };
+  const childrenSize = measureFlowChildren(node.children, "column", contentConstraint);
 
   return {
     width: width ?? childrenSize.width + inset * 2,
@@ -489,6 +514,10 @@ function validateElementProps(node: MountedElementNode): void {
 
   if (node.tag === "box") {
     readOverflow(node.props.overflow);
+  }
+
+  if (node.tag === "text") {
+    readTextWrapMode(node.props.wrap);
   }
 }
 

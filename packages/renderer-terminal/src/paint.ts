@@ -1,4 +1,5 @@
 import type { LayoutNode, LayoutRect, LayoutViewport } from "@bindtty/layout";
+import { layoutText, readTextWrapMode } from "@bindtty/text";
 import type { MountedElementNode } from "@bindtty/vnode";
 import { createFrame, getCell, setCell } from "./frame.js";
 import { readPaintStyle, toBorderCellStyle, toCellStyle } from "./style.js";
@@ -108,16 +109,24 @@ function paintText(
 
   const value = mounted.props.value;
   const text = value === null || value === undefined ? "" : String(value);
-  const clippedText = text.split("\n", 1)[0]?.slice(0, node.rect.width) ?? "";
+  const wrap = readTextWrapMode(mounted.props.wrap);
+  const textLayout = layoutText(text, {
+    width: node.rect.width,
+    wrap
+  });
+  const lines = textLayout.lines.slice(0, node.rect.height);
+  const style = toCellStyle(readPaintStyle(mounted.props));
 
-  writeTextClipped(
-    frame,
-    node.rect.x + context.offsetX,
-    node.rect.y + context.offsetY,
-    clippedText,
-    toCellStyle(readPaintStyle(mounted.props)),
-    context
-  );
+  for (let row = 0; row < lines.length; row += 1) {
+    writeTextClipped(
+      frame,
+      node.rect.x + context.offsetX,
+      node.rect.y + row + context.offsetY,
+      (lines[row] ?? "").slice(0, node.rect.width),
+      style,
+      context
+    );
+  }
 }
 
 function paintBox(

@@ -21,17 +21,38 @@ const commonElementProps: Record<string, PropSchema> = {
   onFocusChange: { dirty: "paint" }
 };
 
+const commonYogaItemProps: Record<string, PropSchema> = {
+  flexGrow: { dirty: "layout" },
+  "flex-grow": { dirty: "layout" },
+  flexShrink: { dirty: "layout" },
+  "flex-shrink": { dirty: "layout" }
+};
+
+const commonYogaContainerProps: Record<string, PropSchema> = {
+  gap: { dirty: "layout" },
+  flexWrap: { dirty: "layout" },
+  "flex-wrap": { dirty: "layout" },
+  alignItems: { dirty: "layout" },
+  "align-items": { dirty: "layout" },
+  justifyContent: { dirty: "layout" },
+  "justify-content": { dirty: "layout" }
+};
+
 export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
   screen: {
     acceptsChildren: true,
     props: {
-      ...commonElementProps
+      ...commonElementProps,
+      ...commonYogaItemProps,
+      ...commonYogaContainerProps
     }
   },
   box: {
     acceptsChildren: true,
     props: {
       ...commonElementProps,
+      ...commonYogaItemProps,
+      ...commonYogaContainerProps,
       border: { dirty: "paint" },
       padding: { dirty: "layout" },
       height: { dirty: "layout" },
@@ -44,13 +65,17 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
   vstack: {
     acceptsChildren: true,
     props: {
-      ...commonElementProps
+      ...commonElementProps,
+      ...commonYogaItemProps,
+      ...commonYogaContainerProps
     }
   },
   hstack: {
     acceptsChildren: true,
     props: {
-      ...commonElementProps
+      ...commonElementProps,
+      ...commonYogaItemProps,
+      ...commonYogaContainerProps
     }
   },
   text: {
@@ -58,7 +83,9 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
     requiredProps: ["value"],
     props: {
       ...commonElementProps,
+      ...commonYogaItemProps,
       value: { required: true, dirty: "layout" },
+      wrap: { dirty: "layout" },
       color: { dirty: "paint" },
       bold: { dirty: "paint" }
     }
@@ -68,6 +95,7 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
     requiredProps: ["value"],
     props: {
       ...commonElementProps,
+      ...commonYogaItemProps,
       value: { required: true, dirty: "layout" },
       disabled: { dirty: "paint" }
     }
@@ -76,6 +104,7 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
     acceptsChildren: false,
     props: {
       ...commonElementProps,
+      ...commonYogaItemProps,
       value: { dirty: "paint" },
       placeholder: { dirty: "paint" }
     }
@@ -84,6 +113,7 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
     acceptsChildren: false,
     props: {
       ...commonElementProps,
+      ...commonYogaItemProps,
       size: { dirty: "layout" }
     }
   }

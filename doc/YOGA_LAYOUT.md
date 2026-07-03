@@ -633,6 +633,47 @@ cli-truncate
 7. CJK / emoji / combining mark 作为后续 hardening。
 ```
 
+MVP 推荐依赖策略：
+
+```text
+优先自实现 ASCII-first measure / wrap / truncate。
+不在 @bindtty/text MVP 中引入 string-width / wrap-ansi / slice-ansi / cli-truncate。
+```
+
+原因：
+
+```text
+1. MVP 明确不承诺 CJK / emoji / ANSI escape。
+2. 当前 Frame 无法正确表达 wide char / grapheme。
+3. 减少 Node 18 / ESM 兼容风险。
+4. 先用测试锁定 BindTTY 自己的 plain text 语义。
+```
+
+后续 hardening 再按能力引入：
+
+```text
+CJK / emoji width:
+  string-width
+
+ANSI strip / parse:
+  strip-ansi / slice-ansi / ansi-regex
+
+terminal wrapping:
+  wrap-ansi
+
+truncate:
+  cli-truncate
+```
+
+引入外部 text 依赖前必须补充：
+
+```text
+1. Node 18 compatibility check。
+2. ESM / CJS import check。
+3. 当前 ASCII snapshot 不回退。
+4. package-lock 变动可解释。
+```
+
 ## 11. 子计划 A 缓存
 
 文本测量会在 layout 和 renderer 中频繁调用。
@@ -648,10 +689,10 @@ cache key：
 
 ```text
 measureText:
-  text + " " + mode
+  text + "\0" + mode
 
 layoutText:
-  text + " " + width + " " + wrap
+  text + "\0" + width + "\0" + wrap
 ```
 
 暂不做 LRU。后续如遇长日志内存压力，再改成有限容量缓存。
@@ -769,6 +810,46 @@ packages/layout/src/yoga-engine.ts
 export function createYogaLayoutEngine(): LayoutEngine;
 ```
 
+依赖：
+
+```json
+{
+  "dependencies": {
+    "yoga-layout": "3.2.1"
+  }
+}
+```
+
+落地前必须先确认并记录实际版本：
+
+```text
+1. 已固定 yoga-layout@3.2.1。
+2. 该包为 ESM，当前 package 的 NodeNext / ESM 编译配置可直接 import。
+3. 测试环境可直接 import。
+4. API 提供 Node.create() / calculateLayout() / freeRecursive()。
+```
+
+为了降低 `yoga-layout` API 变动影响，MVP 不建议在 engine 逻辑里到处直接使用 Yoga 原始对象。建议新增内部适配层：
+
+```ts
+interface YogaAdapter {
+  createNode(): YogaNodeAdapter;
+  directionLTR: unknown;
+  measureModeUndefined: unknown;
+}
+
+interface YogaNodeAdapter {
+  insertChild(child: YogaNodeAdapter, index: number): void;
+  calculateLayout(width: number, height: number, direction: unknown): void;
+  freeRecursive(): void;
+  setMeasureFunc(fn: YogaMeasureFunction): void;
+  unsetMeasureFunc(): void;
+  // 其余 setWidth / setHeight / setPadding / getComputed* 按需补充
+}
+```
+
+第一版可以把 adapter 放在 `yoga-engine.ts` 内部；如果 API 兼容问题变多，再拆成 `yoga-adapter.ts`。
+
 `layoutRoot()` 入口保持不变：
 
 ```ts
@@ -861,6 +942,31 @@ WeakMap<MountedNode, Yoga.Node>
 ```
 
 但这会引入 Yoga node dirty 同步、dispose 同步、structure update 同步，不适合作为 MVP。
+
+MVP 释放规则：
+
+```text
+1. 每个 Yoga node 只被一个 parent 插入一次。
+2. 只对 root yoga node 调用一次 freeRecursive()。
+3. 如果 buildYogaTree() 在中途抛错，必须释放已经创建的 root/subtree。
+4. measure function 不持有长期 MountedNode 引用；layout 完成并 free 后可被 GC。
+```
+
+建议实现结构：
+
+```ts
+let yogaTree: YogaLayoutEntry | null = null;
+
+try {
+  yogaTree = buildYogaTree(root, options);
+  yogaTree.yogaNode.calculateLayout(...);
+  return readLayoutTree(yogaTree, options);
+} finally {
+  yogaTree?.yogaNode.freeRecursive();
+}
+```
+
+如果 `buildYogaTree()` 可能在 root 创建后抛错，应在 build 函数内部使用同样的 try/finally。
 
 ## 18. Yoga Tree 内部结构
 
@@ -1042,6 +1148,22 @@ wrapper 可能影响 flex item 语义。
 flatten structure nodes into nearest element parent
 ```
 
+MVP 明确接受 wrapper 语义：
+
+```text
+fragment / show / for 在 Yoga 中会成为一个 flex item。
+```
+
+这与当前 BasicLayoutEngine 的透明 structure node 语义不完全一致，但能保持 `MountedNode -> LayoutNode` 一一对应，便于 Element Ref、调试和 renderer 兼容。
+
+验收规则：
+
+```text
+1. Yoga MVP 测试锁定 wrapper 行为。
+2. 默认 engine 已切换为 Yoga，wrapper 行为由测试锁定；如需旧透明语义，可显式使用 BasicLayoutEngine legacy fallback。
+3. 若 wrapper 影响明显，在阶段 7 前实现 flatten structure nodes。
+```
+
 ### 19.8 show
 
 ```text
@@ -1139,6 +1261,46 @@ contentSize.height =
   max(child.rect.y + child.rect.height - contentRect.y)
 ```
 
+坐标规则：
+
+```text
+1. LayoutNode.rect 是绝对坐标，和当前 BasicLayoutEngine 保持一致。
+2. contentRect 也是绝对坐标。
+3. children union 使用直接子 LayoutNode 的绝对 rect。
+4. union 结果必须转换为相对 contentRect 的内容尺寸。
+5. 若 child 在 contentRect 左/上方出现负偏移，MVP 先 clamp 起点为 0，不扩大负方向 contentSize。
+```
+
+建议实现：
+
+```ts
+function computeContentSizeFromChildren(
+  contentRect: LayoutRect,
+  children: LayoutNode[]
+): LayoutSize {
+  let width = 0;
+  let height = 0;
+
+  for (const child of children) {
+    width = Math.max(width, child.rect.x + child.rect.width - contentRect.x);
+    height = Math.max(height, child.rect.y + child.rect.height - contentRect.y);
+  }
+
+  return {
+    width: Math.max(0, width),
+    height: Math.max(0, height)
+  };
+}
+```
+
+注意：
+
+```text
+contentSize 不应使用 container computed width / height。
+contentSize 不应受 scrollOffset 影响。
+renderer 应继续只使用 LayoutNode.rect / clip / scrollOffset 绘制，不重新计算 contentSize。
+```
+
 空 children：
 
 ```text
@@ -1216,6 +1378,65 @@ box = column
 ```
 
 后续如果要让 `box` 通用化，再开放 `flexDirection`。
+
+### 21.1 prop 命名与 alias 规则
+
+所有新增 layout props 必须同时考虑：
+
+```text
+camelCase:
+  flexGrow
+  justifyContent
+  alignItems
+  flexWrap
+
+kebab-case:
+  flex-grow
+  justify-content
+  align-items
+  flex-wrap
+```
+
+规则：
+
+```text
+1. TSX 类型优先暴露 camelCase。
+2. Template / runtime 可以接收 camelCase 与 kebab-case。
+3. layout validator 负责 alias 归一和 duplicate 检查。
+4. 同时传 camelCase 和 kebab-case 时抛错。
+5. Yoga engine 只消费归一后的 camelCase 语义。
+```
+
+阶段 6 必须同步更新：
+
+```text
+1. @bindtty/vnode schema。
+2. @bindtty/jsx-runtime IntrinsicElements。
+3. BasicLayoutEngine supported props / future props / aliases。
+4. YogaLayoutEngine prop reader。
+5. LAYOUT.md prop 表。
+```
+
+### 21.2 BasicLayoutEngine 与 Yoga-only props
+
+即使默认 engine 已切到 Yoga，Yoga flex props 也不能在 BasicLayoutEngine legacy fallback 中被悄悄忽略。
+
+推荐策略：
+
+```text
+阶段 6 前:
+  BasicLayoutEngine 对 gap / flexGrow / flexShrink / alignItems / justifyContent / flexWrap 继续抛出 unsupported future layout prop。
+
+阶段 6:
+  默认 engine 已使用 YogaLayoutEngine，这些 props 可直接使用。
+  BasicLayoutEngine 遇到这些 props 应抛出明确错误：
+    "Unsupported layout prop: flexGrow"
+
+默认切 Yoga 后:
+  BasicLayoutEngine 可继续抛错，文档标注 Basic 为 legacy fallback。
+```
+
+这样可以避免用户传了 `flexGrow`，但默认 Basic engine 静默忽略导致布局不可预测。
 
 ## 22. 子计划 B 测试
 
@@ -1445,7 +1666,7 @@ function paintText(frame, node, mounted, context) {
 
 ## 27. App 级 layoutEngine 注入
 
-为了在默认 engine 切换前跑完整 Yoga app / E2E，`createApp()` 需要支持 layout engine 注入。
+在默认 engine 切换前，`createApp()` 通过 layout engine 注入跑完整 Yoga app / E2E。默认切换完成后，该注入能力仍保留，用于测试、自定义 backend 和 Basic fallback。
 
 建议 API：
 
@@ -1480,7 +1701,7 @@ createApp(view, {
 作用：
 
 ```text
-1. 默认 engine 未切换前，也能跑 Yoga app/e2e。
+1. 默认 engine 切换前后，都能跑 Yoga app/e2e。
 2. ScrollView 可以在真实 app render path 下验证。
 3. 不需要临时改 layoutRoot 默认值。
 ```
@@ -1571,6 +1792,20 @@ examples/yoga-layout
 
 最后推进按一个总计划分阶段执行，而不是按两个子计划分别推进。这样可以保证每个阶段都有明确集成点和验收标准。
 
+当前落地状态（2026-07-03）：
+
+```text
+阶段 0：已完成范围决策，MVP 明确为 plain ASCII-first，不支持内嵌 ANSI / wide-cell 完整语义。
+阶段 1：已完成 @bindtty/text，包含 measure / wrap / truncate / cache 与 unit tests。
+阶段 2：已完成 text.wrap 接入 BasicLayoutEngine、renderer 与 JSX/VNode schema。
+阶段 3：已完成 app 级 layoutEngine 注入，stdout / terminal mode 均覆盖测试。
+阶段 4：已完成 createYogaLayoutEngine() MVP。
+阶段 5：核心路径已完成，Yoga 下 ScrollView 可通过 app 注入使用 scroll metadata；扩展场景仍需继续补充。
+阶段 6：已打开第一批 Yoga flex props，包含 camelCase / kebab-case、Yoga 映射与 Basic 明确报错。
+阶段 7：已完成默认 engine 切换，layoutRoot 默认使用 YogaLayoutEngine，BasicLayoutEngine 保留为 legacy fallback。
+阶段 8：尚未决定 BasicLayoutEngine 的长期去留。
+```
+
 ## 阶段 0：Frame wide-cell / ANSI 范围决策
 
 目标：明确 MVP 字符范围，避免文本计划承诺超过当前 Frame 能力。
@@ -1608,7 +1843,8 @@ examples/yoga-layout
 - [ ] 支持 `truncate-middle`。
 - [ ] 支持 `truncate-start`。
 - [ ] 增加文本测量缓存。
-- [ ] 选定 Node 18 兼容依赖版本。
+- [ ] 采用 ASCII-first 自实现，暂不引入 text 外部依赖。
+- [ ] 若确需外部依赖，先完成 Node 18 / ESM 兼容验证。
 - [ ] 导出完整类型。
 - [ ] 增加 unit tests。
 
@@ -1655,7 +1891,7 @@ examples/yoga-layout
 
 ## 阶段 3：app 级 layoutEngine 注入
 
-目标：在默认 engine 切换前允许完整 app / E2E 使用 Yoga engine。
+目标：允许完整 app / E2E 显式使用 Yoga engine；默认切换后该能力继续作为自定义 backend 入口。
 
 任务：
 
@@ -1679,8 +1915,10 @@ examples/yoga-layout
 
 任务：
 
+- [ ] 确认并固定 Node 18 兼容的 `yoga-layout` 版本。
 - [ ] `@bindtty/layout` 增加 `yoga-layout` 依赖。
 - [ ] 新增 `src/yoga-engine.ts`。
+- [ ] 在 `yoga-engine.ts` 内部建立 Yoga API adapter。
 - [ ] 实现 `createYogaLayoutEngine()`。
 - [ ] 支持 `screen`。
 - [ ] 支持 `vstack`。
@@ -1691,8 +1929,11 @@ examples/yoga-layout
 - [ ] 支持 `fragment`。
 - [ ] 支持 `show`。
 - [ ] 支持 `for`。
+- [ ] 明确 fragment/show/for wrapper node 语义并用测试锁定。
 - [ ] 输出现有 `LayoutNode`。
+- [ ] 输出绝对坐标 `rect` / `contentRect`。
 - [ ] 每次 layout 后 `freeRecursive()`。
+- [ ] buildYogaTree 中途抛错时也释放已创建 Yoga node。
 - [ ] 保留 `createBasicLayoutEngine()`。
 
 验收：
@@ -1707,6 +1948,7 @@ examples/yoga-layout
 - [ ] spacer 行为与当前语义兼容。
 - [ ] show / for 动态结构 layout 正确。
 - [ ] Yoga node 不泄漏。
+- [ ] Yoga API 只通过 adapter 被 engine 逻辑使用。
 - [ ] Basic engine 仍可使用。
 
 ## 阶段 5：Yoga 下的 ScrollView / contentSize / scrollOffset
@@ -1717,6 +1959,7 @@ examples/yoga-layout
 
 - [ ] Yoga engine 计算 `clip`。
 - [ ] Yoga engine 基于 children union 或自然内容测量计算 `contentSize`。
+- [ ] children union 使用绝对 child rect 转换为相对 contentRect 的尺寸。
 - [ ] Yoga engine 不能直接使用 container computed size 作为 scroll contentSize。
 - [ ] Yoga engine 计算 `scrollOffset`。
 - [ ] 保持 `scrollY` clamp。
@@ -1746,27 +1989,58 @@ examples/yoga-layout
 
 任务：
 
-- [ ] schema 增加 `gap`。
-- [ ] schema 增加 `flexGrow`。
-- [ ] schema 增加 `flexShrink`。
-- [ ] schema 增加 `alignItems`。
-- [ ] schema 增加 `justifyContent`。
-- [ ] schema 增加 `flexWrap`。
-- [ ] JSX 类型同步。
-- [ ] Yoga engine 映射这些 props。
-- [ ] layout validator 更新 supported props。
-- [ ] 更新文档示例。
+- [x] schema 增加 `gap`。
+- [x] schema 增加 `flexGrow`。
+- [x] schema 增加 `flexShrink`。
+- [x] schema 增加 `alignItems`。
+- [x] schema 增加 `justifyContent`。
+- [x] schema 增加 `flexWrap`。
+- [x] JSX 类型同步 camelCase props。
+- [x] layout alias 支持 kebab-case props。
+- [x] duplicate alias 检查同时覆盖 camelCase / kebab-case。
+- [x] Yoga engine 映射这些 props。
+- [x] BasicLayoutEngine 对 Yoga-only props 给出明确错误。
+- [x] layout validator 更新 supported props / future props / aliases。
+- [x] 更新文档示例。
 
 验收：
 
-- [ ] hstack gap 正确。
-- [ ] vstack gap 正确。
-- [ ] hstack flexWrap 可以换行。
-- [ ] flexGrow 分配剩余空间。
-- [ ] flexShrink 在空间不足时收缩。
-- [ ] alignItems 基本行为正确。
-- [ ] justifyContent 基本行为正确。
-- [ ] 未支持 prop 仍给出明确错误。
+- [x] hstack gap 正确。
+- [x] vstack gap 正确。
+- [x] hstack flexWrap 可以换行。
+- [x] flexGrow 分配剩余空间。
+- [x] flexShrink 在空间不足时收缩。
+- [x] alignItems 基本行为正确。
+- [x] justifyContent 基本行为正确。
+- [x] 未支持 prop 仍给出明确错误。
+
+示例：
+
+```tsx
+import { createApp } from "bindtty";
+
+createApp(
+  <screen alignItems="center" justifyContent="center">
+    <hstack gap={2} flexWrap="wrap">
+      <box flexGrow={1}>
+        <text value="Left" />
+      </box>
+      <box flex-shrink={1}>
+        <text value="Right" />
+      </box>
+    </hstack>
+  </screen>
+);
+```
+
+说明：
+
+```text
+1. camelCase 与 kebab-case 可以同时作为输入形式。
+2. 同一语义不能同时传 camelCase 与 kebab-case，例如 flexGrow 与 flex-grow 同时出现会报 Duplicate layout prop。
+3. 默认 engine 已经是 YogaLayoutEngine，可以直接使用这些 props。
+4. BasicLayoutEngine 仍不消费这些 Yoga-only props；如显式使用 Basic fallback，这些 props 会抛出明确错误。
+```
 
 ## 阶段 7：默认 engine 切换
 
@@ -1774,32 +2048,32 @@ examples/yoga-layout
 
 前置条件：
 
-- [ ] Yoga engine 覆盖现有 Basic engine 的核心行为。
-- [ ] ScrollView / List e2e 通过。
-- [ ] renderer snapshot 通过。
-- [ ] examples 全部通过。
-- [ ] Node 18 环境通过。
-- [ ] real PTY e2e 通过。
+- [x] Yoga engine 覆盖现有 Basic engine 的核心行为。
+- [x] ScrollView / List e2e 通过。
+- [x] renderer snapshot 通过。
+- [x] examples 全部通过。
+- [x] Node 18 环境通过。
+- [x] real PTY e2e 通过。
 
 任务：
 
-- [ ] `layoutRoot()` 默认 engine 从 Basic 切到 Yoga。
-- [ ] `createBasicLayoutEngine()` 保留导出。
-- [ ] 文档标注 Basic 为 legacy。
-- [ ] 更新 [LAYOUT.md](./LAYOUT.md)。
-- [ ] 更新 [RENDERER.md](./RENDERER.md)。
-- [ ] 更新 [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md)。
-- [ ] 新增 Yoga layout 示例。
-- [ ] 新增 text wrap 示例。
-- [ ] 更新 changelog / README。
+- [x] `layoutRoot()` 默认 engine 从 Basic 切到 Yoga。
+- [x] `createBasicLayoutEngine()` 保留导出。
+- [x] 文档标注 Basic 为 legacy。
+- [x] 更新 [LAYOUT.md](./LAYOUT.md)。
+- [x] 更新 [RENDERER.md](./RENDERER.md)。
+- [x] 更新 [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md)。
+- [x] 新增 Yoga layout 示例。
+- [x] 新增 text wrap 示例。
+- [x] 更新 changelog / README。
 
 验收：
 
-- [ ] 默认 app 使用 Yoga。
-- [ ] 用户无需显式传 engine。
-- [ ] 现有示例表现不回退。
-- [ ] Basic engine 仍可通过显式 engine 使用。
-- [ ] 文档与代码一致。
+- [x] 默认 app 使用 Yoga。
+- [x] 用户无需显式传 engine。
+- [x] 现有示例表现不回退。
+- [x] Basic engine 仍可通过显式 engine 使用。
+- [x] 文档与代码一致。
 
 ## 阶段 8：BasicLayoutEngine 退场评估
 
@@ -1887,6 +2161,9 @@ examples/yoga-layout
 - [ ] gap 正确。
 - [ ] alignItems 正确。
 - [ ] justifyContent 正确。
+- [ ] camelCase / kebab-case alias 行为一致。
+- [ ] duplicate alias 抛错。
+- [ ] BasicLayoutEngine 对 Yoga-only props 抛出明确错误。
 
 ### 30.5 renderer-terminal
 
@@ -2104,7 +2381,7 @@ PR 8: default engine switch
 @bindtty/text 可独立落地
 BasicLayoutEngine 与 renderer 的多行语义一致
 Yoga engine 可复用同一套 text measurement
-createApp 可在默认切换前完整验证 Yoga
+createApp 可通过 engine 注入验证 Yoga / Basic fallback / 自定义 backend
 ScrollView 可验证新的 contentSize / scrollOffset
 最终默认 engine 切换风险可控
 ```

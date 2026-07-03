@@ -1,4 +1,5 @@
 export { createBasicLayoutEngine } from "./basic-engine.js";
+export { createYogaLayoutEngine } from "./yoga-engine.js";
 export { layoutRoot } from "./layout.js";
 export { createZeroRect } from "./measure.js";
 export type { LayoutFlow } from "./intrinsic.js";

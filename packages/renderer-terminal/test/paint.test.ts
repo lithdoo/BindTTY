@@ -122,6 +122,40 @@ test("paintLayout clips text to viewport and first line", () => {
   assert.deepEqual(frameToLines(frame), ["cdef"]);
 });
 
+test("paintLayout paints explicit multiline text", () => {
+  const root = layout(
+    element("text", { value: "A\nBC", wrap: "none", color: "green" }),
+    rect(1, 0, 2, 2)
+  );
+  const frame = paintLayout(root, { viewport: { width: 4, height: 3 } });
+
+  assert.deepEqual(frameToLines(frame), [
+    " A  ",
+    " BC ",
+    "    "
+  ]);
+  assert.deepEqual(getCell(frame, 1, 0)?.style, {
+    foreground: "green"
+  });
+  assert.deepEqual(getCell(frame, 1, 1)?.style, {
+    foreground: "green"
+  });
+});
+
+test("paintLayout paints wrapped text within the layout rect height", () => {
+  const root = layout(
+    element("text", { value: "hello world", wrap: "wrap" }),
+    rect(0, 0, 5, 2)
+  );
+  const frame = paintLayout(root, { viewport: { width: 5, height: 3 } });
+
+  assert.deepEqual(frameToLines(frame), [
+    "hello",
+    "world",
+    "     "
+  ]);
+});
+
 test("paintLayout treats null and undefined text values as empty text", () => {
   const nullText = layout(element("text", { value: null }), rect(0, 0, 4, 1));
   const undefinedText = layout(

@@ -6,6 +6,7 @@ import {
   fragmentTemplate,
   showTemplate
 } from "@bindtty/vnode";
+import type { PublicTextWrapMode } from "@bindtty/text";
 import type {
   BindingValue,
   FunctionComponent,
@@ -64,6 +65,38 @@ interface IntrinsicPaintProps {
   color?: BindingValue<string>;
   background?: BindingValue<string>;
   bold?: BindingValue<boolean>;
+}
+
+type IntrinsicYogaAlignItems =
+  | "stretch"
+  | "flex-start"
+  | "center"
+  | "flex-end"
+  | "baseline";
+type IntrinsicYogaJustifyContent =
+  | "flex-start"
+  | "center"
+  | "flex-end"
+  | "space-between"
+  | "space-around"
+  | "space-evenly";
+type IntrinsicYogaFlexWrap = "nowrap" | "wrap" | "wrap-reverse";
+
+interface IntrinsicYogaItemProps {
+  flexGrow?: BindingValue<number>;
+  "flex-grow"?: BindingValue<number>;
+  flexShrink?: BindingValue<number>;
+  "flex-shrink"?: BindingValue<number>;
+}
+
+interface IntrinsicYogaContainerProps {
+  gap?: BindingValue<number>;
+  flexWrap?: BindingValue<IntrinsicYogaFlexWrap>;
+  "flex-wrap"?: BindingValue<IntrinsicYogaFlexWrap>;
+  alignItems?: BindingValue<IntrinsicYogaAlignItems>;
+  "align-items"?: BindingValue<IntrinsicYogaAlignItems>;
+  justifyContent?: BindingValue<IntrinsicYogaJustifyContent>;
+  "justify-content"?: BindingValue<IntrinsicYogaJustifyContent>;
 }
 
 interface IntrinsicBoxStyleProps {
@@ -173,41 +206,46 @@ export namespace JSX {
   export type Element = Template;
 
   export interface IntrinsicElements {
-    screen: IntrinsicInteractionProps & {
+    screen: IntrinsicInteractionProps & IntrinsicYogaItemProps & IntrinsicYogaContainerProps & {
       children?: TemplateChildren;
     };
 
-    box: IntrinsicInteractionProps & IntrinsicBoxStyleProps & IntrinsicPaintProps & {
+    box: IntrinsicInteractionProps &
+      IntrinsicBoxStyleProps &
+      IntrinsicPaintProps &
+      IntrinsicYogaItemProps &
+      IntrinsicYogaContainerProps & {
       children?: TemplateChildren;
     };
 
-    vstack: IntrinsicInteractionProps & {
+    vstack: IntrinsicInteractionProps & IntrinsicYogaItemProps & IntrinsicYogaContainerProps & {
       children?: TemplateChildren;
     };
 
-    hstack: IntrinsicInteractionProps & {
+    hstack: IntrinsicInteractionProps & IntrinsicYogaItemProps & IntrinsicYogaContainerProps & {
       children?: TemplateChildren;
     };
 
-    text: IntrinsicInteractionProps & IntrinsicPaintProps & {
+    text: IntrinsicInteractionProps & IntrinsicPaintProps & IntrinsicYogaItemProps & {
       value: BindingValue<string | number>;
+      wrap?: BindingValue<PublicTextWrapMode>;
       children?: never;
     };
 
-    button: IntrinsicInteractionProps & {
+    button: IntrinsicInteractionProps & IntrinsicYogaItemProps & {
       value: BindingValue<string | number>;
       disabled?: BindingValue<boolean>;
       onPress?: () => void;
       children?: never;
     };
 
-    input: IntrinsicInteractionProps & {
+    input: IntrinsicInteractionProps & IntrinsicYogaItemProps & {
       value?: BindingValue<string>;
       placeholder?: BindingValue<string>;
       children?: never;
     };
 
-    spacer: IntrinsicInteractionProps & {
+    spacer: IntrinsicInteractionProps & IntrinsicYogaItemProps & {
       size?: BindingValue<number>;
       children?: never;
     };
