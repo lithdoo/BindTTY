@@ -10,6 +10,7 @@ import type {
   BindingValue,
   FunctionComponent,
   IntrinsicElementTag,
+  MountedElementRefHandler,
   Template,
   TemplateChildren
 } from "@bindtty/vnode";
@@ -54,6 +55,7 @@ type InteractionKeyBinding = boolean | InteractionKeyHandler | null | undefined;
 
 interface IntrinsicInteractionProps {
   id?: BindingValue<string | number>;
+  ref?: MountedElementRefHandler;
   onKey?: BindingValue<InteractionKeyBinding>;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }

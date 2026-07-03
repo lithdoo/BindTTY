@@ -15,6 +15,7 @@ export interface ElementSchema {
 
 const commonElementProps: Record<string, PropSchema> = {
   id: { dirty: "paint" },
+  ref: { dirty: "paint" },
   focusStyle: { dirty: "paint" },
   onKey: { dirty: "paint" },
   onFocusChange: { dirty: "paint" }

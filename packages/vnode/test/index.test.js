@@ -50,8 +50,10 @@ test('creates element templates and validates element schema', () => {
 test('element schema includes common interaction props', () => {
   const onKey = () => true;
   const onFocusChange = () => {};
+  const ref = () => {};
   const view = elementTemplate('box', {
     id: 'panel',
+    ref,
     onKey,
     onFocusChange
   });
@@ -61,6 +63,7 @@ test('element schema includes common interaction props', () => {
     tag: 'box',
     props: {
       id: 'panel',
+      ref,
       onKey,
       onFocusChange
     },

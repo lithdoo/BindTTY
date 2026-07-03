@@ -18,6 +18,22 @@ export interface MountedBinding<T = unknown> {
   dispose: () => void;
 }
 
+export type MountedElementRefHandler<TLayout = unknown> = (
+  api: MountedElementApi<TLayout>
+) => void;
+
+export interface MountedElementApi<TLayout = unknown> {
+  readonly tag: IntrinsicElementTag;
+  readonly id: string | number | undefined;
+
+  getProp(name: string): unknown;
+  getLayout(): TLayout | null;
+
+  onMounted?: () => void;
+  onLayout?: (layout: TLayout) => void;
+  onUnmount?: () => void;
+}
+
 export interface MountedNodeBase {
   dirty: DirtyKind | null;
   dispose(): void;
@@ -31,6 +47,7 @@ export interface MountedElementNode extends MountedNodeBase {
   bindings: Record<string, MountedBinding>;
   children: MountedNode[];
   state: Record<string, unknown>;
+  api?: MountedElementApi;
 }
 
 export interface MountedFragmentNode extends MountedNodeBase {

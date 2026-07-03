@@ -320,8 +320,9 @@ const offset = createSignal(0);
 
 1. `offset` 是外部状态来源，`ScrollView` 不拥有自己的长期 offset state。
 2. 键盘滚动时，如果提供 `onOffsetChange`，调用它；如果没有提供，则 `ScrollView` 只是静态裁剪容器，不进入 focus list。
-3. `onOffsetChange` 接收的是未 clamp 的意图值还是已 clamp 值需要明确：M7 第一版接收 **意图值**，实际可见值由下一轮 layout clamp。
-4. 若业务希望精确知道 clamp 后值，后续可以增加 `onScrollStateChange`，M7 不做。
+3. `onOffsetChange` 接收下一次用户意图值；键盘滚动基于上一轮 layout 输出的 applied offset / max offset 计算 next，而不是基于可能越界的原始 `offset`。
+4. layout 不会隐式反写用户传入的 `offset` signal；若外部 `offset` 越界，画面按 layout clamp 后的 applied offset 渲染，用户状态保持受控。
+5. 若业务希望精确知道 applied scroll state，后续可以增加 `onScrollStateChange`，M7 不做。
 
 ### 5.4 List 场景（用户面向）
 
@@ -517,12 +518,12 @@ interface PaintContext {
 `ScrollView` 内部 box 只有在 `scrollOnArrow !== false` 且存在 `onOffsetChange` 时才挂载滚动 handler。
 
 ```ts
-if (event.name === "up") onOffsetChange(offset - 1)
-if (event.name === "down") onOffsetChange(offset + 1)
-if (event.name === "pageup") onOffsetChange(offset - height)
-if (event.name === "pagedown") onOffsetChange(offset + height)
+if (event.name === "up") onOffsetChange(Math.max(0, appliedY - 1))
+if (event.name === "down") onOffsetChange(Math.min(maxY, appliedY + 1))
+if (event.name === "pageup") onOffsetChange(Math.max(0, appliedY - pageY))
+if (event.name === "pagedown") onOffsetChange(Math.min(maxY, appliedY + pageY))
 if (event.name === "home") onOffsetChange(0)
-if (event.name === "end") onOffsetChange(Number.MAX_SAFE_INTEGER)
+if (event.name === "end") onOffsetChange(maxY)
 ```
 
 返回值：
@@ -793,7 +794,7 @@ const app = createApp(
 | offset 与 TextInput 焦点冲突 | 明确 interaction 优先级；E2E 覆盖 |
 | 水平滚动与边框 padding 交互复杂 | M7 仅垂直；水平 API 预留 |
 | `height` props 与未来 layout props 设计冲突 | M7 只实现 fixed number，并在 LAYOUT.md 标注这是通用 layout props 的第一步 |
-| `onOffsetChange` 拿到意图值而非 clamp 值 | 文档明确；后续如有需要再加 `onScrollStateChange` |
+| 外部 `offset` 可能越界 | layout 输出 applied offset；ScrollView 键盘处理基于 applied offset 和 max offset 计算下一次意图，不隐式反写用户 signal |
 | raw stdin 不支持箭头键 | mock E2E 覆盖细节；real PTY 只做 smoke |
 
 ---

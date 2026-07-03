@@ -11,6 +11,23 @@
 - [INTERACTION.md](./INTERACTION.md) — focus 与 onKey
 - [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md) — ScrollView / List 设计
 
+当前状态：**核心能力已落地**。
+
+已完成：
+
+1. intrinsic element 支持静态 `ref(api)`。
+2. runtime 提供稳定 `MountedElementApi`、`onMounted`、`onLayout`、`onUnmount`。
+3. app 在 layout/render 后派发 layout result 到 element api。
+4. `ScrollView` 已迁移为基于 applied layout state 计算下一次滚动意图。
+5. 旧的 `scroll-sync` 反写 signal 方案已移除。
+
+暂未纳入 MVP：
+
+1. focus / blur / onFocusChange 的 api 扩展。
+2. component-level lifecycle。
+3. hooks / effect / watch。
+4. React ref object / forwardRef 语义。
+
 ## 1. 背景问题
 
 当前函数组件本质上是 Template 工厂：
@@ -136,6 +153,8 @@ export type MountedElementRefHandler<TLayout = unknown> =
 5. 节点 dispose 时执行 `api.onUnmount` 回调。
 6. `ref` 不支持 `BindingValue<MountedElementRefHandler>`。
 7. `ref` 不进入 `node.props` / `node.bindings`，runtime 必须把它作为 lifecycle prop 单独抽取。
+8. `ref` 也不进入 `node.propSources`，否则后续调试与 binding diff 会把 lifecycle prop 误认为普通 prop。
+9. `ref` 只能是函数；如果传入非函数静态值，应在 mount 阶段抛错。
 
 ### 4.2 MountedElementApi
 
@@ -165,6 +184,8 @@ export interface MountedElementApi<TLayout = unknown> {
 6. `onLayout` 在每次该 element 出现在 layout tree 中时触发。
 7. `onUnmount` 在 dispose 时触发。
 8. `onMounted` / `onLayout` / `onUnmount` 是 callback slot，重复赋值会覆盖旧回调。
+9. `TLayout` 在 `@bindtty/vnode` / `@bindtty/runtime` 层必须保持为 `unknown` 或泛型，不直接引用 `@bindtty/layout` 的 `LayoutNode`，避免底层包依赖上层 layout 包。
+10. `bindtty` app 层派发 layout 时传入真实 `LayoutNode`；widgets 若需要精确类型，可以在 widget 包内按 `LayoutNode` 使用或封装类型辅助。
 
 ### 4.3 为什么叫 ref，而不是 onMounted
 
@@ -198,6 +219,14 @@ MVP 不支持 `BindingValue<MountedElementRefHandler>`。
 3. 当前需求是获取 element handle 并设置回调，静态函数足够。
 
 如果用户需要动态行为，应在 `ref` 中设置 callback slot，或等待后续 effect / watch 能力。
+
+落地校验规则：
+
+1. `ref` 缺省：不创建 `api`。
+2. `ref` 是函数：创建 `api` 并调用。
+3. `ref` 是 readable signal：抛错。
+4. `ref` 是非函数静态值：抛错。
+5. `ref` 不参与 `bindProp()` / `bindProps()`。
 
 ## 5. MountedElementNode 结构变化
 
@@ -288,9 +317,9 @@ layoutRoot()
   ↓
 renderer.render(layoutTree)
   ↓
-dispatchLayout(layoutTree)
-  ↓
 runtime.clearDirty()
+  ↓
+dispatchLayout(layoutTree)
 ```
 
 `dispatchLayout()` 遍历 layout tree：
@@ -311,9 +340,24 @@ function dispatchLayout(layout: LayoutNode | null): void {
 }
 ```
 
-`dispatchLayout()` 不修改用户 signal，只通知 element api 的 layout callback。
+`dispatchLayout()` 自身不修改用户 signal，只通知 element api 的 layout callback。但用户在 `api.onLayout` 中可以调用 signal setter。
 
-推荐在 renderer 后派发 layout，这样本轮 layout 已经用于实际渲染。若 callback 中修改 signal，应进入下一轮 runtime flush，而不是在当前 render 中递归 layout/render。
+推荐在 renderer 后、`runtime.clearDirty()` 后派发 layout，这样本轮 layout 已经用于实际渲染，同时 `api.onLayout` 中产生的新 dirty 不会被本轮 `clearDirty()` 吃掉。
+
+如果实现上必须在 `runtime.clearDirty()` 前派发 layout，则 runtime 需要区分：
+
+```text
+本轮 render 已消费的 dirty
+dispatchLayout 期间新产生的 dirty
+```
+
+并保证只清掉前者。MVP 为了降低 runtime 复杂度，建议采用：
+
+```text
+layoutRoot -> renderer.render -> clearDirty -> dispatchLayout
+```
+
+`api.onLayout` 中触发的 signal 更新进入下一轮 flush，不允许在当前 `dispatchLayout()` 中递归 layout/render。
 
 `notifyElementLayout(node, layout)` 对没有 `api` 的 element 必须是 no-op。只有定义了 `ref` 并创建了 `node.api` 的 element 才会保存 latest layout 并调用 `api.onLayout?.(layout)`。
 
@@ -457,6 +501,10 @@ function ScrollView(props: ScrollViewProps): Template {
 }
 ```
 
+这里依赖当前函数组件语义：函数组件在 mount 时执行一次，返回的内部 `box`、`ref` 回调和 `onKey` handler 共享同一个闭包。
+
+当前文档不引入“函数组件重新执行”的模型。若未来引入组件实例或重新执行机制，`ScrollView` 的 applied state 需要迁移到组件实例 state 或 element api state 中，而不能继续依赖一次性闭包。
+
 数据流变为：
 
 ```text
@@ -504,6 +552,14 @@ ref
 
 注意：当前 `elementTemplate()` 只校验 children 与 required props，并不拒绝未知 props。因此“schema 允许 `ref`”主要服务于公共类型、dirty 语义与后续一致性；真正关键的是 runtime 特殊抽取 `ref`，避免它进入普通 binding 流程。
 
+类型边界：
+
+1. `MountedElementApi` 可以定义在 `@bindtty/vnode`。
+2. `MountedElementApi` 的 `TLayout` 默认保持 `unknown`。
+3. `@bindtty/vnode` 不依赖 `@bindtty/layout`。
+4. `@bindtty/runtime` 只保存与派发 `unknown` layout。
+5. `bindtty` app 层知道具体 layout 类型，并把 `LayoutNode` 作为 `unknown` 传给 runtime。
+
 ### 9.2 @bindtty/jsx-runtime
 
 需要补充 JSX intrinsic 类型，使下面代码可以通过类型检查：
@@ -526,11 +582,27 @@ runtime 在 mount element 时：
 
 1. 创建 `MountedElementNode`。
 2. 从 `template.props` 中抽取静态 `ref`，并验证它不是 readable signal。
-3. 绑定普通 props（不包含 `ref`）。
-4. 如果存在静态 `ref`，创建 `MountedElementApi` 并保存到 `node.api`。
-5. 执行静态 `ref(api)`。
-6. mount children。
-7. 触发 `api.onMounted?.()`。
+3. 验证 `ref` 若存在则必须是函数。
+4. 从 ordinary props 中删除 `ref`。
+5. 绑定普通 props（不包含 `ref`）。
+6. 如果存在静态 `ref`，创建 `MountedElementApi` 并保存到 `node.api`。
+7. 执行静态 `ref(api)`。
+8. mount children。
+9. 触发 `api.onMounted?.()`。
+
+ordinary props 指：
+
+```ts
+const { ref, ...ordinaryProps } = template.props;
+```
+
+但实现时应使用显式抽取函数，避免把 `ref` 写入：
+
+```text
+node.props
+node.propSources
+node.bindings
+```
 
 dispose element 时：
 
@@ -547,6 +619,13 @@ notifyElementLayout(node: MountedElementNode, layout: unknown): void;
 
 该函数由 app 在 layout 后调用。若 `node.api` 不存在，该函数直接返回。
 
+`notifyElementLayout` 内部负责：
+
+1. 保存 latest layout 到 lifecycle state。
+2. 让 `api.getLayout()` 返回 latest layout。
+3. 调用 `api.onLayout?.(layout)`。
+4. 如果 node 已 disposed，则 no-op。
+
 ### 9.4 bindtty createApp
 
 app 层在每次 `layoutRoot()` 后，需要把 layout tree 派发给对应 mounted element 的 api：
@@ -556,10 +635,14 @@ layoutRoot(runtime.root)
   ↓
 renderer.render(layoutTree)
   ↓
+runtime.clearDirty()
+  ↓
 dispatchLayout(layoutTree)
 ```
 
 这一步不修改用户 signal，只通知节点实例。
+
+`dispatchLayout()` 必须放在本轮 dirty 清理之后，或者 runtime 必须能保留 dispatch 期间产生的新 dirty。MVP 推荐前者。
 
 迁移后应移除或停止调用 `syncClampedScrollBindings()`。
 
@@ -621,16 +704,23 @@ function Panel() {
 
 这点需要明确，因为当前 `ComponentTemplate` 在 mount 阶段会消解，不保留组件实例。
 
-## 11. 对 scroll-sync 的影响
+## 11. 对旧 scroll-sync 的影响
 
-当前 `scroll-sync` 修复通过 layout 后回写 `scrollY` signal 保持状态一致。
+旧 `scroll-sync` 修复通过 layout 后回写 `scrollY` signal 保持状态一致。`ref(api)` 与 `api.onLayout` 落地后，ScrollView 已改为基于 applied layout state 计算下一次滚动意图，不再需要 layout 后反写用户 signal。
 
-引入 `ref` 后，推荐目标是：
+当前实现：
 
 1. 保留 layout clamp。
 2. 移除 app 对用户 signal 的隐式反写。
 3. `ScrollView` 用 `api.onLayout` 记录 applied scroll state。
 4. 键盘滚动基于 applied state 调用 `onOffsetChange(next)`。
+
+迁移策略已执行：
+
+1. 已实现 `ref(api)` 与 `api.onLayout`。
+2. 已迁移 `ScrollView` 使用 applied state。
+3. 已补充测试证明 offset 过大时用户 signal 不会被隐式改写。
+4. 已移除旧 `syncClampedScrollBindings()` 调用与实现。
 
 迁移后数据流更清晰：
 
@@ -658,6 +748,7 @@ state -> layout -> state
 - [ ] 在 common element props 中加入 lifecycle prop `ref`。
 - [ ] 补充 TSX intrinsic 类型，使 `<box ref={...} />` 可通过类型检查。
 - [ ] 单测：`ref` 不进入 `node.props` / `node.bindings`。
+- [ ] 单测：`ref` 不进入 `node.propSources`。
 
 验收：
 
@@ -674,6 +765,7 @@ state -> layout -> state
 - [ ] 创建 `MountedElementApi`。
 - [ ] 如果 element 定义了 `ref`，在 mounted element 上保存稳定 `api`。
 - [ ] 从 `template.props` 中抽取 `ref`，普通 props binding 不处理 `ref`。
+- [ ] 验证 `ref` 是函数；非函数静态值抛错。
 - [ ] mount element 时调用静态 `ref(api)`。
 - [ ] 支持用户给 `api.onUnmount` 赋值。
 - [ ] dispose 时执行 `api.onUnmount?.()`。
@@ -685,7 +777,9 @@ state -> layout -> state
 - [ ] ref mount 时只执行一次。
 - [ ] binding 更新不重复执行 ref。
 - [ ] `ref` 不进入 `node.props` / `node.bindings`。
+- [ ] `ref` 不进入 `node.propSources`。
 - [ ] signal ref 抛错。
+- [ ] 非函数 ref 抛错。
 - [ ] `api.onUnmount` 在 dispose 时执行一次。
 - [ ] show / for 重新 mount 时 ref 重新执行。
 
@@ -716,6 +810,7 @@ state -> layout -> state
 - [ ] runtime 保存 latest layout。
 - [ ] runtime 实现 `notifyElementLayout(node, layout)`。
 - [ ] app 每次 layoutRoot 后遍历 layout tree 派发 layout。
+- [ ] app 在本轮 dirty 清理后派发 layout，避免 onLayout 中产生的新 dirty 被清掉。
 - [ ] `api.getLayout()` 返回最新 layout。
 - [ ] 没有 `api` 的 element 在 layout 派发时 no-op。
 - [ ] unmount 后 `api.onLayout` 不再触发。
@@ -728,6 +823,7 @@ state -> layout -> state
 - [ ] 没有定义 `ref` 的 element 不会创建 `api`，layout 派发也不报错。
 - [ ] unmount 后不再收到 layout。
 - [ ] `api.getLayout()` 返回最新 layout。
+- [ ] `api.onLayout` 中 set signal 会进入下一轮 flush，不会被本轮 clearDirty 清掉。
 
 ### 阶段 5：ScrollView 迁移
 
@@ -739,7 +835,7 @@ state -> layout -> state
 - [ ] `api.onLayout` 记录 `appliedY` / `maxY` / `pageY`。
 - [ ] 键盘滚动基于 `appliedY` / `maxY` / `pageY` 计算 next offset。
 - [ ] `End` 改为 `onOffsetChange(maxY)`。
-- [ ] 移除或废弃 `syncClampedScrollBindings()`。
+- [ ] 测试通过后移除或停止调用 `syncClampedScrollBindings()`。
 - [ ] 更新 M7 scroll 文档中的受控规则。
 
 验收：

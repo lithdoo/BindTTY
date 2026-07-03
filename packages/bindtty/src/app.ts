@@ -1,12 +1,11 @@
 import { createInteractionController } from "@bindtty/interaction";
 import { layoutRoot } from "@bindtty/layout";
+import type { LayoutNode } from "@bindtty/layout";
 import { createTerminalRenderer } from "@bindtty/renderer-terminal";
-import { createRuntimeRoot } from "@bindtty/runtime";
+import { createRuntimeRoot, notifyElementLayout } from "@bindtty/runtime";
 import type { Dispose } from "@bindtty/runtime";
 import type { TerminalHost, TerminalKeyEvent } from "@bindtty/terminal";
 import type { ViewTemplate } from "@bindtty/vnode";
-
-import { syncClampedScrollBindings } from "./scroll-sync.js";
 
 export interface AppStdout {
   columns?: number;
@@ -106,10 +105,7 @@ export function createApp(
 
     const viewport = readViewport();
     refreshInteraction();
-    let layoutTree = layoutRoot(runtime.root, { viewport });
-    if (syncClampedScrollBindings(layoutTree)) {
-      layoutTree = layoutRoot(runtime.root, { viewport });
-    }
+    const layoutTree = layoutRoot(runtime.root, { viewport });
     const patch = renderer.render(layoutTree, {
       viewport,
       isFocused: (mounted) => interaction.isFocused(mounted)
@@ -120,7 +116,22 @@ export function createApp(
     }
 
     runtime.clearDirty();
+    dispatchLayout(layoutTree);
     return patch;
+  }
+
+  function dispatchLayout(layout: LayoutNode | null): void {
+    if (!layout) {
+      return;
+    }
+
+    if (layout.mounted.kind === "element") {
+      notifyElementLayout(layout.mounted, layout);
+    }
+
+    for (const child of layout.children) {
+      dispatchLayout(child);
+    }
   }
 
   const app: BindTTYApp = {

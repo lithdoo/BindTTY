@@ -858,7 +858,7 @@ test("terminal mode dispose prevents later runtime flush writes", async () => {
   assert.equal(terminal.writes.length, 1);
 });
 
-test("terminal mode clamps scroll offset bindings after layout", () => {
+test("terminal mode keeps scroll offset bindings controlled after layout clamp", () => {
   const terminal = createMockTerminal(12, 8);
   const offset = createSignal(0);
   const app = createApp(
@@ -882,7 +882,7 @@ test("terminal mode clamps scroll offset bindings after layout", () => {
 
   offset.set(99);
   app.render();
-  assert.equal(offset.get(), 2);
+  assert.equal(offset.get(), 99);
 
   terminal.emitKey(keyEvent("", { name: "end" }));
   assert.equal(offset.get(), 2);
@@ -899,7 +899,7 @@ test("terminal mode clamps scroll offset bindings after layout", () => {
   app.dispose();
 });
 
-test("terminal mode clamps negative and oversized scroll offsets after layout", () => {
+test("terminal mode scrolls from applied offset without implicit signal writeback", () => {
   const terminal = createMockTerminal(12, 8);
   const offset = createSignal(-4);
   const app = createApp(
@@ -922,11 +922,18 @@ test("terminal mode clamps negative and oversized scroll offsets after layout", 
   app.start();
   app.render();
 
-  assert.equal(offset.get(), 0);
+  assert.equal(offset.get(), -4);
 
   offset.set(1);
   app.render();
   assert.equal(offset.get(), 1);
+
+  offset.set(99);
+  app.render();
+  assert.equal(offset.get(), 99);
+
+  terminal.emitKey(keyEvent("", { name: "down" }));
+  assert.equal(offset.get(), 2);
 
   app.dispose();
 });

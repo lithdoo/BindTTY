@@ -43,7 +43,9 @@ export type { DirtyKind, ElementSchema, PropSchema } from "./template/schema.js"
 
 export type {
   MountedBinding,
+  MountedElementApi,
   MountedElementNode,
+  MountedElementRefHandler,
   MountedForItemNode,
   MountedForNode,
   MountedFragmentNode,

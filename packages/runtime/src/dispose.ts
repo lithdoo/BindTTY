@@ -6,6 +6,7 @@ import type {
   MountedNode,
   MountedShowNode
 } from "@bindtty/vnode";
+import { disposeElementApi } from "./element-api.js";
 
 const disposedNodes = new WeakSet<MountedNode>();
 
@@ -37,6 +38,7 @@ export function isDisposed(node: MountedNode): boolean {
 }
 
 function disposeElementNode(node: MountedElementNode): void {
+  disposeElementApi(node);
   disposeBindings(node.bindings);
   for (const child of node.children) {
     disposeMountedNode(child);

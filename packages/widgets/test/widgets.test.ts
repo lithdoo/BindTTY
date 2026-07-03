@@ -215,6 +215,7 @@ test("ScrollView renders as a clipped box with scroll metadata", () => {
   assert.equal(template.props.overflow, "clip");
   assert.equal(template.props.scrollX, 0);
   assert.equal(template.props.scrollY, 2);
+  assert.equal(typeof template.props.ref, "function");
   assert.equal(typeof template.props.onKey, "function");
   assert.equal(template.props.onFocusChange, onFocusChange);
   assert.equal(template.children[0], child);
@@ -271,6 +272,44 @@ test("ScrollView emits offset intents for scroll keys", () => {
     0,
     Number.MAX_SAFE_INTEGER
   ]);
+});
+
+test("ScrollView uses applied layout state for scroll keys after layout", () => {
+  const changes: number[] = [];
+  const template = asElement(
+    ScrollView({
+      height: 3,
+      offset: 99,
+      onOffsetChange(nextOffset) {
+        changes.push(nextOffset);
+      }
+    })
+  );
+  const ref = template.props.ref;
+  assert.equal(typeof ref, "function");
+  interface TestApi {
+    onLayout?: (layout: unknown) => void;
+    onUnmount?: () => void;
+  }
+  const api = {
+    onLayout: undefined as ((layout: unknown) => void) | undefined
+  } satisfies TestApi;
+  (ref as (api: TestApi) => void)(api);
+  api.onLayout?.({
+    rect: { height: 3 },
+    contentRect: { height: 3 },
+    clip: { height: 3 },
+    scrollOffset: { y: 7 },
+    contentSize: { height: 10 }
+  });
+
+  const onKey = readOnKeyHandler(template);
+
+  assert.equal(onKey(key("down"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("pagedown"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("end"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("up"), { node: {} as never, isFocused: true }), true);
+  assert.deepEqual(changes, [7, 7, 7, 6]);
 });
 
 test("ScrollView is not focusable without an offset change handler", () => {

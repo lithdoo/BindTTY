@@ -5,6 +5,7 @@ import {
   type ForTemplate,
   type FragmentTemplate,
   type MountedElementNode,
+  type MountedElementRefHandler,
   type MountedForItemNode,
   type MountedForNode,
   type MountedFragmentNode,
@@ -16,6 +17,7 @@ import {
 import { createBinding, bindProps } from "./binding.js";
 import { disposeMountedNode } from "./dispose.js";
 import { markDirty } from "./dirty.js";
+import { notifyElementMounted, runElementRef } from "./element-api.js";
 import type { MountOptions } from "./types.js";
 
 export function mountTemplate(
@@ -92,13 +94,14 @@ function mountElementTemplate(
   template: ElementTemplate,
   options: MountOptions
 ): MountedElementNode {
+  const { ref, props } = extractElementRef(template.props);
   const node: MountedElementNode = {
     kind: "element",
     tag: template.tag,
     props: {},
     propSources: {},
     bindings: {},
-    children: mountChildren(template.children, options),
+    children: [],
     state: {},
     dirty: options.markInitiallyDirty ? "structure" : null,
     dispose() {
@@ -106,9 +109,44 @@ function mountElementTemplate(
     }
   };
 
-  bindProps(node, template.props, options.context);
+  bindProps(node, props, options.context);
+  runElementRef(node, ref);
+  node.children = mountChildren(template.children, options);
+  notifyElementMounted(node);
 
   return node;
+}
+
+function extractElementRef(
+  props: ElementTemplate["props"]
+): {
+  ref?: MountedElementRefHandler;
+  props: ElementTemplate["props"];
+} {
+  const ordinaryProps: ElementTemplate["props"] = {};
+  let ref: MountedElementRefHandler | undefined;
+
+  for (const [name, value] of Object.entries(props)) {
+    if (name !== "ref") {
+      ordinaryProps[name] = value;
+      continue;
+    }
+
+    if (isReadableSignal(value)) {
+      throw new TypeError("Element ref must be a static function.");
+    }
+
+    if (typeof value !== "function") {
+      throw new TypeError("Element ref must be a function.");
+    }
+
+    ref = value as MountedElementRefHandler;
+  }
+
+  return {
+    ref,
+    props: ordinaryProps
+  };
 }
 
 function mountFragmentTemplate(

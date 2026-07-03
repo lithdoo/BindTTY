@@ -9,9 +9,16 @@ import {
   fragmentTemplate,
   showTemplate,
   forTemplate,
+  type MountedElementApi,
   type Template
 } from "@bindtty/vnode";
-import { clearDirty, disposeMountedNode, markDirty, mountTemplate } from "@bindtty/runtime";
+import {
+  clearDirty,
+  disposeMountedNode,
+  markDirty,
+  mountTemplate,
+  notifyElementLayout
+} from "@bindtty/runtime";
 
 test("mounts empty templates to null", () => {
   assert.equal(mountTemplate(emptyTemplate()), null);
@@ -47,6 +54,118 @@ test("mounts elements with signal props and updates dirty state", () => {
   assert.equal(mounted.props.value, "B");
   assert.equal(mounted.bindings.value.value, "B");
   assert.equal(mounted.dirty, "layout");
+});
+
+test("element ref receives a stable api without entering ordinary props", () => {
+  let api: MountedElementApi | undefined;
+  const mounted = mountTemplate(
+    elementTemplate("box", {
+      id: "panel",
+      ref(nextApi: MountedElementApi) {
+        api = nextApi;
+      }
+    })
+  );
+
+  assert.equal(mounted?.kind, "element");
+  assert.ok(api);
+  const mountedApi = api;
+  assert.equal(mountedApi.tag, "box");
+  assert.equal(mountedApi.id, "panel");
+  assert.equal(mountedApi.getProp("id"), "panel");
+  assert.equal(mounted.api, mountedApi);
+  assert.deepEqual(mounted.props, {
+    id: "panel"
+  });
+  assert.deepEqual(mounted.propSources, {
+    id: "panel"
+  });
+  assert.equal("ref" in mounted.props, false);
+  assert.equal("ref" in mounted.propSources, false);
+  assert.equal("ref" in mounted.bindings, false);
+});
+
+test("element ref rejects signal and non-function values", () => {
+  const signalRef = createSignal(() => {});
+
+  assert.throws(
+    () => mountTemplate(elementTemplate("box", { ref: signalRef })),
+    /Element ref must be a static function/
+  );
+
+  assert.throws(
+    () => mountTemplate(elementTemplate("box", { ref: "nope" })),
+    /Element ref must be a function/
+  );
+});
+
+test("element api fires mounted after children and unmount before children", () => {
+  const events: string[] = [];
+  const mounted = mountTemplate(
+    elementTemplate(
+      "box",
+      {
+        ref(api: MountedElementApi) {
+          const mountedApi = api;
+          mountedApi.onMounted = () => events.push("parent mounted");
+          mountedApi.onUnmount = () => events.push("parent unmount");
+        }
+      },
+      [
+        elementTemplate("text", {
+          value: "A",
+          ref(api: MountedElementApi) {
+            const mountedApi = api;
+            mountedApi.onMounted = () => events.push("child mounted");
+            mountedApi.onUnmount = () => events.push("child unmount");
+          }
+        })
+      ]
+    )
+  );
+
+  assert.deepEqual(events, ["child mounted", "parent mounted"]);
+
+  mounted?.dispose();
+  mounted?.dispose();
+
+  assert.deepEqual(events, [
+    "child mounted",
+    "parent mounted",
+    "parent unmount",
+    "child unmount"
+  ]);
+});
+
+test("element api stores latest layout and clears it after dispose", () => {
+  let api: MountedElementApi | undefined;
+  const mounted = mountTemplate(
+    elementTemplate("box", {
+      ref(nextApi: MountedElementApi) {
+        api = nextApi;
+      }
+    })
+  );
+  assert.equal(mounted?.kind, "element");
+  assert.ok(api);
+  const mountedApi = api;
+  const layouts: unknown[] = [];
+  mountedApi.onLayout = (layout: unknown) => {
+    layouts.push(layout);
+  };
+  const layout = { rect: { x: 0, y: 0, width: 1, height: 1 } };
+
+  assert.equal(mountedApi.getLayout(), null);
+  notifyElementLayout(mounted, layout);
+
+  assert.equal(mountedApi.getLayout(), layout);
+  assert.deepEqual(layouts, [layout]);
+
+  mounted.dispose();
+  notifyElementLayout(mounted, { rect: { x: 0, y: 0, width: 2, height: 2 } });
+
+  assert.equal(mountedApi.getLayout(), null);
+  assert.deepEqual(layouts, [layout]);
 });
 
 test("updates multiple signal props and keeps the highest dirty severity", () => {
