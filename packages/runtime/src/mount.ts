@@ -110,7 +110,7 @@ function mountElementTemplate(
   };
 
   bindProps(node, props, options.context);
-  runElementRef(node, ref);
+  runElementRef(node, ref, options.context);
   node.children = mountChildren(template.children, options);
   notifyElementMounted(node);
 
@@ -129,6 +129,10 @@ function extractElementRef(
   for (const [name, value] of Object.entries(props)) {
     if (name !== "ref") {
       ordinaryProps[name] = value;
+      continue;
+    }
+
+    if (value == null) {
       continue;
     }
 

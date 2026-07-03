@@ -10,8 +10,11 @@ import {
   showTemplate
 } from "@bindtty/vnode";
 import { createRuntimeRoot } from "@bindtty/runtime";
-import type { Template } from "@bindtty/vnode";
-import type { RuntimeFlushRecord } from "@bindtty/runtime";
+import type { MountedElementApi, Template } from "@bindtty/vnode";
+import type {
+  RuntimeFlushRecord,
+  RuntimeLifecycleError
+} from "@bindtty/runtime";
 
 test("createRuntimeRoot mounts and exposes root", () => {
   const runtime = createRuntimeRoot(elementTemplate("text", { value: "Hello" }));
@@ -304,6 +307,40 @@ test("show and for structure updates queue control nodes", () => {
   const record = runtime.flushNow();
 
   assert.deepEqual(record?.dirtyNodes, [showNode, forNode]);
+});
+
+test("show branch unmount errors do not stop mounting the next branch", () => {
+  const visible = createSignal(true);
+  const errors: RuntimeLifecycleError[] = [];
+  const runtime = createRuntimeRoot(
+    showTemplate({
+      when: visible,
+      children: elementTemplate("text", {
+        value: "Visible",
+        ref(api: MountedElementApi) {
+          api.onUnmount = () => {
+            throw new Error("unmount failed");
+          };
+        }
+      }),
+      fallback: elementTemplate("text", { value: "Hidden" })
+    }),
+    {
+      onLifecycleError(error) {
+        errors.push(error);
+      }
+    }
+  );
+  assert.equal(runtime.root?.kind, "show");
+
+  visible.set(false);
+  runtime.flushNow();
+
+  assert.equal(runtime.root.activeBranch?.kind, "element");
+  assert.equal(runtime.root.activeBranch.props.value, "Hidden");
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]?.phase, "unmount");
+  assert.match(String((errors[0]?.error as Error).message), /unmount failed/);
 });
 
 test("clearDirty clears the mounted tree recursively", () => {

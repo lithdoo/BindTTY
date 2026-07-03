@@ -3,7 +3,7 @@ import { layoutRoot } from "@bindtty/layout";
 import type { LayoutNode } from "@bindtty/layout";
 import { createTerminalRenderer } from "@bindtty/renderer-terminal";
 import { createRuntimeRoot, notifyElementLayout } from "@bindtty/runtime";
-import type { Dispose } from "@bindtty/runtime";
+import type { Dispose, RuntimeLifecycleErrorHandler } from "@bindtty/runtime";
 import type { TerminalHost, TerminalKeyEvent } from "@bindtty/terminal";
 import type { ViewTemplate } from "@bindtty/vnode";
 
@@ -27,12 +27,14 @@ export interface CreateAppStdoutOptions {
   stdin?: AppStdin;
   fallbackViewport?: AppViewport;
   autoStart?: boolean;
+  onLifecycleError?: RuntimeLifecycleErrorHandler;
   terminal?: never;
 }
 
 export interface CreateAppTerminalOptions {
   terminal: TerminalHost;
   autoStart?: boolean;
+  onLifecycleError?: RuntimeLifecycleErrorHandler;
   stdout?: never;
   stdin?: never;
   fallbackViewport?: never;
@@ -52,7 +54,9 @@ export function createApp(
   view: ViewTemplate,
   options: CreateAppOptions
 ): BindTTYApp {
-  const runtime = createRuntimeRoot(view);
+  const runtime = createRuntimeRoot(view, {
+    onLifecycleError: options.onLifecycleError
+  });
   const renderer = createTerminalRenderer();
   const interaction = createInteractionController();
   const terminal = options.terminal;

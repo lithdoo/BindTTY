@@ -15,8 +15,10 @@ import type { Dispose, TerminalHost, TerminalKeyEvent, TerminalViewport } from "
 import {
   elementTemplate,
   forTemplate,
-  showTemplate
+  showTemplate,
+  type MountedElementApi
 } from "@bindtty/vnode";
+import type { RuntimeLifecycleError } from "@bindtty/runtime";
 
 interface MockStdout extends AppStdout {
   writes: string[];
@@ -855,6 +857,97 @@ test("terminal mode dispose prevents later runtime flush writes", async () => {
   await nextMicrotask();
 
   assert.equal(terminal.disposeCalls, 1);
+  assert.equal(terminal.writes.length, 1);
+});
+
+test("terminal mode reports layout callback errors without stopping sibling layout callbacks", () => {
+  const terminal = createMockTerminal(10, 4);
+  const errors: RuntimeLifecycleError[] = [];
+  const events: string[] = [];
+  const app = createApp(
+    elementTemplate("box", {}, [
+      elementTemplate("text", {
+        value: "A",
+        ref(api: MountedElementApi) {
+          api.onLayout = () => {
+            events.push("first layout");
+            throw new Error("layout failed");
+          };
+        }
+      }),
+      elementTemplate("text", {
+        value: "B",
+        ref(api: MountedElementApi) {
+          api.onLayout = () => {
+            events.push("second layout");
+          };
+        }
+      })
+    ]),
+    {
+      terminal,
+      onLifecycleError(error) {
+        errors.push(error);
+      }
+    }
+  );
+
+  app.start();
+
+  assert.deepEqual(events, ["first layout", "second layout"]);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]?.phase, "layout");
+  assert.match(String((errors[0]?.error as Error).message), /layout failed/);
+  assert.equal(terminal.writes.length, 1);
+
+  app.dispose();
+});
+
+test("terminal mode reports unmount callback errors after completing dispose cleanup", () => {
+  const terminal = createMockTerminal(10, 4);
+  const errors: RuntimeLifecycleError[] = [];
+  const events: string[] = [];
+  const app = createApp(
+    elementTemplate("box", {}, [
+      elementTemplate("text", {
+        value: "A",
+        ref(api: MountedElementApi) {
+          api.onUnmount = () => {
+            events.push("first unmount");
+            throw new Error("unmount failed");
+          };
+        }
+      }),
+      elementTemplate("text", {
+        value: "B",
+        ref(api: MountedElementApi) {
+          api.onUnmount = () => {
+            events.push("second unmount");
+          };
+        }
+      })
+    ]),
+    {
+      terminal,
+      onLifecycleError(error) {
+        errors.push(error);
+      }
+    }
+  );
+
+  app.start();
+  app.dispose();
+  app.dispose();
+  terminal.emitResize();
+  terminal.emitKey(keyEvent("x"));
+
+  assert.deepEqual(events, ["first unmount", "second unmount"]);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]?.phase, "unmount");
+  assert.match(String((errors[0]?.error as Error).message), /unmount failed/);
+  assert.equal(terminal.disposeCalls, 1);
+  assert.equal(terminal.resizeListenerCount(), 0);
+  assert.equal(terminal.keyListenerCount(), 0);
   assert.equal(terminal.writes.length, 1);
 });
 

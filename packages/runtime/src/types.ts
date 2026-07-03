@@ -1,4 +1,4 @@
-import type { MountedNode } from "@bindtty/vnode";
+import type { MountedElementNode, MountedNode } from "@bindtty/vnode";
 
 export interface MountOptions {
   markInitiallyDirty?: boolean;
@@ -7,6 +7,19 @@ export interface MountOptions {
 
 export interface RuntimeContext {
   scheduler: RuntimeScheduler;
+  onLifecycleError?: RuntimeLifecycleErrorHandler;
+}
+
+export interface RuntimeRootOptions {
+  onLifecycleError?: RuntimeLifecycleErrorHandler;
+}
+
+export type RuntimeLifecyclePhase = "mounted" | "layout" | "unmount";
+
+export interface RuntimeLifecycleError {
+  phase: RuntimeLifecyclePhase;
+  node: MountedElementNode;
+  error: unknown;
 }
 
 export interface RuntimeRoot {
@@ -31,5 +44,9 @@ export interface RuntimeScheduler {
   onFlush(listener: RuntimeFlushListener): Dispose;
   clear(): void;
 }
+
+export type RuntimeLifecycleErrorHandler = (
+  error: RuntimeLifecycleError
+) => void;
 
 export type Dispose = () => void;

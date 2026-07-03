@@ -7,17 +7,22 @@ import type {
   Dispose,
   RuntimeFlushListener,
   RuntimeFlushRecord,
-  RuntimeRoot
+  RuntimeRoot,
+  RuntimeRootOptions
 } from "./types.js";
 
-export function createRuntimeRoot(template: Template): RuntimeRoot {
+export function createRuntimeRoot(
+  template: Template,
+  options: RuntimeRootOptions = {}
+): RuntimeRoot {
   let root: MountedNode | null = null;
   let disposed = false;
   const scheduler = createRuntimeScheduler(() => root);
 
   root = mountTemplate(template, {
     context: {
-      scheduler
+      scheduler,
+      onLifecycleError: options.onLifecycleError
     }
   });
 

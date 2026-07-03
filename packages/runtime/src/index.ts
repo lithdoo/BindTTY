@@ -11,6 +11,10 @@ export type {
   RuntimeContext,
   RuntimeFlushListener,
   RuntimeFlushRecord,
+  RuntimeLifecycleError,
+  RuntimeLifecycleErrorHandler,
+  RuntimeLifecyclePhase,
   RuntimeRoot,
+  RuntimeRootOptions,
   RuntimeScheduler
 } from "./types.js";

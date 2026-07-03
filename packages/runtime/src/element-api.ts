@@ -3,10 +3,15 @@ import type {
   MountedElementNode,
   MountedElementRefHandler
 } from "@bindtty/vnode";
+import type {
+  RuntimeContext,
+  RuntimeLifecyclePhase
+} from "./types.js";
 
 interface MountedElementLifecycleState {
   disposed: boolean;
   latestLayout: unknown | null;
+  context?: RuntimeContext;
 }
 
 const lifecycleStates = new WeakMap<
@@ -15,11 +20,13 @@ const lifecycleStates = new WeakMap<
 >();
 
 export function createMountedElementApi(
-  node: MountedElementNode
+  node: MountedElementNode,
+  context?: RuntimeContext
 ): MountedElementApi {
   const state: MountedElementLifecycleState = {
     disposed: false,
-    latestLayout: null
+    latestLayout: null,
+    context
   };
 
   lifecycleStates.set(node, state);
@@ -43,19 +50,24 @@ export function createMountedElementApi(
 
 export function runElementRef(
   node: MountedElementNode,
-  ref: MountedElementRefHandler | undefined
+  ref: MountedElementRefHandler | undefined,
+  context?: RuntimeContext
 ): void {
   if (!ref) {
     return;
   }
 
-  const api = createMountedElementApi(node);
+  const api = createMountedElementApi(node, context);
   node.api = api;
   ref(api);
 }
 
 export function notifyElementMounted(node: MountedElementNode): void {
-  node.api?.onMounted?.();
+  try {
+    node.api?.onMounted?.();
+  } catch (error) {
+    reportLifecycleError(node, "mounted", error);
+  }
 }
 
 export function notifyElementLayout(
@@ -69,7 +81,11 @@ export function notifyElementLayout(
   }
 
   state.latestLayout = layout;
-  node.api.onLayout?.(layout);
+  try {
+    node.api.onLayout?.(layout);
+  } catch (error) {
+    reportLifecycleError(node, "layout", error);
+  }
 }
 
 export function disposeElementApi(node: MountedElementNode): void {
@@ -82,8 +98,27 @@ export function disposeElementApi(node: MountedElementNode): void {
 
   state.disposed = true;
   state.latestLayout = null;
-  api.onUnmount?.();
-  api.onMounted = undefined;
-  api.onLayout = undefined;
-  api.onUnmount = undefined;
+  try {
+    api.onUnmount?.();
+  } catch (error) {
+    reportLifecycleError(node, "unmount", error);
+  } finally {
+    api.onMounted = undefined;
+    api.onLayout = undefined;
+    api.onUnmount = undefined;
+  }
+}
+
+function reportLifecycleError(
+  node: MountedElementNode,
+  phase: RuntimeLifecyclePhase,
+  error: unknown
+): void {
+  const state = lifecycleStates.get(node);
+
+  state?.context?.onLifecycleError?.({
+    phase,
+    node,
+    error
+  });
 }

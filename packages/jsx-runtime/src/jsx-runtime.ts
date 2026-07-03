@@ -55,7 +55,7 @@ type InteractionKeyBinding = boolean | InteractionKeyHandler | null | undefined;
 
 interface IntrinsicInteractionProps {
   id?: BindingValue<string | number>;
-  ref?: MountedElementRefHandler;
+  ref?: MountedElementRefHandler | null | undefined;
   onKey?: BindingValue<InteractionKeyBinding>;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }

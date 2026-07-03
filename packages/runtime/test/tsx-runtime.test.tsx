@@ -31,6 +31,30 @@ test("mounts real TSX templates and updates signal bindings", () => {
   assert.equal(text.dirty, "layout");
 });
 
+test("mounts real TSX templates with null and undefined refs", () => {
+  const root = mountTemplate(
+    <vstack>
+      <box ref={null}>
+        <text value="null" />
+      </box>
+      <box ref={undefined}>
+        <text value="undefined" />
+      </box>
+    </vstack>
+  );
+
+  assert.equal(root?.kind, "element");
+  const nullRefBox = root.children[0];
+  const undefinedRefBox = root.children[1];
+
+  assert.equal(nullRefBox?.kind, "element");
+  assert.equal(undefinedRefBox?.kind, "element");
+  assert.equal(nullRefBox.api, undefined);
+  assert.equal(undefinedRefBox.api, undefined);
+  assert.equal("ref" in nullRefBox.props, false);
+  assert.equal("ref" in undefinedRefBox.props, false);
+});
+
 test("RuntimeRoot flushes updates from real TSX templates", async () => {
   const visible = createSignal(true);
   type RowItem = {

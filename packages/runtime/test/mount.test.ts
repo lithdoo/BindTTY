@@ -19,6 +19,33 @@ import {
   mountTemplate,
   notifyElementLayout
 } from "@bindtty/runtime";
+import type {
+  RuntimeContext,
+  RuntimeLifecycleError,
+  RuntimeScheduler
+} from "@bindtty/runtime";
+
+function createTestRuntimeContext(
+  errors: RuntimeLifecycleError[] = []
+): RuntimeContext {
+  const scheduler: RuntimeScheduler = {
+    queueDirty() {},
+    flushNow() {
+      return null;
+    },
+    onFlush() {
+      return () => {};
+    },
+    clear() {}
+  };
+
+  return {
+    scheduler,
+    onLifecycleError(error) {
+      errors.push(error);
+    }
+  };
+}
 
 test("mounts empty templates to null", () => {
   assert.equal(mountTemplate(emptyTemplate()), null);
@@ -85,6 +112,38 @@ test("element ref receives a stable api without entering ordinary props", () => 
   assert.equal("ref" in mounted.bindings, false);
 });
 
+test("element ref accepts null and undefined as no-op lifecycle props", () => {
+  const nullRefMounted = mountTemplate(
+    elementTemplate("box", {
+      id: "null-ref",
+      ref: null
+    })
+  );
+  const undefinedRefMounted = mountTemplate(
+    elementTemplate("box", {
+      id: "undefined-ref",
+      ref: undefined
+    })
+  );
+
+  assert.equal(nullRefMounted?.kind, "element");
+  assert.equal(undefinedRefMounted?.kind, "element");
+  assert.equal(nullRefMounted.api, undefined);
+  assert.equal(undefinedRefMounted.api, undefined);
+  assert.deepEqual(nullRefMounted.props, {
+    id: "null-ref"
+  });
+  assert.deepEqual(undefinedRefMounted.props, {
+    id: "undefined-ref"
+  });
+  assert.equal("ref" in nullRefMounted.props, false);
+  assert.equal("ref" in nullRefMounted.propSources, false);
+  assert.equal("ref" in nullRefMounted.bindings, false);
+  assert.equal("ref" in undefinedRefMounted.props, false);
+  assert.equal("ref" in undefinedRefMounted.propSources, false);
+  assert.equal("ref" in undefinedRefMounted.bindings, false);
+});
+
 test("element ref rejects signal and non-function values", () => {
   const signalRef = createSignal(() => {});
 
@@ -137,6 +196,69 @@ test("element api fires mounted after children and unmount before children", () 
   ]);
 });
 
+test("element lifecycle callback errors are reported without stopping sibling callbacks", () => {
+  const errors: RuntimeLifecycleError[] = [];
+  const events: string[] = [];
+  const context = createTestRuntimeContext(errors);
+  const mounted = mountTemplate(
+    elementTemplate(
+      "box",
+      {
+        ref(api: MountedElementApi) {
+          api.onMounted = () => events.push("parent mounted");
+          api.onUnmount = () => events.push("parent unmount");
+        }
+      },
+      [
+        elementTemplate("text", {
+          value: "A",
+          ref(api: MountedElementApi) {
+            api.onMounted = () => {
+              events.push("first mounted");
+              throw new Error("mounted failed");
+            };
+            api.onUnmount = () => {
+              events.push("first unmount");
+              throw new Error("unmount failed");
+            };
+          }
+        }),
+        elementTemplate("text", {
+          value: "B",
+          ref(api: MountedElementApi) {
+            api.onMounted = () => events.push("second mounted");
+            api.onUnmount = () => events.push("second unmount");
+          }
+        })
+      ]
+    ),
+    { context }
+  );
+
+  assert.deepEqual(events, [
+    "first mounted",
+    "second mounted",
+    "parent mounted"
+  ]);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]?.phase, "mounted");
+  assert.match(String((errors[0]?.error as Error).message), /mounted failed/);
+
+  mounted?.dispose();
+
+  assert.deepEqual(events, [
+    "first mounted",
+    "second mounted",
+    "parent mounted",
+    "parent unmount",
+    "first unmount",
+    "second unmount"
+  ]);
+  assert.equal(errors.length, 2);
+  assert.equal(errors[1]?.phase, "unmount");
+  assert.match(String((errors[1]?.error as Error).message), /unmount failed/);
+});
+
 test("element api stores latest layout and clears it after dispose", () => {
   let api: MountedElementApi | undefined;
   const mounted = mountTemplate(
@@ -166,6 +288,33 @@ test("element api stores latest layout and clears it after dispose", () => {
 
   assert.equal(mountedApi.getLayout(), null);
   assert.deepEqual(layouts, [layout]);
+});
+
+test("element layout callback errors are reported after latest layout is stored", () => {
+  const errors: RuntimeLifecycleError[] = [];
+  const context = createTestRuntimeContext(errors);
+  let api: MountedElementApi | undefined;
+  const mounted = mountTemplate(
+    elementTemplate("box", {
+      ref(nextApi: MountedElementApi) {
+        api = nextApi;
+        nextApi.onLayout = () => {
+          throw new Error("layout failed");
+        };
+      }
+    }),
+    { context }
+  );
+  assert.equal(mounted?.kind, "element");
+  assert.ok(api);
+  const layout = { rect: { x: 0, y: 0, width: 1, height: 1 } };
+
+  notifyElementLayout(mounted, layout);
+
+  assert.equal(api.getLayout(), layout);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]?.phase, "layout");
+  assert.match(String((errors[0]?.error as Error).message), /layout failed/);
 });
 
 test("updates multiple signal props and keeps the highest dirty severity", () => {
