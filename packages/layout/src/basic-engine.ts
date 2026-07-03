@@ -1,3 +1,4 @@
+import { layoutText, type TextWrapMode } from "@bindtty/text";
 import type { MountedElementNode, MountedNode } from "@bindtty/vnode";
 import type { LayoutFlow } from "./intrinsic.js";
 import { clampNonNegative, toNonNegativeNumber } from "./measure.js";
@@ -33,7 +34,7 @@ const supportedPropsByTag: Record<MountedElementNode["tag"], Set<string>> = {
     "scrollX",
     "scrollY"
   ]),
-  text: new Set(["value", "color", "bold"]),
+  text: new Set(["value", "wrap", "color", "bold"]),
   spacer: new Set(["size"]),
   button: new Set(["value", "disabled"]),
   input: new Set(["value", "placeholder"])
@@ -145,10 +146,7 @@ function measureElement(
         height: constraint.height
       };
     case "text":
-      return {
-        width: String(node.props.value ?? "").length,
-        height: 1
-      };
+      return measureTextElement(node, constraint);
     case "spacer":
       return measureSpacer(node, constraint);
     case "vstack":
@@ -182,16 +180,36 @@ function measureSpacer(
   };
 }
 
+function measureTextElement(
+  node: MountedElementNode,
+  constraint: LayoutConstraint
+): LayoutSize {
+  const wrap = readTextWrap(node.props.wrap);
+  const layout = layoutText(String(node.props.value ?? ""), {
+    width: wrap === "legacy" ? undefined : constraint.width,
+    wrap
+  });
+
+  return {
+    width: layout.width,
+    height: layout.height
+  };
+}
+
 function measureBox(
   node: MountedElementNode,
   constraint: LayoutConstraint
 ): LayoutSize {
   const edges = getBoxEdges(node);
-  const contentConstraint = shrinkConstraint(constraint, edges);
-  const childrenSize = measureFlowChildren(node.children, "column", contentConstraint);
   const inset = getBoxInset(edges);
   const width = readOptionalSize(node.props.width);
   const height = readOptionalSize(node.props.height);
+  const contentConstraint = shrinkConstraint({
+    ...constraint,
+    width: width ?? constraint.width,
+    height: height ?? constraint.height
+  }, edges);
+  const childrenSize = measureFlowChildren(node.children, "column", contentConstraint);
 
   return {
     width: width ?? childrenSize.width + inset * 2,
@@ -490,6 +508,10 @@ function validateElementProps(node: MountedElementNode): void {
   if (node.tag === "box") {
     readOverflow(node.props.overflow);
   }
+
+  if (node.tag === "text") {
+    readTextWrap(node.props.wrap);
+  }
 }
 
 function readOptionalSize(value: unknown): number | undefined {
@@ -514,6 +536,25 @@ function readOverflow(value: unknown): LayoutOverflow {
 
 function readScrollOffset(value: unknown): number {
   return Math.floor(toNonNegativeNumber(value));
+}
+
+function readTextWrap(value: unknown): TextWrapMode {
+  if (value === null || value === undefined) {
+    return "legacy";
+  }
+
+  if (
+    value === "none" ||
+    value === "wrap" ||
+    value === "hard" ||
+    value === "truncate-end" ||
+    value === "truncate-middle" ||
+    value === "truncate-start"
+  ) {
+    return value;
+  }
+
+  throw new Error(`Unsupported text wrap value: ${String(value)}`);
 }
 
 function clamp(value: number, min: number, max: number): number {

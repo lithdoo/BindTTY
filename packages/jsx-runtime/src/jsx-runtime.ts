@@ -52,6 +52,13 @@ type InteractionKeyHandler = (
   context: InteractionKeyContext
 ) => boolean | void;
 type InteractionKeyBinding = boolean | InteractionKeyHandler | null | undefined;
+type PublicTextWrapMode =
+  | "none"
+  | "wrap"
+  | "hard"
+  | "truncate-end"
+  | "truncate-middle"
+  | "truncate-start";
 
 interface IntrinsicInteractionProps {
   id?: BindingValue<string | number>;
@@ -191,6 +198,7 @@ export namespace JSX {
 
     text: IntrinsicInteractionProps & IntrinsicPaintProps & {
       value: BindingValue<string | number>;
+      wrap?: BindingValue<PublicTextWrapMode>;
       children?: never;
     };
 

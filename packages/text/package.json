@@ -1,9 +1,9 @@
 {
-  "name": "@bindtty/renderer-terminal",
+  "name": "@bindtty/text",
   "version": "0.1.0-alpha.0",
   "private": true,
   "type": "module",
-  "description": "Terminal renderer package for BindTTY.",
+  "description": "Text measurement and wrapping utilities for BindTTY.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -18,14 +18,9 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/layout && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
-  },
-  "dependencies": {
-    "@bindtty/layout": "0.1.0-alpha.0",
-    "@bindtty/text": "0.1.0-alpha.0"
+    "test": "npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
   },
   "devDependencies": {
-    "@bindtty/vnode": "0.1.0-alpha.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },
@@ -33,10 +28,10 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lithdoo/BindTTY.git",
-    "directory": "packages/renderer-terminal"
+    "directory": "packages/text"
   },
   "bugs": {
     "url": "https://github.com/lithdoo/BindTTY/issues"
   },
-  "homepage": "https://github.com/lithdoo/BindTTY/tree/main/packages/renderer-terminal#readme"
+  "homepage": "https://github.com/lithdoo/BindTTY/tree/main/packages/text#readme"
 }

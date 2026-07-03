@@ -59,6 +59,7 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
     props: {
       ...commonElementProps,
       value: { required: true, dirty: "layout" },
+      wrap: { dirty: "layout" },
       color: { dirty: "paint" },
       bold: { dirty: "paint" }
     }

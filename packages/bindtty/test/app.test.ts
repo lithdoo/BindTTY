@@ -18,6 +18,7 @@ import {
   showTemplate,
   type MountedElementApi
 } from "@bindtty/vnode";
+import type { LayoutEngine, LayoutViewport } from "@bindtty/layout";
 import type { RuntimeLifecycleError } from "@bindtty/runtime";
 
 interface MockStdout extends AppStdout {
@@ -198,6 +199,50 @@ test("start writes the first rendered frame to stdout", () => {
   assert.equal(stdout.writes.length, 1);
   assert.match(stdout.writes[0], /H/);
   assert.match(stdout.writes[0], /i/);
+});
+
+test("stdout mode uses the injected layout engine", () => {
+  const stdout = createMockStdout(2, 1);
+  let observedViewport: LayoutViewport | undefined;
+  const layoutEngine: LayoutEngine = {
+    layout(root, options) {
+      observedViewport = options.viewport;
+
+      if (!root) {
+        return null;
+      }
+
+      return {
+        mounted: root,
+        rect: {
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 1
+        },
+        contentRect: {
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 1
+        },
+        children: []
+      };
+    }
+  };
+  const app = createApp(elementTemplate("text", { value: "AB" }), {
+    stdout,
+    layoutEngine
+  });
+
+  app.start();
+
+  assert.deepEqual(observedViewport, {
+    width: 2,
+    height: 1
+  });
+  assert.match(stripVTControlCharacters(stdout.writes[0] ?? ""), /A/);
+  assert.doesNotMatch(stripVTControlCharacters(stdout.writes[0] ?? ""), /B/);
 });
 
 test("start is idempotent and does not repeat the first frame", () => {

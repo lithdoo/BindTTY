@@ -1,6 +1,6 @@
 import { createInteractionController } from "@bindtty/interaction";
 import { layoutRoot } from "@bindtty/layout";
-import type { LayoutNode } from "@bindtty/layout";
+import type { LayoutEngine, LayoutNode } from "@bindtty/layout";
 import { createTerminalRenderer } from "@bindtty/renderer-terminal";
 import { createRuntimeRoot, notifyElementLayout } from "@bindtty/runtime";
 import type { Dispose, RuntimeLifecycleErrorHandler } from "@bindtty/runtime";
@@ -27,6 +27,7 @@ export interface CreateAppStdoutOptions {
   stdin?: AppStdin;
   fallbackViewport?: AppViewport;
   autoStart?: boolean;
+  layoutEngine?: LayoutEngine;
   onLifecycleError?: RuntimeLifecycleErrorHandler;
   terminal?: never;
 }
@@ -34,6 +35,7 @@ export interface CreateAppStdoutOptions {
 export interface CreateAppTerminalOptions {
   terminal: TerminalHost;
   autoStart?: boolean;
+  layoutEngine?: LayoutEngine;
   onLifecycleError?: RuntimeLifecycleErrorHandler;
   stdout?: never;
   stdin?: never;
@@ -109,7 +111,10 @@ export function createApp(
 
     const viewport = readViewport();
     refreshInteraction();
-    const layoutTree = layoutRoot(runtime.root, { viewport });
+    const layoutTree = layoutRoot(runtime.root, {
+      viewport,
+      engine: options.layoutEngine
+    });
     const patch = renderer.render(layoutTree, {
       viewport,
       isFocused: (mounted) => interaction.isFocused(mounted)

@@ -158,6 +158,42 @@ test("TerminalRenderer emits full patch when viewport size changes", () => {
   );
 });
 
+test("paintLayout paints explicit multiline text", () => {
+  const root = layout(
+    element("text", {
+      value: "hello\nbye",
+      wrap: "none"
+    }),
+    rect(0, 0, 5, 2)
+  );
+  const frame = paintLayout(root, {
+    viewport: {
+      width: 5,
+      height: 2
+    }
+  });
+
+  assert.deepEqual(frameToLines(frame), ["hello", "bye  "]);
+});
+
+test("paintLayout paints wrapped text lines", () => {
+  const root = layout(
+    element("text", {
+      value: "hello world",
+      wrap: "wrap"
+    }),
+    rect(0, 0, 5, 2)
+  );
+  const frame = paintLayout(root, {
+    viewport: {
+      width: 5,
+      height: 2
+    }
+  });
+
+  assert.deepEqual(frameToLines(frame), ["hello", "world"]);
+});
+
 test("paintLayout clips child text to node clip rects", () => {
   const child = layout(element("text", { value: "ABCDE" }), rect(0, 0, 5, 1));
   const root = layout(

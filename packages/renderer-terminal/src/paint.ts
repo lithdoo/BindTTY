@@ -1,3 +1,4 @@
+import { layoutText, type TextWrapMode } from "@bindtty/text";
 import type { LayoutNode, LayoutRect, LayoutViewport } from "@bindtty/layout";
 import type { MountedElementNode } from "@bindtty/vnode";
 import { createFrame, getCell, setCell } from "./frame.js";
@@ -108,16 +109,22 @@ function paintText(
 
   const value = mounted.props.value;
   const text = value === null || value === undefined ? "" : String(value);
-  const clippedText = text.split("\n", 1)[0]?.slice(0, node.rect.width) ?? "";
+  const textLayout = layoutText(text, {
+    width: node.rect.width,
+    wrap: readTextWrap(mounted.props.wrap)
+  });
+  const lines = textLayout.lines.slice(0, node.rect.height);
 
-  writeTextClipped(
-    frame,
-    node.rect.x + context.offsetX,
-    node.rect.y + context.offsetY,
-    clippedText,
-    toCellStyle(readPaintStyle(mounted.props)),
-    context
-  );
+  for (let row = 0; row < lines.length; row += 1) {
+    writeTextClipped(
+      frame,
+      node.rect.x + context.offsetX,
+      node.rect.y + row + context.offsetY,
+      (lines[row] ?? "").slice(0, node.rect.width),
+      toCellStyle(readPaintStyle(mounted.props)),
+      context
+    );
+  }
 }
 
 function paintBox(
@@ -227,6 +234,25 @@ function shouldPaintBorder(border: boolean | number | undefined): boolean {
   }
 
   return border === true;
+}
+
+function readTextWrap(value: unknown): TextWrapMode {
+  if (value === null || value === undefined) {
+    return "legacy";
+  }
+
+  if (
+    value === "none" ||
+    value === "wrap" ||
+    value === "hard" ||
+    value === "truncate-end" ||
+    value === "truncate-middle" ||
+    value === "truncate-start"
+  ) {
+    return value;
+  }
+
+  throw new Error(`Unsupported text wrap value: ${String(value)}`);
 }
 
 function paintFocusedState(

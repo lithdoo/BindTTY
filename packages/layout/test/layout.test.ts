@@ -141,7 +141,7 @@ test("createBasicLayoutEngine exposes the layout engine contract", () => {
   assert.deepEqual(layout?.children, []);
 });
 
-test("lays out text as a single line using string length", () => {
+test("lays out text with legacy single-line behavior by default", () => {
   const root = createMountedText("BindTTY");
   const layout = layoutRoot(root, { viewport });
 
@@ -152,6 +152,47 @@ test("lays out text as a single line using string length", () => {
     height: 1
   });
   assert.deepEqual(layout?.contentRect, layout?.rect);
+});
+
+test("lays out text wrap none with explicit newlines", () => {
+  const root = createMountedElement("text", {
+    value: "A\nLong",
+    wrap: "none"
+  });
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 4,
+    height: 2
+  });
+  assert.deepEqual(layout?.contentRect, layout?.rect);
+});
+
+test("lays out wrapped text using available content width", () => {
+  const root = createMountedElement("box", {
+    width: 5
+  }, [
+    createMountedElement("text", {
+      value: "hello world",
+      wrap: "wrap"
+    })
+  ]);
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 5,
+    height: 2
+  });
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 0,
+    y: 0,
+    width: 5,
+    height: 2
+  });
 });
 
 test("lays out vstack children in column flow", () => {
