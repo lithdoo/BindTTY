@@ -13,6 +13,7 @@ npm run build
 npm start --workspace @bindtty/example-counter
 npm start --workspace @bindtty/example-form
 npm start --workspace @bindtty/example-log-viewer
+npm start --workspace @bindtty/example-yoga-dashboard
 ```
 
 | 目录 | 说明 |
@@ -20,3 +21,4 @@ npm start --workspace @bindtty/example-log-viewer
 | [counter](./counter/) | Signal + `Button` 计数器 |
 | [form](./form/) | `TextInput` 输入与提交 |
 | [log-viewer](./log-viewer/) | `List` / `ScrollView` 长列表滚动 |
+| [yoga-dashboard](./yoga-dashboard/) | Yoga layout + 真实 runtime stats dashboard |
