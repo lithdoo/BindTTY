@@ -8,6 +8,8 @@
 
 BindTTY 是一个面向 **MVVM + signal-driven TUI** 的 TypeScript/TSX 框架。
 
+当前实现说明：`button` / `input` 仍保留为 intrinsic tag 与 schema 类型的一部分，但 layout / renderer 尚未把它们作为完整 intrinsic 控件实现；用户侧 Button / TextInput 行为由 `@bindtty/widgets` 通过 `box` / `text` / `onKey` 组合提供。本文后半部分关于 `ElementDefinition` 与 intrinsic button/input/input system 的内容属于前瞻架构设计，不代表当前已落地代码。
+
 ## 1. 主链路
 
 ```text

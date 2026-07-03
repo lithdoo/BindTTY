@@ -1048,7 +1048,7 @@ frame diff
 
 ## 20. Monorepo 包结构
 
-MVP 阶段 monorepo 收敛为 7 个包。视图四层结构（ViewTemplate → MountedNode → LayoutNode → Frame）不变；包划分按实现职责组织。
+当前 monorepo 已按实现职责拆分为多个 workspace 包。视图四层结构（ViewTemplate → MountedNode → LayoutNode → Frame）不变；包划分按实现职责组织。
 
 | 包 | 职责 |
 | --- | --- |
@@ -1056,19 +1056,22 @@ MVP 阶段 monorepo 收敛为 7 个包。视图四层结构（ViewTemplate → M
 | `@bindtty/vnode` | 声明层类型 |
 | `@bindtty/jsx-runtime` | TSX → ViewTemplate |
 | `@bindtty/runtime` | mount、binding、dirty、dispose、scheduler |
-| `@bindtty/layout` | layout、paint、Frame、ANSI diff |
-| `@bindtty/widgets` | ElementDefinition、focus、keyboard |
+| `@bindtty/layout` | MountedNode → LayoutNode 几何计算 |
+| `@bindtty/renderer-terminal` | LayoutNode → Frame → ANSI diff |
+| `@bindtty/terminal` | 真实终端 lifecycle、viewport、stdin key event |
+| `@bindtty/interaction` | keyboard focus、onKey 派发 |
+| `@bindtty/widgets` | Button / TextInput / ScrollView / List 等高层控件 |
 | `bindtty` | 统一入口 |
 
 合并原则：
 
 ~~~text
-layout 包暂时包含 paint / frame / ANSI diff，不单独拆 renderer-terminal。
-widgets 包暂时包含 focus / keyboard，不单独拆 input。
+renderer-terminal 已从 layout 中拆出。
+interaction 已从 widgets 中拆出。
 scheduler 放在 runtime 包，不单独拆包。
 ~~~
 
-ElementDefinition 放在 `@bindtty/widgets`；layout 引擎调用其 measure / paint 能力。InputSystem 通过 FocusManager 找到 MountedElementNode，再调用对应 definition 的输入处理。
+当前未落地 ElementDefinition 层。layout / renderer 直接消费 MountedNode / LayoutNode；Button、TextInput、ScrollView、List 由 `@bindtty/widgets` 组合 intrinsic element 与 `onKey` 实现。
 
 实现计划与里程碑见 [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md)，文档索引见 [README.md](./README.md)。
 
@@ -1107,8 +1110,6 @@ Layout:
   vstack
   hstack
   text
-  button
-  input
   spacer
 
 Render:
@@ -1116,11 +1117,15 @@ Render:
   line diff
   ANSI patch
 
-ElementDefinition:
-  layout
-  paint
-  input
-  focus metadata
+Interaction:
+  focus list
+  onKey dispatch
+
+Widgets:
+  Button
+  TextInput
+  ScrollView
+  List
 ~~~
 
 暂不纳入 MVP：
@@ -1146,9 +1151,7 @@ keyed for diff
 switch / case
 theme context
 overlay / modal
-scroll view
 virtual list
-node ref
 focus scope
 component-level error boundary
 cell-based frame

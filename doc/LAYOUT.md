@@ -673,6 +673,11 @@ MVP 当前公开 props 很少：
 ```text
 padding
 border
+height
+width
+overflow
+scrollX
+scrollY
 size
 value
 ```
@@ -700,13 +705,13 @@ MVP 只从 `MountedElementNode.props` 读取以下字段：
 | `screen` | none |
 | `vstack` | none |
 | `hstack` | none |
-| `box` | `padding`, `border` |
+| `box` | `padding`, `border`, `height`, `width`, `overflow`, `scrollX`, `scrollY` |
 | `text` | `value` |
 | `spacer` | `size` |
 
 `LayoutStyle` 是未来 Yoga / Flexbox 的内部归一化目标，不等于当前公开 props。
 
-当前 vnode schema 中 `box` 只公开 `padding` 和 `border`。因此 MVP 不需要先修改 vnode schema 来加入 `margin` / `gap` / `alignItems` 等 future props。
+当前 vnode schema 中 `box` 已公开 M7 所需的固定尺寸与滚动 metadata props，但仍不公开 `margin` / `gap` / `alignItems` 等 future props。
 
 实现时应先执行 layout prop 归一化：
 
@@ -779,9 +784,9 @@ for
 
 这让 control node 更接近 transparent layout 语义，同时仍保留自身 `LayoutNode`。
 
-### 10.4 Viewport 与 overflow
+### 10.4 Viewport、overflow 与 scroll metadata
 
-MVP 不做 clipping。
+当前 BasicLayoutEngine 已支持 `overflow="clip"` 输出 `LayoutNode.clip`，并在存在 `scrollX` / `scrollY` 时输出 clamp 后的 `LayoutNode.scrollOffset` 与自然内容尺寸 `contentSize`。
 
 规则：
 
@@ -794,9 +799,15 @@ non-screen root:
 
 children:
   可以产生超出 parent / viewport 的 rect
+
+box overflow="clip":
+  clip = contentRect
+
+box scrollY:
+  scrollOffset.y = clamp(scrollY, 0, max(contentSize.height - contentRect.height, 0))
 ```
 
-overflow / clipping / scroll 后续交给 renderer 或更完整的 layout backend 处理。
+实际裁剪和滚动位移仍由 renderer paint 阶段消费 `clip` / `scrollOffset` 完成；layout 只负责几何 metadata。
 
 ### 10.5 Unsupported 策略
 

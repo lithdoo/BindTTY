@@ -76,7 +76,8 @@ TerminalKeyEvent
 5. 可选隐藏 / 恢复 cursor。
 6. 可选进入 / 退出 stdin raw mode。
 7. 解析 keypress 事件。
-8. 处理 Ctrl+C 和进程退出恢复。
+8. 处理 Ctrl+C 默认 dispose。
+9. 显式 `stop()` / `dispose()` 时恢复 terminal 状态。
 ```
 
 它不负责：
@@ -451,6 +452,19 @@ MVP key event 示例：
 { input: "c", name: "c", ctrl: true, meta: false, shift: false, sequence: "\x03" }
 ```
 
+当前 raw stdin 路径已支持解析常见导航键序列：
+
+```text
+CSI / SS3:
+  ArrowUp / ArrowDown / ArrowRight / ArrowLeft
+  Home / End
+  Insert / Delete
+  PageUp / PageDown
+
+Windows console prefixed:
+  \x00 / \xe0 + navigation code
+```
+
 ### 9.2 Ctrl+C
 
 `exitOnCtrlC = true` 时：
@@ -766,14 +780,14 @@ JSON lines 输出 writes / events
 5. Ctrl+C / dispose 后恢复 terminal。
 ```
 
-后续 terminal lifecycle 稳定后，再增加 PTY E2E：
+当前已增加基于 `node-pty` 的 real PTY E2E，用于覆盖真实伪终端下的 alternate screen、raw mode keypress、cursor restore 与核心交互路径。仍未实现的是进程异常退出时的自动 restore hook（例如 `process.on("exit")` / SIGTERM 恢复）。
 
 ```text
 node-pty / 系统 pty
   验证 alternate screen
   验证 raw mode keypress
   验证 cursor restore
-  验证异常退出 restore
+  异常退出 restore 仍是后续项
 ```
 
 ## 15. 落地阶段

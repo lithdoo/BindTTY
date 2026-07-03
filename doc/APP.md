@@ -181,9 +181,9 @@ stdout / viewport adapter 类型
 
 ```text
 export createApp
-export { Button, TextInput } from @bindtty/widgets
+export { Button, TextInput, ScrollView, List } from @bindtty/widgets
 export type { AppStdout, AppStdin, AppViewport, BindTTYApp, CreateAppStdoutOptions, CreateAppTerminalOptions, CreateAppOptions }
-export type { ButtonProps, ButtonStyleProps, TextInputProps, TextInputStyleProps }
+export type { ButtonProps, ButtonStyleProps, TextInputProps, TextInputStyleProps, ScrollViewProps, ScrollViewStyleProps, ListProps }
 ```
 
 `package.json` 运行时依赖：
@@ -275,7 +275,7 @@ stdout.write(ANSI)
 5. runtime flush 后 refresh interaction + render。
 6. 两种模式：stdout 模式（write 到 stdout）和 terminal 模式（使用 TerminalHost）。
 7. dispose 时释放 runtime、interaction、terminal 和监听器。
-8. 从顶层 re-export Button、TextInput 等 widgets。
+8. 从顶层 re-export Button、TextInput、ScrollView、List 等 widgets。
 ```
 
 它不负责：
@@ -309,6 +309,7 @@ export interface CreateAppStdoutOptions {
   stdin?: AppStdin;
   fallbackViewport?: AppViewport;
   autoStart?: boolean;
+  onLifecycleError?: RuntimeLifecycleErrorHandler;
 }
 ```
 
@@ -317,6 +318,8 @@ export interface CreateAppStdoutOptions {
 ```ts
 export interface CreateAppTerminalOptions {
   terminal: TerminalHost;
+  autoStart?: boolean;
+  onLifecycleError?: RuntimeLifecycleErrorHandler;
 }
 ```
 
@@ -357,6 +360,8 @@ stdout.rows ?? fallbackViewport.height ?? 24
 `render()` 返回本次写入的 ANSI string，方便测试。
 
 `resize()` 返回重绘 ANSI string，方便测试。
+
+`onLifecycleError` 用于接收 element lifecycle callback 的异常，包括 `api.onMounted`、`api.onLayout`、`api.onUnmount`。这些异常不会阻断后续节点更新、layout 派发或 dispose 清理；如果未提供该 handler，runtime 默认忽略这些异常。
 
 ## 7. 生命周期
 
@@ -647,18 +652,21 @@ stdout.write 抛错:
 
 runtime flush listener 抛错:
   由当前 runtime scheduler 行为决定
+
+lifecycle callback 抛错:
+  捕获并调用 onLifecycleError，不阻断后续节点更新 / layout dispatch / dispose cleanup
 ```
 
 暂不实现：
 
 ```text
 error boundary
-onError callback
+通用 onError callback
 fallback UI
 recoverable render
 ```
 
-后续可以扩展：
+后续可以扩展通用 `onError`，与当前已实现的 `onLifecycleError` 区分：
 
 ```ts
 createApp(view, {
@@ -839,7 +847,7 @@ dispose:
 用户可写：
 
 ```ts
-import { createApp, Button, TextInput } from "bindtty";
+import { createApp, Button, TextInput, ScrollView, List } from "bindtty";
 import { createNodeTerminal } from "@bindtty/terminal";
 
 // stdout 模式（测试 / 非 TTY）
@@ -863,10 +871,9 @@ signal.set()
   ↓ stdout.write / terminal.write
 ```
 
-后续待推进（见 [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md) 与 [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) Milestone 7）：
+已完成的 M7 scroll / list / viewport 能力见 [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md)。后续待推进：
 
 ```text
-scroll / list / viewport（M7 详细设计见 M7_SCROLL_VIEWPORT.md）
 高级 layout props
 signal batch()、runtime bind() helper
 顶层包 re-export signal / vnode / runtime

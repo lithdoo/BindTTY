@@ -66,18 +66,7 @@ packages/jsx-runtime/
 
 ## 3. TypeScript 配置
 
-用户侧推荐配置：
-
-```json
-{
-  "compilerOptions": {
-    "jsx": "react-jsx",
-    "jsxImportSource": "bindtty"
-  }
-}
-```
-
-如果用户直接引用子包，也可以使用：
+当前用户侧推荐直接引用 JSX runtime 子包：
 
 ```json
 {
@@ -88,19 +77,13 @@ packages/jsx-runtime/
 }
 ```
 
-最终 `bindtty` 入口包需要转发 JSX runtime 子路径：
+顶层 `bindtty` 包当前只导出用户运行时入口，不转发 JSX runtime 子路径。因此暂不支持：
 
 ```text
-bindtty/jsx-runtime
-bindtty/jsx-dev-runtime
+jsxImportSource: "bindtty"
 ```
 
-子包自身需要提供：
-
-```text
-@bindtty/jsx-runtime/jsx-runtime
-@bindtty/jsx-runtime/jsx-dev-runtime
-```
+如果未来希望用户只配置 `jsxImportSource: "bindtty"`，需要在 `packages/bindtty/package.json` 中额外导出 `./jsx-runtime` 与 `./jsx-dev-runtime` 子路径。
 
 ## 4. 必要导出
 

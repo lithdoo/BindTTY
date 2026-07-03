@@ -190,8 +190,10 @@ scrollY signal 变化
 stdin key (↑)
   ↓ terminal adapter → TerminalKeyEvent
   ↓ interaction.handleKey
-  ↓ ScrollView onKey 或专用 handler
-  ↓ scrollY.set(scrollY.get() - 1)  // 或 page scroll
+  ↓ ScrollView onKey
+  ↓ 基于上一轮 layout appliedY / maxY / pageY 计算 nextOffset
+  ↓ onOffsetChange(nextOffset)
+  ↓ 外部 signal.set(nextOffset)
   ↓ 同上 binding dirty 链
 ```
 
@@ -532,9 +534,9 @@ if (event.name === "end") onOffsetChange(maxY)
 2. 未识别的 key 返回 `false`。
 3. `scrollOnArrow === false` 或未提供 `onOffsetChange` 时，内部 `box` 使用 `onKey=false`，不进入 focus list。
 
-### 8.4 Real PTY 限制
+### 8.4 Real PTY 覆盖
 
-`@bindtty/terminal` 的 raw stdin 路径不解析方向键序列；**箭头键 E2E 以 mock 为准**，real PTY 不阻塞 M7 交付。
+`@bindtty/terminal` 的 raw stdin 路径已支持 CSI / SS3 方向键与 Home / End / PageUp / PageDown 解析，也支持 Windows console prefixed navigation key。real PTY E2E 已覆盖 `ScrollView` / `List` 的 Down 键滚动；更细的组合键仍主要由 mock E2E 覆盖。
 
 ---
 
@@ -554,18 +556,18 @@ if (event.name === "end") onOffsetChange(maxY)
 
 **实现任务**：
 
-- [ ] vnode `box` schema 增加新增 props，dirty 均为 `layout`
-- [ ] JSX `box` 类型增加新增 props
-- [ ] layout `supportedPropsByTag.box` 增加新增 props
-- [ ] layout 增加 prop 读取 helper 与非法 `overflow` 校验
-- [ ] `height` / `width` 固定尺寸参与 `measureBox`
+- [x] vnode `box` schema 增加新增 props，dirty 均为 `layout`
+- [x] JSX `box` 类型增加新增 props
+- [x] layout `supportedPropsByTag.box` 增加新增 props
+- [x] layout 增加 prop 读取 helper 与非法 `overflow` 校验
+- [x] `height` / `width` 固定尺寸参与 `measureBox`
 
 **验收**：
 
-- [ ] `<box height={3}>` 不再抛 unsupported prop
-- [ ] layout 单测：box 设置 height 后 `rect.height === 3`
-- [ ] layout 单测：box 设置 width 后 `rect.width === width`
-- [ ] 动态 height signal 更新会触发 layout dirty
+- [x] `<box height={3}>` 不再抛 unsupported prop
+- [x] layout 单测：box 设置 height 后 `rect.height === 3`
+- [x] layout 单测：box 设置 width 后 `rect.width === width`
+- [x] 动态 height signal 更新会触发 layout dirty
 
 **不涉及**：clip、scroll offset、renderer。
 
@@ -581,16 +583,16 @@ if (event.name === "end") onOffsetChange(maxY)
 
 **实现任务**：
 
-- [ ] `LayoutNode` 增加 `clip?`、`scrollOffset?`、`contentSize?`
-- [ ] `overflow="clip"` 时输出 `clip = contentRect`
-- [ ] `scrollY` 时计算 children 自然 `contentSize`
-- [ ] `scrollOffset.y` clamp 到合法范围
-- [ ] children rect 保持自然排列，不因 clip 截断
+- [x] `LayoutNode` 增加 `clip?`、`scrollOffset?`、`contentSize?`
+- [x] `overflow="clip"` 时输出 `clip = contentRect`
+- [x] `scrollY` 时计算 children 自然 `contentSize`
+- [x] `scrollOffset.y` clamp 到合法范围
+- [x] children rect 保持自然排列，不因 clip 截断
 
-- [ ] layout 单测：子 rect 可大于 parent
-- [ ] layout 单测：`contentSize.height > clip.height`
-- [ ] layout 单测：offset 过大时 `scrollOffset.y` clamp 到 max
-- [ ] layout 单测：内容不足 clip 高度时 `scrollOffset.y === 0`
+- [x] layout 单测：子 rect 可大于 parent
+- [x] layout 单测：`contentSize.height > clip.height`
+- [x] layout 单测：offset 过大时 `scrollOffset.y` clamp 到 max
+- [x] layout 单测：内容不足 clip 高度时 `scrollOffset.y === 0`
 
 **不涉及**：renderer 实际裁剪。
 
@@ -606,18 +608,18 @@ if (event.name === "end") onOffsetChange(maxY)
 
 **实现任务**：
 
-- [ ] 增加 `PaintContext`
-- [ ] paint children 时计算 clip 交集
-- [ ] 所有 cell 写入统一走 clipped setCell
-- [ ] text / box / border / focus inverse 都遵守 clip
-- [ ] 没有 `clip` 的现有场景保持行为不变
+- [x] 增加 `PaintContext`
+- [x] paint children 时计算 clip 交集
+- [x] 所有 cell 写入统一走 clipped setCell
+- [x] text / box / border / focus inverse 都遵守 clip
+- [x] 没有 `clip` 的现有场景保持行为不变
 
 **验收**：
 
-- [ ] renderer 单测：clip 外无 cell
-- [ ] renderer 单测：负坐标 + clip 不越界
-- [ ] renderer 单测：focused inverse 不越过 clip
-- [ ] mock E2E：固定 `height=3` 的 box 内放 10 行 text，只显示前 3 行
+- [x] renderer 单测：clip 外无 cell
+- [x] renderer 单测：负坐标 + clip 不越界
+- [x] renderer 单测：focused inverse 不越过 clip
+- [x] mock E2E：固定 `height=3` 的 box 内放 10 行 text，只显示前 3 行
 
 ---
 
@@ -632,17 +634,17 @@ if (event.name === "end") onOffsetChange(maxY)
 
 **实现任务**：
 
-- [ ] children paint context 应用 `-scrollOffset`
-- [ ] 当前节点 border/background 不随 scrollOffset 移动
-- [ ] offset 变化通过普通 frame diff 输出 patch
-- [ ] mock E2E 增加静态 offset 场景
+- [x] children paint context 应用 `-scrollOffset`
+- [x] 当前节点 border/background 不随 scrollOffset 移动
+- [x] offset 变化通过普通 frame diff 输出 patch
+- [x] mock E2E 增加静态 offset 场景
 
 **验收**：
 
-- [ ] offset 0 显示第 1 行起
-- [ ] offset 5 显示第 6 行起
-- [ ] offset 过大显示最后可见窗口
-- [ ] box border 固定，只有 content 滚动
+- [x] offset 0 显示第 1 行起
+- [x] offset 5 显示第 6 行起
+- [x] offset 过大显示最后可见窗口
+- [x] box border 固定，只有 content 滚动
 
 ---
 
@@ -657,19 +659,19 @@ if (event.name === "end") onOffsetChange(maxY)
 
 **实现任务**：
 
-- [ ] 新增 `ScrollView`
-- [ ] `ScrollView` 渲染为内部 `box`
-- [ ] `height` / `width` / `overflow="clip"` / `scrollY` 转发到 box
-- [ ] `onKey` 支持 ↑/↓/PgUp/PgDn/Home/End
-- [ ] `onOffsetChange` 受控写回外部 signal
-- [ ] `@bindtty/widgets` 与 `bindtty` 入口导出 `ScrollView`
+- [x] 新增 `ScrollView`
+- [x] `ScrollView` 渲染为内部 `box`
+- [x] `height` / `width` / `overflow="clip"` / `scrollY` 转发到 box
+- [x] `onKey` 支持 ↑/↓/PgUp/PgDn/Home/End
+- [x] `onOffsetChange` 受控写回外部 signal
+- [x] `@bindtty/widgets` 与 `bindtty` 入口导出 `ScrollView`
 
 **验收**：
 
-- [ ] widgets 单测：`scrollOnArrow` / 无 `onOffsetChange` 时 focus 行为符合文档
-- [ ] mock E2E：focus 到 ScrollView 后 ↓ 改变可见行
-- [ ] mock E2E：TextInput focused 时方向键优先被 TextInput 消费，不滚动外层 ScrollView
-- [ ] mock E2E：PgDn/Home/End 行为正确
+- [x] widgets 单测：`scrollOnArrow` / 无 `onOffsetChange` 时 focus 行为符合文档
+- [x] mock E2E：focus 到 ScrollView 后 ↓ 改变可见行
+- [x] mock E2E：TextInput focused 时方向键优先被 TextInput 消费，不滚动外层 ScrollView
+- [x] mock E2E：PgDn/Home/End 行为正确
 
 ---
 
@@ -685,18 +687,18 @@ if (event.name === "end") onOffsetChange(maxY)
 
 **实现任务**：
 
-- [ ] 新增 `List<T>`
-- [ ] 内部组合 `ScrollView` + `<for>`
-- [ ] `items` / `getKey` / `render` 转换到 `<for>`
-- [ ] 增加动态 items 场景测试
-- [ ] 更新 `WIDGETS.md`、`TUI_IMPLEMENTATION_PLAN.md`、根 README 状态
+- [x] 新增 `List<T>`
+- [x] 内部组合 `ScrollView` + `<for>`
+- [x] `items` / `getKey` / `render` 转换到 `<for>`
+- [x] 增加动态 items 场景测试
+- [x] 更新 `WIDGETS.md`、`TUI_IMPLEMENTATION_PLAN.md`、根 README 状态
 
 **验收**：
 
-- [ ] `items.push()` 后 content 变长，clamp 行为正确
-- [ ] 删除当前可见前方 item 后，可见窗口稳定且不越界
-- [ ] key 未变、内容变更时复用现有 for 行为
-- [ ] mock E2E：For 增删与滚动组合场景
+- [x] `items.push()` 后 content 变长，clamp 行为正确
+- [x] 删除当前可见前方 item 后，可见窗口稳定且不越界
+- [x] key 未变、内容变更时复用现有 for 行为
+- [x] mock E2E：For 增删与滚动组合场景
 
 **后置项**：
 
@@ -725,36 +727,36 @@ if (event.name === "end") onOffsetChange(maxY)
 
 Layout：
 
-- [ ] `box height` 固定外部 rect
-- [ ] `box width` 固定外部 rect
-- [ ] `overflow="clip"` 输出 `clip`
-- [ ] `scrollY` 输出 clamp 后 `scrollOffset`
-- [ ] `contentSize` 记录未裁剪 children 尺寸
-- [ ] `for` 作为 scroll content 时 content height 正确
+- [x] `box height` 固定外部 rect
+- [x] `box width` 固定外部 rect
+- [x] `overflow="clip"` 输出 `clip`
+- [x] `scrollY` 输出 clamp 后 `scrollOffset`
+- [x] `contentSize` 记录未裁剪 children 尺寸
+- [x] `for` 作为 scroll content 时 content height 正确
 
 Renderer：
 
-- [ ] text 被 clip 截断
-- [ ] background fill 被 clip 截断
-- [ ] border 被父 clip 截断，但不被自身 scrollOffset 移动
-- [ ] children 被 scrollOffset 移动
-- [ ] focused inverse 被 clip 截断
-- [ ] diff 在 offset 改变后输出正确 patch
+- [x] text 被 clip 截断
+- [x] background fill 被 clip 截断
+- [x] border 被父 clip 截断，但不被自身 scrollOffset 移动
+- [x] children 被 scrollOffset 移动
+- [x] focused inverse 被 clip 截断
+- [x] diff 在 offset 改变后输出正确 patch
 
 Widgets：
 
-- [ ] `ScrollView` 输出内部 box props
-- [ ] `ScrollView` onKey 调用 `onOffsetChange`
-- [ ] `scrollOnArrow=false` 行为符合文档
-- [ ] `List` 渲染所有 item 并保留 key
+- [x] `ScrollView` 输出内部 box props
+- [x] `ScrollView` onKey 调用 `onOffsetChange`
+- [x] `scrollOnArrow=false` 行为符合文档
+- [x] `List` 渲染所有 item 并保留 key
 
 E2E mock：
 
-- [ ] 静态 clip
-- [ ] signal offset 更新
-- [ ] 键盘滚动
-- [ ] TextInput 与 ScrollView 同屏时方向键优先级
-- [ ] 动态 list push/delete
+- [x] 静态 clip
+- [x] signal offset 更新
+- [x] 键盘滚动
+- [x] TextInput 与 ScrollView 同屏时方向键优先级
+- [x] 动态 list push/delete
 
 ---
 

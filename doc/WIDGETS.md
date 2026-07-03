@@ -28,7 +28,7 @@ TSX
 它负责：
 
 ```text
-1. 提供 Button / TextInput / Checkbox 等高层组件。
+1. 提供 Button / TextInput / ScrollView / List 等高层组件，Checkbox / Select 等后续扩展。
 2. 把业务 props 转换成 intrinsic element 的 style props / interaction props。
 3. 把 keyboard event 转换成控件语义，例如 onPress、onInput、onChange。
 4. 通过 signal-friendly props 支持受控组件。
@@ -152,7 +152,7 @@ widget custom props:
 4. disabled 由 widget 决定是否让 onKey 变为 false。
 5. focusable 不作为单独 prop；是否可聚焦仍由 onKey 决定。
 6. focusStyle 是 renderer paint prop；复杂控件可用 focusStyle="none" 关闭默认 focused inverse。
-7. TextInput MVP 不暴露 width；固定宽度等 layout 能力等待 layout width 支持后再加入。
+7. TextInput 当前不直接暴露 width；如需固定宽度可在外层布局中组合 `box width`，后续可再评估是否加入 TextInput 自身 props。
 ```
 
 ## 5. Focus 与 Disabled
@@ -346,21 +346,22 @@ TextInput 是第二个落地控件，在 Button 之后实现。
 
 详细设计见 [TEXT_INPUT.md](./TEXT_INPUT.md)。
 
-### 7.3 Checkbox / Select / List
+### 7.3 Checkbox / Select
 
-这些控件可以在 Button 后逐步补。
+这些控件可以在当前 Button / TextInput / ScrollView / List 之后逐步补。
 
 建议顺序：
 
 ```text
 1. Button
-2. Checkbox
-3. TextInput
-4. Select
-5. List / Menu
+2. TextInput
+3. ScrollView
+4. List
+5. Checkbox
+6. Select / Menu
 ```
 
-Checkbox 比 TextInput 简单，可用于进一步验证 `onChange` 与 dynamic style。
+Checkbox 尚未实现，可用于进一步验证 `onChange` 与 dynamic style。
 
 ## 8. 与 Intrinsic button / input 的关系
 
@@ -624,7 +625,7 @@ Button、TextInput、ScrollView 和 List 跑通后，下一步建议：
   增强 TextInput（width、selection、多行）。
 ```
 
-Checkbox 比 TextInput 简单，可用于进一步验证 `onChange` 与 dynamic style。
+Checkbox 尚未实现，可用于进一步验证 `onChange` 与 dynamic style。
 
 ## M7 当前实现：ScrollView / List
 

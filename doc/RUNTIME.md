@@ -187,6 +187,7 @@ MountedNode | null
 ```ts
 export interface MountOptions {
   markInitiallyDirty?: boolean;
+  context?: RuntimeContext;
 }
 
 export function mountTemplate(
@@ -290,12 +291,13 @@ MountedElementNode
 
 ```text
 1. 创建 MountedElementNode。
-2. mount children。
-3. props 保存 resolved value。
-4. propSources 保存原始 BindingValue。
-5. bindings 保存 signal subscription。
-6. state 初始为空对象。
-7. dirty 初始为 null 或 mount 阶段指定值。
+2. 从 template props 中抽取 lifecycle prop ref。
+3. bind ordinary props，保存 resolved value / propSources / bindings。
+4. 若 ref 是函数，创建 api 并调用 ref(api)。
+5. mount children。
+6. children 完成后触发 api.onMounted。
+7. state 初始为空对象。
+8. dirty 初始为 null 或 mount 阶段指定值。
 ```
 
 示例：
@@ -550,10 +552,11 @@ export function disposeMountedNode(node: MountedNode | null): void;
 职责：
 
 ```text
-1. 取消当前节点 bindings。
-2. 递归 dispose children。
-3. 清空 bindings。
-4. 调用 node.dispose() 时保持幂等。
+1. element 节点先执行并清理 lifecycle api（含 api.onUnmount）。
+2. 取消当前节点 bindings。
+3. 递归 dispose children。
+4. 清空 bindings。
+5. 调用 node.dispose() 时保持幂等。
 ```
 
 幂等要求：
@@ -563,7 +566,7 @@ disposeMountedNode(node);
 disposeMountedNode(node); // 不应重复 unsubscribe，也不应抛错
 ```
 
-第一阶段没有 focus/input/widget local resource，所以 dispose 只处理 bindings 和 children。
+`api.onUnmount` 抛错时由 runtime 捕获并通过可选 `onLifecycleError` 上报，不阻断 bindings / children 的后续清理。
 
 ## 11. MountedNode 类型使用
 
@@ -1189,7 +1192,26 @@ export interface RuntimeFlushRecord {
 
 export type RuntimeFlushListener = (record: RuntimeFlushRecord) => void;
 
-export function createRuntimeRoot(template: Template): RuntimeRoot;
+export interface RuntimeRootOptions {
+  onLifecycleError?: RuntimeLifecycleErrorHandler;
+}
+
+export type RuntimeLifecyclePhase = "mounted" | "layout" | "unmount";
+
+export interface RuntimeLifecycleError {
+  phase: RuntimeLifecyclePhase;
+  node: MountedElementNode;
+  error: unknown;
+}
+
+export type RuntimeLifecycleErrorHandler = (
+  error: RuntimeLifecycleError
+) => void;
+
+export function createRuntimeRoot(
+  template: Template,
+  options?: RuntimeRootOptions
+): RuntimeRoot;
 ```
 
 使用方式：
@@ -1256,6 +1278,7 @@ context.scheduler.queueDirty(node);
 ```ts
 export interface RuntimeContext {
   scheduler: RuntimeScheduler;
+  onLifecycleError?: RuntimeLifecycleErrorHandler;
 }
 
 export interface MountOptions {
@@ -1267,12 +1290,18 @@ export interface MountOptions {
 `createRuntimeRoot()` 创建 scheduler，再把 context 传给 mount：
 
 ```ts
-export function createRuntimeRoot(template: Template): RuntimeRoot {
+export function createRuntimeRoot(
+  template: Template,
+  options: RuntimeRootOptions = {}
+): RuntimeRoot {
   let root: MountedNode | null = null;
   const scheduler = createRuntimeScheduler(() => root);
 
   root = mountTemplate(template, {
-    context: { scheduler }
+    context: {
+      scheduler,
+      onLifecycleError: options.onLifecycleError
+    }
   });
 
   return runtimeRootFacade;
