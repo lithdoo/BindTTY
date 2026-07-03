@@ -200,6 +200,78 @@ test("real PTY: TextInput backspace edits before submit", { concurrency: false }
   }
 });
 
+test("real PTY: ScrollView scrolls with down arrow", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("scroll");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("scroll-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 80,
+    rows: 24
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await delay(300);
+
+    session.write("\x1b[B");
+    await delay(100);
+    session.write("\x1b[B");
+
+    await marker.waitFor("OFFSET:2", { timeoutMs: 8_000 });
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(result.markers.includes("PASS"));
+    assert.ok(result.markers.includes("OFFSET:2"));
+  } finally {
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
+test("real PTY: List scrolls with down arrow", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("list");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("list-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 80,
+    rows: 24
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await delay(300);
+
+    session.write("\x1b[B");
+
+    await marker.waitFor("OFFSET:1", { timeoutMs: 8_000 });
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(result.markers.includes("PASS"));
+    assert.ok(result.markers.includes("OFFSET:1"));
+  } finally {
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
 test("host kind is recorded for the current runner", () => {
   const kind = detectHostKind();
   assert.ok(kind.length > 0);

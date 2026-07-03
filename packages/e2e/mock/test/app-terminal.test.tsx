@@ -427,6 +427,35 @@ test("tsx app dispatches terminal keys through TextInput widgets", async () => {
   assert.equal(stdout.writes.length, writeCountAfterDispose);
 });
 
+test("tsx app clips overflowing box content without scroll offset", async () => {
+  const stdout = createFakeStdout(8, 4);
+  const stdin = createFakeStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <box height={2} overflow="clip">
+      <text value="A" />
+      <text value="B" />
+      <text value="C" />
+      <text value="D" />
+    </box>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /A/);
+  assert.match(visibleText(stdout.writes.at(-1)), /B/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /C/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /D/);
+
+  app.dispose();
+});
+
 test("tsx app clips and scrolls box content with signal offset", async () => {
   const stdout = createFakeStdout(8, 4);
   const stdin = createFakeStdin();
@@ -506,10 +535,116 @@ test("tsx app scrolls ScrollView with keyboard focus", async () => {
   stdin.emitKey(undefined, { name: "pagedown" });
   await nextMicrotask();
 
-  assert.equal(offset.get(), 3);
+  assert.equal(offset.get(), 2);
   assert.match(visibleText(stdout.writes.at(-1)), /D/);
 
   stdin.emitKey(undefined, { name: "home" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 0);
+  assert.match(visibleText(stdout.writes.at(-1)), /A/);
+
+  app.dispose();
+});
+
+test("tsx app scrolls ScrollView with pageup end and up keys", async () => {
+  const stdout = createFakeStdout(12, 5);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <ScrollView
+      height={2}
+      offset={offset}
+      onOffsetChange={(nextOffset) => {
+        offset.set(nextOffset);
+      }}
+    >
+      <text value="A" />
+      <text value="B" />
+      <text value="C" />
+      <text value="D" />
+    </ScrollView>,
+    { terminal }
+  );
+
+  app.start();
+
+  stdin.emitKey(undefined, { name: "pagedown" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 2);
+  assert.match(visibleText(stdout.writes.at(-1)), /C/);
+  assert.match(visibleText(stdout.writes.at(-1)), /D/);
+
+  stdin.emitKey(undefined, { name: "pageup" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 0);
+  assert.match(visibleText(stdout.writes.at(-1)), /A/);
+  assert.match(visibleText(stdout.writes.at(-1)), /B/);
+
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 1);
+  assert.match(visibleText(stdout.writes.at(-1)), /B/);
+  assert.match(visibleText(stdout.writes.at(-1)), /C/);
+
+  stdin.emitKey(undefined, { name: "up" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 0);
+
+  stdin.emitKey(undefined, { name: "end" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 2);
+  assert.match(visibleText(stdout.writes.at(-1)), /C/);
+  assert.match(visibleText(stdout.writes.at(-1)), /D/);
+
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 2);
+
+  app.dispose();
+});
+
+test("tsx app does not scroll ScrollView when scrollOnArrow is false", async () => {
+  const stdout = createFakeStdout(12, 5);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <ScrollView
+      height={2}
+      offset={offset}
+      scrollOnArrow={false}
+      onOffsetChange={(nextOffset) => {
+        offset.set(nextOffset);
+      }}
+    >
+      <text value="A" />
+      <text value="B" />
+      <text value="C" />
+    </ScrollView>,
+    { terminal }
+  );
+
+  app.start();
+
+  stdin.emitKey(undefined, { name: "down" });
   await nextMicrotask();
 
   assert.equal(offset.get(), 0);
@@ -628,6 +763,63 @@ test("tsx app scrolls dynamic List data with for keys", async () => {
 
   assert.match(visibleText(stdout.writes.at(-1)), /D/);
   assert.match(visibleText(stdout.writes.at(-1)), /E/);
+
+  app.dispose();
+});
+
+test("tsx app clamps List scroll offset at bottom after end and down keys", async () => {
+  const stdout = createFakeStdout(20, 12);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const items = createSignal<readonly Item[]>(
+    Array.from({ length: 20 }, (_, index) => ({
+      id: index + 1,
+      label: `line-${index + 1}`
+    }))
+  );
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <List
+      height={6}
+      offset={offset}
+      items={items}
+      getKey={(item) => (item as Item).id}
+      render={(item) => <text value={(item as Item).label} />}
+      onOffsetChange={(nextOffset) => {
+        offset.set(nextOffset);
+      }}
+    />,
+    { terminal }
+  );
+
+  app.start();
+
+  stdin.emitKey(undefined, { name: "end" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 14);
+
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 14);
+
+  stdin.emitKey(undefined, { name: "home" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 0);
+
+  stdin.emitKey(undefined, { name: "up" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 0);
 
   app.dispose();
 });

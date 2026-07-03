@@ -69,6 +69,8 @@ npm run test:e2e:real:wsl
 | `interaction-app.tsx` | TextInput 输入 + Enter 提交 |
 | `focus-app.tsx` | Tab 切换 Button focus + Enter |
 | `textedit-app.tsx` | TextInput Backspace 后提交 |
+| `scroll-app.tsx` | ScrollView Down 键滚动 |
+| `list-app.tsx` | List Down 键滚动 |
 
 ## 目录结构
 

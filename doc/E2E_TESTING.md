@@ -167,10 +167,16 @@ E2E 负责：
 
 mock E2E 已覆盖：
 
-- `box overflow="clip"` 静态裁剪。
+- `box overflow="clip"` 静态裁剪（无 `scrollY`）。
 - `scrollY` signal 更新后可见窗口变化。
-- `ScrollView` focus 后方向键滚动。
+- `ScrollView` focus 后方向键滚动（含 PageUp/PageDown/Home/End/Up）。
+- `scrollOnArrow={false}` 时方向键不改变 offset。
 - `TextInput` focused 时方向键优先由输入框消费，不滚动外层 `ScrollView`。
 - `List` 动态 push/delete 与 scroll clamp 组合。
 
-real PTY E2E 仍保持 smoke 范围；方向键细节继续由 mock E2E 覆盖。
+real PTY E2E 已补充：
+
+- `scroll-app`：`ScrollView` 在真实 TTY 中响应 `\x1b[B`（Down）滚动。
+- `list-app`：`List` 在真实 TTY 中响应 Down 滚动。
+
+方向键在 PTY 子进程经 `RawStdinInput` + `parseRawChunk` CSI/SS3 解析；更细的按键组合仍主要由 mock E2E 覆盖。

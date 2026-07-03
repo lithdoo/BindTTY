@@ -802,6 +802,43 @@ test("parseRawChunk maps control keys used by raw stdin adapter", () => {
   ]);
 });
 
+test("parseRawChunk maps CSI and SS3 navigation keys", () => {
+  const events = [
+    ...parseRawChunk("\x1b[B\x1b[A\x1b[C\x1b[D"),
+    ...parseRawChunk("\x1b[5~\x1b[6~"),
+    ...parseRawChunk("\x1b[H\x1b[F"),
+    ...parseRawChunk("\x1bOB")
+  ];
+
+  assert.deepEqual(
+    events.map((event) => event.name),
+    [
+      "down",
+      "up",
+      "right",
+      "left",
+      "pageup",
+      "pagedown",
+      "home",
+      "end",
+      "down"
+    ]
+  );
+});
+
+test("parseRawChunk maps Windows console prefixed arrow keys", () => {
+  const events = [...parseRawChunk("\xE0H\xE0P\xE0M\xE0K\x00I\x00Q")];
+
+  assert.deepEqual(events.map((event) => event.name), [
+    "up",
+    "down",
+    "right",
+    "left",
+    "pageup",
+    "pagedown"
+  ]);
+});
+
 test("stdinInputAdapter injection selects a fixed stdin reader", () => {
   const stdout = createMockStdout();
   const stdin = createMockStdin();

@@ -4,6 +4,7 @@ import { stripVTControlCharacters } from "node:util";
 
 import {
   Button,
+  ScrollView,
   TextInput,
   createApp,
   type AppStdout,
@@ -855,4 +856,77 @@ test("terminal mode dispose prevents later runtime flush writes", async () => {
 
   assert.equal(terminal.disposeCalls, 1);
   assert.equal(terminal.writes.length, 1);
+});
+
+test("terminal mode clamps scroll offset bindings after layout", () => {
+  const terminal = createMockTerminal(12, 8);
+  const offset = createSignal(0);
+  const app = createApp(
+    ScrollView({
+      height: 2,
+      offset,
+      onOffsetChange: (nextOffset) => {
+        offset.set(nextOffset);
+      },
+      children: [
+        elementTemplate("text", { value: "A" }),
+        elementTemplate("text", { value: "B" }),
+        elementTemplate("text", { value: "C" }),
+        elementTemplate("text", { value: "D" })
+      ]
+    }),
+    { terminal }
+  );
+
+  app.start();
+
+  offset.set(99);
+  app.render();
+  assert.equal(offset.get(), 2);
+
+  terminal.emitKey(keyEvent("", { name: "end" }));
+  assert.equal(offset.get(), 2);
+
+  terminal.emitKey(keyEvent("", { name: "down" }));
+  assert.equal(offset.get(), 2);
+
+  terminal.emitKey(keyEvent("", { name: "home" }));
+  assert.equal(offset.get(), 0);
+
+  terminal.emitKey(keyEvent("", { name: "up" }));
+  assert.equal(offset.get(), 0);
+
+  app.dispose();
+});
+
+test("terminal mode clamps negative and oversized scroll offsets after layout", () => {
+  const terminal = createMockTerminal(12, 8);
+  const offset = createSignal(-4);
+  const app = createApp(
+    ScrollView({
+      height: 2,
+      offset,
+      onOffsetChange: (nextOffset) => {
+        offset.set(nextOffset);
+      },
+      children: [
+        elementTemplate("text", { value: "A" }),
+        elementTemplate("text", { value: "B" }),
+        elementTemplate("text", { value: "C" }),
+        elementTemplate("text", { value: "D" })
+      ]
+    }),
+    { terminal }
+  );
+
+  app.start();
+  app.render();
+
+  assert.equal(offset.get(), 0);
+
+  offset.set(1);
+  app.render();
+  assert.equal(offset.get(), 1);
+
+  app.dispose();
 });

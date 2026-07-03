@@ -6,6 +6,8 @@ import type { Dispose } from "@bindtty/runtime";
 import type { TerminalHost, TerminalKeyEvent } from "@bindtty/terminal";
 import type { ViewTemplate } from "@bindtty/vnode";
 
+import { syncClampedScrollBindings } from "./scroll-sync.js";
+
 export interface AppStdout {
   columns?: number;
   rows?: number;
@@ -104,7 +106,10 @@ export function createApp(
 
     const viewport = readViewport();
     refreshInteraction();
-    const layoutTree = layoutRoot(runtime.root, { viewport });
+    let layoutTree = layoutRoot(runtime.root, { viewport });
+    if (syncClampedScrollBindings(layoutTree)) {
+      layoutTree = layoutRoot(runtime.root, { viewport });
+    }
     const patch = renderer.render(layoutTree, {
       viewport,
       isFocused: (mounted) => interaction.isFocused(mounted)
