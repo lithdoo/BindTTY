@@ -5,7 +5,7 @@
   "type": "module",
   "description": "BindTTY counter example with Button and signals.",
   "scripts": {
-    "build:deps": "npm run build --workspace bindtty",
+    "build:deps": "npm run build --workspace @bindtty/signal && npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/vnode && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build --workspace @bindtty/terminal && npm run build --workspace @bindtty/interaction && npm run build --workspace @bindtty/widgets && npm run build --workspace bindtty",
     "build": "npm run build:deps && tsc -p tsconfig.json",
     "start": "npm run build && node dist/main.js"
   },

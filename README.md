@@ -152,6 +152,8 @@ npm run test:e2e:real:win
 npm run test:e2e:real:wsl   # 需 WSL Ubuntu + Node.js
 ```
 
+示例应用见 [examples/README.md](./examples/README.md)，其中 `@bindtty/example-yoga-dashboard` 展示 Yoga `gap` / `flexGrow` / `flexShrink` / `flexWrap` 与真实 runtime stats。
+
 ## 文档索引
 
 | 文档 | 内容 |

@@ -309,6 +309,50 @@ test("real PTY: List scrolls with down arrow", { concurrency: false }, async (t)
   }
 });
 
+test("real PTY: Yoga dashboard renders scrolls and toggles sidebar", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("dashboard");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("dashboard-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 80,
+    rows: 24
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await delay(300);
+
+    session.write("\x1b[F");
+    await marker.waitFor("OFFSET:3", { timeoutMs: 8_000 });
+
+    session.write("\t");
+    await delay(100);
+    session.write("\r");
+
+    await marker.waitFor("SIDEBAR:hidden", { timeoutMs: 8_000 });
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(result.markers.includes("PASS"));
+    assert.ok(result.markers.includes("OFFSET:3"));
+    assert.ok(result.markers.includes("SIDEBAR:hidden"));
+    assert.match(result.visibleOutput, /Yoga Dashboard/);
+    assert.match(result.visibleOutput, /CPU/);
+    assert.match(result.visibleOutput, /event-5/);
+  } finally {
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
 test("host kind is recorded for the current runner", () => {
   const kind = detectHostKind();
   assert.ok(kind.length > 0);

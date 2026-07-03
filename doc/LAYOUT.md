@@ -63,6 +63,7 @@ layout 负责回答：
   text / vstack / hstack / box / spacer / screen layout
   fragment / show / for structure layout
   第一批 Yoga flex props: gap / flexGrow / flexShrink / alignItems / justifyContent / flexWrap
+  Yoga ScrollView 回归: wrapped content / resize rewrap / dynamic shrink / flexShrink scroll
   unsupported intrinsic button / input 抛错
   renderer-terminal 对接
   createApp 组合 runtime / layout / renderer / interaction

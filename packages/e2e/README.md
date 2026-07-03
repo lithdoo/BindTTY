@@ -15,6 +15,7 @@ BindTTY 端到端测试，按目录区分两种运行方式：
 
 - 首屏渲染、signal 更新、resize、stop/restart、dispose
 - Ctrl+C lifecycle、focus、Tab/Enter、Button、TextInput
+- ScrollView / List、Yoga dashboard layout、flex props、resize rewrap
 
 ```bash
 npm test
@@ -72,6 +73,7 @@ npm run test:e2e:real:wsl
 | `scroll-app.tsx` | ScrollView Down 键滚动 |
 | `scroll-clamp-app.tsx` | ScrollView 受控 offset 超界时只 clamp 画面，按键后基于 applied offset 更新 |
 | `list-app.tsx` | List Down 键滚动 |
+| `dashboard-app.tsx` | Yoga dashboard 首屏渲染、List End 滚动、sidebar toggle |
 
 ## 目录结构
 

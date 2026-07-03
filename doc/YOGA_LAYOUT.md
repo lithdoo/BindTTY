@@ -1800,7 +1800,7 @@ examples/yoga-layout
 阶段 2：已完成 text.wrap 接入 BasicLayoutEngine、renderer 与 JSX/VNode schema。
 阶段 3：已完成 app 级 layoutEngine 注入，stdout / terminal mode 均覆盖测试。
 阶段 4：已完成 createYogaLayoutEngine() MVP。
-阶段 5：核心路径已完成，Yoga 下 ScrollView 可通过 app 注入使用 scroll metadata；扩展场景仍需继续补充。
+阶段 5：已完成 Yoga 下 ScrollView / contentSize / scrollOffset 核心路径与扩展回归测试，覆盖 wrapped content、resize rewrap、dynamic shrink 与 flexShrink scroll。
 阶段 6：已打开第一批 Yoga flex props，包含 camelCase / kebab-case、Yoga 映射与 Basic 明确报错。
 阶段 7：已完成默认 engine 切换，layoutRoot 默认使用 YogaLayoutEngine，BasicLayoutEngine 保留为 legacy fallback。
 阶段 8：尚未决定 BasicLayoutEngine 的长期去留。
@@ -1965,23 +1965,23 @@ examples/yoga-layout
 - [ ] 保持 `scrollY` clamp。
 - [ ] 保持 `scrollX` clamp。
 - [ ] `ScrollView` 在 Yoga engine 下继续使用 `api.onLayout`。
-- [ ] 增加 wrapped text inside ScrollView 测试。
-- [ ] 增加 flexShrink + scroll container 测试。
-- [ ] 增加 fixed height scroll container 测试。
-- [ ] 增加 dynamic content shrink / expand 测试。
-- [ ] 增加 resize rewrap 测试。
+- [x] 增加 wrapped text inside ScrollView 测试。
+- [x] 增加 flexShrink + scroll container 测试。
+- [x] 增加 fixed height scroll container 测试。
+- [x] 增加 dynamic content shrink / expand 测试。
+- [x] 增加 resize rewrap 测试。
 
 验收：
 
-- [ ] 长 wrapped text 可以撑高 `contentSize.height`。
-- [ ] `End` 滚动到 `maxY`。
-- [ ] 内容缩短后 appliedY 被 clamp。
-- [ ] `api.onLayout` 拿到正确 `scrollOffset`。
-- [ ] 不反写用户 signal。
-- [ ] PageUp / PageDown 使用实际 viewport height。
-- [ ] List 动态数据变更后滚动状态正确。
-- [ ] fixed height scroll container 下 contentSize 与 rect.height 区分正确。
-- [ ] resize 导致 rewrap 后 contentSize 更新正确。
+- [x] 长 wrapped text 可以撑高 `contentSize.height`。
+- [x] `End` 滚动到 `maxY`。
+- [x] 内容缩短后 appliedY 被 clamp。
+- [x] `api.onLayout` 拿到正确 `scrollOffset`。
+- [x] 不反写用户 signal。
+- [x] PageUp / PageDown 使用实际 viewport height。
+- [x] List 动态数据变更后滚动状态正确。
+- [x] fixed height scroll container 下 contentSize 与 rect.height 区分正确。
+- [x] resize 导致 rewrap 后 contentSize 更新正确。
 
 ## 阶段 6：打开第一批 Yoga flex props
 

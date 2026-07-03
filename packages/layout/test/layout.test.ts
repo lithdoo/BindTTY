@@ -1197,6 +1197,205 @@ test("YogaLayoutEngine records clipped scroll metadata", () => {
   });
 });
 
+test("YogaLayoutEngine rewraps scroll content when viewport width changes", () => {
+  const root = createMountedElement(
+    "screen",
+    {},
+    [
+      createMountedElement(
+        "box",
+        {
+          height: 1,
+          overflow: "clip",
+          scrollY: 99
+        },
+        [
+          createMountedElement("text", {
+            value: "one two three four",
+            wrap: "wrap"
+          })
+        ]
+      )
+    ]
+  );
+  const wide = layoutRoot(root, {
+    viewport: { width: 20, height: 2 },
+    engine: createYogaLayoutEngine()
+  });
+  const narrow = layoutRoot(root, {
+    viewport: { width: 8, height: 1 },
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(wide?.children[0]?.contentSize, {
+    width: 20,
+    height: 1
+  });
+  assert.deepEqual(wide?.children[0]?.scrollOffset, {
+    x: 0,
+    y: 0
+  });
+  assert.deepEqual(narrow?.children[0]?.contentSize, {
+    width: 8,
+    height: 3
+  });
+  assert.deepEqual(narrow?.children[0]?.scrollOffset, {
+    x: 0,
+    y: 2
+  });
+});
+
+test("YogaLayoutEngine clamps scroll offset after dynamic content shrink", () => {
+  const children = [
+    createMountedText("A"),
+    createMountedText("B"),
+    createMountedText("C"),
+    createMountedText("D")
+  ];
+  const root = createMountedElement(
+    "box",
+    {
+      height: 2,
+      overflow: "clip",
+      scrollY: 99
+    },
+    children
+  );
+  const full = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  root.children = [children[0] as MountedNode];
+  const shrunk = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(full?.contentSize, {
+    width: 1,
+    height: 4
+  });
+  assert.deepEqual(full?.scrollOffset, {
+    x: 0,
+    y: 2
+  });
+  assert.deepEqual(shrunk?.contentSize, {
+    width: 1,
+    height: 2
+  });
+  assert.deepEqual(shrunk?.scrollOffset, {
+    x: 0,
+    y: 0
+  });
+});
+
+test("YogaLayoutEngine keeps scroll metadata correct when flexShrink reduces viewport height", () => {
+  const root = createMountedElement(
+    "screen",
+    {},
+    [
+      createMountedElement("box", { height: 2 }, [createMountedText("Header")]),
+      createMountedElement(
+        "box",
+        {
+          flexGrow: 1,
+          flexShrink: 1,
+          overflow: "clip",
+          scrollY: 99
+        },
+        [
+          createMountedText("A"),
+          createMountedText("B"),
+          createMountedText("C"),
+          createMountedText("D")
+        ]
+      )
+    ]
+  );
+  const layout = layoutRoot(root, {
+    viewport: { width: 10, height: 3 },
+    engine: createYogaLayoutEngine()
+  });
+  const scroller = layout?.children[1];
+
+  assert.deepEqual(scroller?.rect, {
+    x: 0,
+    y: 2,
+    width: 10,
+    height: 1
+  });
+  assert.deepEqual(scroller?.contentSize, {
+    width: 10,
+    height: 4
+  });
+  assert.deepEqual(scroller?.scrollOffset, {
+    x: 0,
+    y: 3
+  });
+});
+
+test("YogaLayoutEngine updates scroll metadata after runtime text shrink", async () => {
+  const value = createSignal("one two three four");
+  const runtime = createRuntimeRoot(
+    elementTemplate(
+      "box",
+      {
+        width: 8,
+        height: 2,
+        overflow: "clip",
+        scrollY: 99
+      },
+      [
+        elementTemplate("text", {
+          value,
+          wrap: "wrap"
+        })
+      ]
+    )
+  );
+  const layouts: NonNullable<ReturnType<typeof layoutRoot>>[] = [];
+
+  runtime.onFlush(({ root }) => {
+    const layout = layoutRoot(root, {
+      viewport,
+      engine: createYogaLayoutEngine()
+    });
+
+    if (layout) {
+      layouts.push(layout);
+    }
+
+    runtime.clearDirty();
+  });
+
+  const full = layoutRoot(runtime.root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  value.set("short");
+  await Promise.resolve();
+
+  assert.deepEqual(full?.contentSize, {
+    width: 8,
+    height: 3
+  });
+  assert.deepEqual(full?.scrollOffset, {
+    x: 0,
+    y: 1
+  });
+  assert.equal(layouts.length, 1);
+  assert.deepEqual(layouts[0]?.contentSize, {
+    width: 8,
+    height: 2
+  });
+  assert.deepEqual(layouts[0]?.scrollOffset, {
+    x: 0,
+    y: 0
+  });
+});
+
 test("YogaLayoutEngine rejects unsupported layout elements and props", () => {
   assert.throws(
     () =>

@@ -866,6 +866,114 @@ test("tsx app clamps List scroll offset at bottom after end and down keys", asyn
   app.dispose();
 });
 
+test("tsx app renders a Yoga dashboard and handles scroll toggle and resize", async () => {
+  const stdout = createFakeStdout(48, 24);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const showSidebar = createSignal(true);
+  const stats = createSignal("cpu=1.0% heap=12 MB rss=48 MB");
+  const events = createSignal<readonly Item[]>([
+    { id: 1, label: "event-1 boot" },
+    { id: 2, label: "event-2 sample" },
+    { id: 3, label: "event-3 sample" },
+    { id: 4, label: "event-4 sample" },
+    { id: 5, label: "event-5 sample" }
+  ]);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <screen gap={1} alignItems="stretch">
+      <box padding={1} border>
+        <hstack justifyContent="space-between" alignItems="center">
+          <text value="Yoga Dashboard" bold />
+          <text value={stats} />
+        </hstack>
+      </box>
+      <hstack gap={1} flexGrow={1} alignItems="stretch">
+        <box flexGrow={1} flexShrink={1} padding={1} border>
+          <vstack gap={1}>
+            <List
+              height={2}
+              items={events}
+              offset={offset}
+              getKey={(item) => (item as Item).id}
+              render={(item) => <text value={(item as Item).label} />}
+              onOffsetChange={(nextOffset) => {
+                offset.set(nextOffset);
+              }}
+            />
+            <hstack gap={1} flexWrap="wrap">
+              <box width={12} flexGrow={1} flexShrink={1} padding={1} border>
+                <text value="CPU" bold />
+                <text value="1.0%" />
+              </box>
+              <box width={12} flexGrow={1} flexShrink={1} padding={1} border>
+                <text value="Heap" bold />
+                <text value="12 MB" />
+              </box>
+              <box width={12} flexGrow={1} flexShrink={1} padding={1} border>
+                <text value="RSS" bold />
+                <text value="48 MB" />
+              </box>
+            </hstack>
+            <text
+              value="This dashboard text rewraps when the terminal width changes."
+              wrap="wrap"
+            />
+          </vstack>
+        </box>
+        <show when={showSidebar}>
+          <box width={14} flexShrink={0} padding={1} border>
+            <vstack gap={1}>
+              <text value="Sidebar" bold />
+              <Button
+                label="Hide sidebar"
+                onPress={() => {
+                  showSidebar.set(false);
+                }}
+              />
+            </vstack>
+          </box>
+        </show>
+      </hstack>
+    </screen>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /Yoga Dashboard/);
+  assert.match(visibleText(stdout.writes.at(-1)), /Sidebar/);
+  assert.match(visibleText(stdout.writes.at(-1)), /CPU/);
+  assert.match(visibleText(stdout.writes.at(-1)), /event-1/);
+
+  stdin.emitKey(undefined, { name: "end" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 3);
+  assert.match(visibleText(stdout.writes.join("")), /sample5/);
+
+  stdin.emitKey(undefined, { name: "tab" });
+  stdin.emitKey("\r", { name: "return" });
+  await nextMicrotask();
+
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /Sidebar/);
+  assert.match(visibleText(stdout.writes.join("")), /Yoga Dashboard/);
+
+  stdout.columns = 28;
+  stdout.rows = 40;
+  stdout.emitResize();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /dashboard text/);
+  assert.match(visibleText(stdout.writes.at(-1)), /rewraps/);
+
+  app.dispose();
+});
+
 test("tsx app edits TextInput with backspace arrows shift tab placeholder and empty submit", async () => {
   const stdout = createFakeStdout(40, 16);
   const stdin = createFakeStdin();
