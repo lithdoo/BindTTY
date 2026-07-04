@@ -28,7 +28,7 @@ TSX
 它负责：
 
 ```text
-1. 提供 Button / TextInput / Checkbox / ScrollView / VScrollView / HScrollView / List 等高层组件，Select 等后续扩展。
+1. 提供 Button / TextInput / Checkbox / ProgressBar / ScrollView / VScrollView / HScrollView / List 等高层组件，Select 等后续扩展。
 2. 把业务 props 转换成 intrinsic element 的 style props / interaction props。
 3. 把 keyboard event 转换成控件语义，例如 onPress、onInput、onChange。
 4. 通过 signal-friendly props 支持受控组件。
@@ -392,7 +392,19 @@ box (onKey, border=false)
 
 ### 7.4 Select
 
-Select / Menu 尚未实现。建议顺序：Select → ProgressBar。
+Select / Menu 尚未实现。ProgressBar 已实现（§7.5）。
+
+### 7.5 ProgressBar
+
+纯展示进度条，见 [PROGRESS_BAR.md](../specs/PROGRESS_BAR.md)。
+
+```tsx
+<ProgressBar width={30} value={progress} max={100} label="Loading" showPercent />
+```
+
+- 单行 `hstack`：`label` | 条 | 可选 `%`
+- 无 focus / `onKey`
+- 测试：`packages/widgets/test/widgets.test.ts`；mock E2E
 
 ## 8. 与 Intrinsic button / input 的关系
 

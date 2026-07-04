@@ -8,6 +8,9 @@ import {
   VScrollView,
   HScrollView,
   ScrollView,
+  ProgressBar,
+  renderProgressBar,
+  renderProgressPercent,
   computeScrollbarThumb,
   renderScrollbarColumn,
   renderScrollbarRow,
@@ -19,8 +22,7 @@ import {
   type HScrollViewProps,
   type ScrollViewProps
 } from "@bindtty/widgets";
-import type { InteractionKeyBinding } from "@bindtty/interaction";
-import type { InteractionKeyHandler } from "@bindtty/interaction";
+import type { InteractionKeyBinding, InteractionKeyHandler } from "@bindtty/interaction";
 import type { ElementTemplate, ReadableSignal, Template } from "@bindtty/vnode";
 
 function asElement(template: Template): ElementTemplate {
@@ -1024,4 +1026,113 @@ test("ScrollView showScrollbar hides horizontal row when only Y overflows", () =
   const bottomRow = asElement(column.children[1] as Template);
 
   assert.equal(resolveSignal<number>(bottomRow.props.height), 0);
+});
+
+function getProgressBarTrackBox(template: ElementTemplate): ElementTemplate {
+  const row = asElement(template.children[0] as Template);
+  assert.equal(row.tag, "hstack");
+
+  for (const child of row.children) {
+    if (child.kind === "element") {
+      const element = asElement(child);
+      if (element.tag === "box" && element.props.width !== undefined) {
+        return element;
+      }
+    }
+  }
+
+  throw new Error("ProgressBar track box not found");
+}
+
+function getProgressBarTrackText(template: ElementTemplate): ElementTemplate {
+  const trackBox = getProgressBarTrackBox(template);
+  return asElement(trackBox.children[0] as Template);
+}
+
+test("renderProgressBar follows the round formula", () => {
+  assert.equal(renderProgressBar(50, 100, 10, "█", "░"), "█████░░░░░");
+  assert.equal(renderProgressBar(100, 100, 4, "█", "░"), "████");
+  assert.equal(renderProgressBar(150, 100, 4, "█", "░"), "████");
+  assert.equal(renderProgressBar(0, 100, 4, "█", "░"), "░░░░");
+  assert.equal(renderProgressBar(50, 0, 10, "█", "░"), "");
+  assert.equal(renderProgressBar(50, 100, 0, "█", "░"), "");
+});
+
+test("renderProgressBar width 1 uses round", () => {
+  assert.equal(renderProgressBar(40, 100, 1, "█", "░"), "░");
+  assert.equal(renderProgressBar(60, 100, 1, "█", "░"), "█");
+});
+
+test("renderProgressPercent formats percentage text", () => {
+  assert.equal(renderProgressPercent(42, 100), " 42%");
+  assert.equal(renderProgressPercent(0, 0), " 0%");
+});
+
+test("ProgressBar renders hstack with track box and text", () => {
+  const template = asElement(
+    ProgressBar({
+      width: 8,
+      value: 4,
+      max: 8
+    })
+  );
+  const row = asElement(template.children[0] as Template);
+  const trackBox = getProgressBarTrackBox(template);
+  const trackText = getProgressBarTrackText(template);
+
+  assert.equal(template.tag, "box");
+  assert.equal(row.tag, "hstack");
+  assert.equal(row.children.length, 1);
+  assert.equal(trackBox.props.width, 8);
+  assert.equal(trackText.tag, "text");
+  assert.equal(trackText.props.value, "████░░░░");
+});
+
+test("ProgressBar renders label and showPercent in hstack", () => {
+  const template = asElement(
+    ProgressBar({
+      width: 4,
+      value: 2,
+      max: 4,
+      label: "Load",
+      showPercent: true
+    })
+  );
+  const row = asElement(template.children[0] as Template);
+
+  assert.equal(row.children.length, 3);
+  assert.equal(asElement(row.children[0] as Template).props.value, "Load");
+  assert.equal(
+    asElement(row.children[2] as Template).props.value,
+    " 50%"
+  );
+});
+
+test("ProgressBar is not focusable", () => {
+  const template = asElement(
+    ProgressBar({
+      width: 4,
+      value: 1,
+      max: 2
+    })
+  );
+
+  assert.equal(template.props.onKey, undefined);
+});
+
+test("ProgressBar updates bar text from a dynamic value signal", () => {
+  const value = createSignal(0);
+  const template = asElement(
+    ProgressBar({
+      width: 4,
+      value,
+      max: 100
+    })
+  );
+  const trackText = getProgressBarTrackText(template);
+
+  assert.equal(resolveSignal<string>(trackText.props.value), "░░░░");
+
+  value.set(100);
+  assert.equal(resolveSignal<string>(trackText.props.value), "████");
 });

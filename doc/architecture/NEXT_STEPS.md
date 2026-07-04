@@ -126,7 +126,7 @@ import {
 
 ### Phase C：组件生态（P2）
 
-推荐顺序：Checkbox → Select（单选）→ ProgressBar → Tabs（稍后）
+推荐顺序：Checkbox → Select（单选）→ ~~ProgressBar~~ → Tabs（稍后）
 
 暂缓：Modal / Overlay（需 overlay layer、z-index、focus trap）
 
@@ -239,4 +239,5 @@ API freeze → CI / release → layout prop matrix → Scroll/List → widgets e
 | 10 | ScrollView stickToBottom | ✅ done |
 | 10b | ScrollView scrollbar | ✅ done |
 | 10c | ScrollView 双轴（X+Y） | ✅ done |
+| 11 | ProgressBar widget | ✅ done |
 | 11 | Checkbox widget | ⏳ open |

@@ -1,10 +1,11 @@
 # @bindtty/widgets
 
-高层 TUI 控件：`Button`、`Checkbox`、`TextInput`、`ScrollView`、`VScrollView`、`HScrollView`、`List`。
+高层 TUI 控件：`Button`、`Checkbox`、`ProgressBar`、`TextInput`、`ScrollView`、`VScrollView`、`HScrollView`、`List`。
 
 ## 导出
 
 - `Button` / `Checkbox` / `TextInput`
+- `ProgressBar` — 纯展示进度条（`value` / `max`、`label`、`showPercent`）
 - `ScrollView` — 双轴 X+Y 滚动（`stickToBottom` / `stickToEnd`、`showScrollbar`）
 - `VScrollView` — 垂直滚动（`stickToBottom`、`showScrollbar`）
 - `HScrollView` — 水平滚动（`stickToEnd`、`showScrollbar`）
@@ -41,6 +42,7 @@ const scrollY = createSignal(0);
 
 - [doc/specs/SCROLL_VIEWPORT.md](../../doc/specs/SCROLL_VIEWPORT.md) — ScrollView / VScrollView / HScrollView / List
 - [doc/specs/TEXT_INPUT.md](../../doc/specs/TEXT_INPUT.md) — TextInput
+- [doc/specs/PROGRESS_BAR.md](../../doc/specs/PROGRESS_BAR.md) — ProgressBar
 
 ## Migration（alpha.2 breaking）
 

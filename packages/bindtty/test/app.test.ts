@@ -9,6 +9,7 @@ import {
   VScrollView,
   HScrollView,
   ScrollView,
+  ProgressBar,
   TextInput,
   computed,
   createApp,
@@ -224,6 +225,10 @@ test("bindtty exports the Button widget", () => {
 
 test("bindtty exports the Checkbox widget", () => {
   assert.equal(typeof Checkbox, "function");
+});
+
+test("bindtty exports the ProgressBar widget", () => {
+  assert.equal(typeof ProgressBar, "function");
 });
 
 test("bindtty exports the TextInput widget", () => {

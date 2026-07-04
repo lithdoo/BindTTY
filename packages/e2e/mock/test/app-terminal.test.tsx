@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { stripVTControlCharacters } from "node:util";
 
-import { Button, Checkbox, HScrollView, List, ScrollView, VScrollView, TextInput, createApp } from "bindtty";
+import { Button, Checkbox, HScrollView, List, ProgressBar, ScrollView, VScrollView, TextInput, createApp } from "bindtty";
 import type { LayoutNode } from "@bindtty/layout";
 import { createSignal } from "@bindtty/signal";
 import { ANSI, createNodeTerminal } from "@bindtty/terminal";
@@ -410,6 +410,64 @@ test("tsx app toggles Checkbox with Space", async () => {
   await nextMicrotask();
 
   assert.match(visibleText(stdout.writes.at(-1)), /\[x\] Agree/);
+
+  app.dispose();
+});
+
+test("tsx app ProgressBar updates when value signal changes", async () => {
+  const stdout = createFakeStdout(40, 6);
+  const progress = createSignal(0);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin: createFakeStdin(),
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <ProgressBar width={10} value={progress} max={100} />,
+    { terminal }
+  );
+
+  app.start();
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /░/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /█/);
+
+  progress.set(50);
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /█/);
+
+  app.dispose();
+});
+
+test("tsx app ProgressBar renders label and percent", async () => {
+  const stdout = createFakeStdout(40, 6);
+  const progress = createSignal(25);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin: createFakeStdin(),
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <ProgressBar
+      width={8}
+      value={progress}
+      max={100}
+      label="Load"
+      showPercent={true}
+    />,
+    { terminal }
+  );
+
+  app.start();
+  await nextMicrotask();
+
+  const rendered = visibleText(stdout.writes.at(-1));
+  assert.match(rendered, /Load/);
+  assert.match(rendered, /25%/);
 
   app.dispose();
 });

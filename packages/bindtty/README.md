@@ -31,7 +31,7 @@ npm install bindtty
 | --- | --- |
 | 应用 | `createApp` |
 | Signal | `createSignal`、`computed`、`effect` |
-| Widgets | `Button`、`Checkbox`、`TextInput`、`ScrollView`、`VScrollView`、`HScrollView`、`List` |
+| Widgets | `Button`、`Checkbox`、`ProgressBar`、`TextInput`、`ScrollView`、`VScrollView`、`HScrollView`、`List` |
 | 类型 | `CreateAppOptions`、`BindTTYApp`、`ButtonProps`、`CheckboxProps`、`TextInputProps`、… |
 
 ```ts

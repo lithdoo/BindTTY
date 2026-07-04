@@ -5,6 +5,7 @@ export {
   Checkbox,
   HScrollView,
   List,
+  ProgressBar,
   ScrollView,
   TextInput,
   VScrollView
@@ -33,6 +34,8 @@ export type {
   HScrollViewProps,
   HScrollViewStyleProps,
   ListProps,
+  ProgressBarProps,
+  ProgressBarStyleProps,
   ScrollViewProps,
   ScrollViewShowScrollbar,
   ScrollViewStyleProps,
