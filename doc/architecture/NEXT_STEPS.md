@@ -61,16 +61,16 @@ push / PR 到 `main` 自动触发。`npm test` 含 workspace 单测与 `@bindtty
 
 real PTY 专项 job（Windows / WSL）可后续单独添加，不阻塞主 CI。
 
-### 3.2 npm 发布待执行
+### 3.2 npm 发布
 
-工程配置已完成；待运行：
+**已完成（2026-07）**：11 包 `0.1.0-alpha.1` 已发布，tag `alpha`。
 
 ```bash
-npm run pack:dry-run
-npm run publish:packages   # 默认 --tag alpha
+npm install bindtty@alpha
+# 真实终端另需：npm install @bindtty/terminal@alpha
 ```
 
-`bindtty@0.1.0-alpha.0` 在 npm 上为占位包，需用 `0.1.0-alpha.1` 覆盖发布全部 `@bindtty/*` 子包。
+后续版本：`npm run publish:packages`（或 bump 版本后重跑）。`latest` 仍指向旧占位 `0.1.0-alpha.0` 时，请显式安装 `@alpha`。
 
 ### 3.3 顶层 API（alpha 冻结）
 

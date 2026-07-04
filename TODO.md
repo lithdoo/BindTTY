@@ -14,12 +14,7 @@
 - ROADMAP 历史 7 包 / 10 包模型移入 [doc/archive/plans/PACKAGE_MODEL_HISTORY.md](doc/archive/plans/PACKAGE_MODEL_HISTORY.md)
 - `bindtty` 顶层公共 API 冻结：`createApp`、`createSignal` / `computed` / `effect`、widgets、JSX 转发
 - GitHub Actions CI（`.github/workflows/ci.yml`：`npm ci` / `build` / `test` / `build:examples`）
-
----
-
-## P0 — alpha 发布前
-
-- [ ] 执行 npm 发布：`npm run pack:dry-run` → `npm run publish:packages`
+- npm 发布：`0.1.0-alpha.1` 已发布至 npm（11 包，tag `alpha`）
 
 ---
 
