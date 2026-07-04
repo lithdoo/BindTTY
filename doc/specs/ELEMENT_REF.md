@@ -14,9 +14,9 @@
 - [VNODE.md](../packages/VNODE.md) — Template / MountedNode
 - [RUNTIME.md](../packages/RUNTIME.md) — mount、binding、dirty
 - [APP.md](../packages/APP.md) — createApp 主链路
-- [SCROLL_VIEWPORT.md](./SCROLL_VIEWPORT.md) — ScrollView 与 `api.onLayout`
+- [SCROLL_VIEWPORT.md](./SCROLL_VIEWPORT.md) — VScrollView 与 `api.onLayout`
 
-**核心能力已落地**（`ref(api)`、`onMounted` / `onLayout` / `onUnmount`、ScrollView 基于 applied layout state）。
+**核心能力已落地**（`ref(api)`、`onMounted` / `onLayout` / `onUnmount`、VScrollView 基于 applied layout state）。
 
 **暂未纳入**：
 
@@ -39,12 +39,12 @@ MountedNode
 
 函数组件执行后不会保留稳定组件实例，也不能直接拿到自己对应的 mounted node 或 layout node。
 
-这会导致一些高阶 widget 难以实现清晰的数据流。例如 `ScrollView`：
+这会导致一些高阶 widget 难以实现清晰的数据流。例如 `VScrollView`：
 
 ```tsx
-<ScrollView height={2} offset={offset}>
+<VScrollView height={2} offset={offset}>
   ...
-</ScrollView>
+</VScrollView>
 ```
 
 `offset` 是用户意图值，但真实可见 offset 需要 layout 根据 `contentSize.height - clip.height` clamp 后才能知道。
@@ -420,12 +420,12 @@ dispose children
 />
 ```
 
-## 8. ScrollView 数据流
+## 8. VScrollView 数据流
 
-引入 `ref` 后，`ScrollView` 可以把 layout applied state 存在 widget 闭包中：
+引入 `ref` 后，`VScrollView` 可以把 layout applied state 存在 widget 闭包中：
 
 ```tsx
-function ScrollView(props: ScrollViewProps): Template {
+function VScrollView(props: VScrollViewProps): Template {
   let appliedY = 0;
   let maxY = 0;
   let pageY = 1;
@@ -501,7 +501,7 @@ function ScrollView(props: ScrollViewProps): Template {
 
 这里依赖当前函数组件语义：函数组件在 mount 时执行一次，返回的内部 `box`、`ref` 回调和 `onKey` handler 共享同一个闭包。
 
-当前文档不引入“函数组件重新执行”的模型。若未来引入组件实例或重新执行机制，`ScrollView` 的 applied state 需要迁移到组件实例 state 或 element api state 中，而不能继续依赖一次性闭包。
+当前文档不引入“函数组件重新执行”的模型。若未来引入组件实例或重新执行机制，`VScrollView` 的 applied state 需要迁移到组件实例 state 或 element api state 中，而不能继续依赖一次性闭包。
 
 数据流变为：
 
@@ -688,8 +688,8 @@ onFocusChange(listener: (focused: boolean) => void): Dispose;
 
 第一批迁移目标：
 
-1. `ScrollView` 使用 `ref + api.onLayout` 记录 applied scroll state。
-2. `List` 继续组合 `ScrollView`。
+1. `VScrollView` 使用 `ref + api.onLayout` 记录 applied scroll state。
+2. `List` 继续组合 `VScrollView`。
 3. 后续 `TextInput` 可以基于同一个 `api` 扩展 focus 或布局能力，但 MVP 不强制改造。
 
 ## 10. ref 与组件生命周期边界
@@ -714,19 +714,19 @@ function Panel() {
 
 ## 11. 对旧 scroll-sync 的影响
 
-旧 `scroll-sync` 修复通过 layout 后回写 `scrollY` signal 保持状态一致。`ref(api)` 与 `api.onLayout` 落地后，ScrollView 已改为基于 applied layout state 计算下一次滚动意图，不再需要 layout 后反写用户 signal。
+旧 `scroll-sync` 修复通过 layout 后回写 `scrollY` signal 保持状态一致。`ref(api)` 与 `api.onLayout` 落地后，VScrollView 已改为基于 applied layout state 计算下一次滚动意图，不再需要 layout 后反写用户 signal。
 
 当前实现：
 
 1. 保留 layout clamp。
 2. 移除 app 对用户 signal 的隐式反写。
-3. `ScrollView` 用 `api.onLayout` 记录 applied scroll state。
+3. `VScrollView` 用 `api.onLayout` 记录 applied scroll state。
 4. 键盘滚动基于 applied state 调用 `onOffsetChange(next)`。
 
 迁移策略已执行：
 
 1. 已实现 `ref(api)` 与 `api.onLayout`。
-2. 已迁移 `ScrollView` 使用 applied state。
+2. 已迁移 `VScrollView` 使用 applied state。
 3. 已补充测试证明 offset 过大时用户 signal 不会被隐式改写。
 4. 已移除旧 `syncClampedScrollBindings()` 调用；残留未使用实现文件可后续清理。
 
@@ -833,13 +833,13 @@ state -> layout -> state
 - [x] `api.getLayout()` 返回最新 layout。
 - [x] `api.onLayout` 中 set signal 会进入下一轮 flush，不会被本轮 clearDirty 清掉。
 
-### 阶段 5：ScrollView 迁移
+### 阶段 5：VScrollView 迁移
 
 目标：移除 scroll clamp 反写 signal，改为基于 element api 的 applied state。
 
 任务：
 
-- [x] `ScrollView` 内部设置 `ref`。
+- [x] `VScrollView` 内部设置 `ref`。
 - [x] `api.onLayout` 记录 `appliedY` / `maxY` / `pageY`。
 - [x] 键盘滚动基于 `appliedY` / `maxY` / `pageY` 计算 next offset。
 - [x] `End` 改为 `onOffsetChange(maxY)`。
@@ -895,10 +895,10 @@ app 单测：
 
 widget / e2e：
 
-- [x] ScrollView offset 过大时 signal 不被隐式改写。
-- [x] ScrollView End 后 `onOffsetChange(maxY)`。
-- [x] ScrollView Down 在底部保持 maxY。
-- [x] ScrollView Up 在顶部保持 0。
+- [x] VScrollView offset 过大时 signal 不被隐式改写。
+- [x] VScrollView End 后 `onOffsetChange(maxY)`。
+- [x] VScrollView Down 在底部保持 maxY。
+- [x] VScrollView Up 在顶部保持 0。
 - [x] PageUp / PageDown 使用实际 viewport height。
 - [x] List 删除 item 后下一次滚动基于 appliedY。
 - [x] real PTY 下方向键滚动仍通过。
@@ -938,7 +938,7 @@ widget / e2e：
 3. 不引入 hooks。
 4. 不引入 component instance。
 5. 不暴露 mutable mounted node。
-6. 足够支撑 ScrollView / List 从 layout 反写 signal 迁移到 applied layout state 消费。
+6. 足够支撑 VScrollView / List 从 layout 反写 signal 迁移到 applied layout state 消费。
 
 推荐优先落地：
 
@@ -952,7 +952,7 @@ widget / e2e：
 />
 ```
 
-然后迁移 `ScrollView`，移除 `syncClampedScrollBindings()`，恢复更清晰的单向数据流：
+然后迁移 `VScrollView`，移除 `syncClampedScrollBindings()`，恢复更清晰的单向数据流：
 
 ```text
 state -> runtime -> layout -> element api -> user interaction -> state

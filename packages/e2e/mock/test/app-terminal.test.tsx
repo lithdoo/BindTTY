@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { stripVTControlCharacters } from "node:util";
 
-import { Button, List, ScrollView, TextInput, createApp } from "bindtty";
+import { Button, HScrollView, List, VScrollView, TextInput, createApp } from "bindtty";
 import type { LayoutNode } from "@bindtty/layout";
 import { createSignal } from "@bindtty/signal";
 import { ANSI, createNodeTerminal } from "@bindtty/terminal";
@@ -511,7 +511,7 @@ test("tsx app clips and scrolls box content with signal offset", async () => {
   app.dispose();
 });
 
-test("tsx app scrolls ScrollView with keyboard focus", async () => {
+test("tsx app scrolls VScrollView with keyboard focus", async () => {
   const stdout = createFakeStdout(12, 5);
   const stdin = createFakeStdin();
   const offset = createSignal(0);
@@ -522,7 +522,7 @@ test("tsx app scrolls ScrollView with keyboard focus", async () => {
     exitOnCtrlC: false
   });
   const app = createApp(
-    <ScrollView
+    <VScrollView
       height={2}
       offset={offset}
       onOffsetChange={(nextOffset) => {
@@ -533,7 +533,7 @@ test("tsx app scrolls ScrollView with keyboard focus", async () => {
       <text value="B" />
       <text value="C" />
       <text value="D" />
-    </ScrollView>,
+    </VScrollView>,
     { terminal }
   );
 
@@ -564,7 +564,7 @@ test("tsx app scrolls ScrollView with keyboard focus", async () => {
   app.dispose();
 });
 
-test("tsx app scrolls ScrollView with pageup end and up keys", async () => {
+test("tsx app scrolls VScrollView with pageup end and up keys", async () => {
   const stdout = createFakeStdout(12, 5);
   const stdin = createFakeStdin();
   const offset = createSignal(0);
@@ -575,7 +575,7 @@ test("tsx app scrolls ScrollView with pageup end and up keys", async () => {
     exitOnCtrlC: false
   });
   const app = createApp(
-    <ScrollView
+    <VScrollView
       height={2}
       offset={offset}
       onOffsetChange={(nextOffset) => {
@@ -586,7 +586,7 @@ test("tsx app scrolls ScrollView with pageup end and up keys", async () => {
       <text value="B" />
       <text value="C" />
       <text value="D" />
-    </ScrollView>,
+    </VScrollView>,
     { terminal }
   );
 
@@ -633,7 +633,7 @@ test("tsx app scrolls ScrollView with pageup end and up keys", async () => {
   app.dispose();
 });
 
-test("tsx app uses applied ScrollView layout when controlled offset is out of range", async () => {
+test("tsx app uses applied VScrollView layout when controlled offset is out of range", async () => {
   const stdout = createFakeStdout(12, 5);
   const stdin = createFakeStdin();
   const offset = createSignal(99);
@@ -644,7 +644,7 @@ test("tsx app uses applied ScrollView layout when controlled offset is out of ra
     exitOnCtrlC: false
   });
   const app = createApp(
-    <ScrollView
+    <VScrollView
       height={2}
       offset={offset}
       onOffsetChange={(nextOffset) => {
@@ -655,7 +655,7 @@ test("tsx app uses applied ScrollView layout when controlled offset is out of ra
       <text value="B" />
       <text value="C" />
       <text value="D" />
-    </ScrollView>,
+    </VScrollView>,
     { terminal }
   );
 
@@ -675,7 +675,7 @@ test("tsx app uses applied ScrollView layout when controlled offset is out of ra
   app.dispose();
 });
 
-test("tsx app does not scroll ScrollView when scrollOnArrow is false", async () => {
+test("tsx app does not scroll VScrollView when scrollOnArrow is false", async () => {
   const stdout = createFakeStdout(12, 5);
   const stdin = createFakeStdin();
   const offset = createSignal(0);
@@ -686,7 +686,7 @@ test("tsx app does not scroll ScrollView when scrollOnArrow is false", async () 
     exitOnCtrlC: false
   });
   const app = createApp(
-    <ScrollView
+    <VScrollView
       height={2}
       offset={offset}
       scrollOnArrow={false}
@@ -697,7 +697,7 @@ test("tsx app does not scroll ScrollView when scrollOnArrow is false", async () 
       <text value="A" />
       <text value="B" />
       <text value="C" />
-    </ScrollView>,
+    </VScrollView>,
     { terminal }
   );
 
@@ -712,7 +712,7 @@ test("tsx app does not scroll ScrollView when scrollOnArrow is false", async () 
   app.dispose();
 });
 
-test("tsx app keeps TextInput arrow keys from scrolling ScrollView", async () => {
+test("tsx app keeps TextInput arrow keys from scrolling VScrollView", async () => {
   const stdout = createFakeStdout(24, 8);
   const stdin = createFakeStdin();
   const value = createSignal("abc");
@@ -731,7 +731,7 @@ test("tsx app keeps TextInput arrow keys from scrolling ScrollView", async () =>
           value.set(nextValue);
         }}
       />
-      <ScrollView
+      <VScrollView
         height={2}
         offset={offset}
         onOffsetChange={(nextOffset) => {
@@ -741,7 +741,7 @@ test("tsx app keeps TextInput arrow keys from scrolling ScrollView", async () =>
         <text value="A" />
         <text value="B" />
         <text value="C" />
-      </ScrollView>
+      </VScrollView>
     </vstack>,
     { terminal }
   );
@@ -943,7 +943,7 @@ test("tsx app List stickToBottom detaches after up and re-attaches after end", a
   app.dispose();
 });
 
-test("tsx app ScrollView showScrollbar renders track characters", async () => {
+test("tsx app VScrollView showScrollbar renders track characters", async () => {
   const stdout = createFakeStdout(12, 5);
   const stdin = createFakeStdin();
   const offset = createSignal(0);
@@ -954,7 +954,7 @@ test("tsx app ScrollView showScrollbar renders track characters", async () => {
     exitOnCtrlC: false
   });
   const app = createApp(
-    <ScrollView
+    <VScrollView
       height={3}
       width={6}
       offset={offset}
@@ -968,7 +968,7 @@ test("tsx app ScrollView showScrollbar renders track characters", async () => {
       <text value="C" />
       <text value="D" />
       <text value="E" />
-    </ScrollView>,
+    </VScrollView>,
     { terminal }
   );
 
@@ -983,6 +983,90 @@ test("tsx app ScrollView showScrollbar renders track characters", async () => {
 
   assert.equal(offset.get(), 1);
   assert.match(visibleText(stdout.writes.join("")), /[│█]/);
+
+  app.dispose();
+});
+
+test("tsx app scrolls HScrollView with keyboard focus", async () => {
+  const stdout = createFakeStdout(20, 5);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <HScrollView
+      width={2}
+      offset={offset}
+      onOffsetChange={(nextOffset) => {
+        offset.set(nextOffset);
+      }}
+    >
+      <text value="A" marginRight={5} wrap="none" />
+    </HScrollView>,
+    { terminal }
+  );
+
+  app.start();
+  await nextMicrotask();
+
+  stdin.emitKey(undefined, { name: "right" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 1);
+
+  stdin.emitKey(undefined, { name: "left" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 0);
+
+  app.dispose();
+});
+
+test("tsx app keeps TextInput arrow keys from scrolling HScrollView", async () => {
+  const stdout = createFakeStdout(24, 6);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const value = createSignal("abc");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <vstack>
+      <TextInput
+        id="name"
+        value={value}
+        onChange={(nextValue) => {
+          value.set(nextValue);
+        }}
+      />
+      <HScrollView
+        width={8}
+        offset={offset}
+        onOffsetChange={(nextOffset) => {
+          offset.set(nextOffset);
+        }}
+      >
+        <text value="0123456789ABCDEF" />
+      </HScrollView>
+    </vstack>,
+    { terminal }
+  );
+
+  app.start();
+
+  stdin.emitKey(undefined, { name: "tab" });
+  await nextMicrotask();
+  stdin.emitKey(undefined, { name: "right" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 0);
 
   app.dispose();
 });
@@ -1152,7 +1236,7 @@ test("tsx app renders a Yoga dashboard and handles scroll toggle and resize", as
   app.dispose();
 });
 
-test("tsx app scrolls ScrollView with wrapped CJK lines", async () => {
+test("tsx app scrolls VScrollView with wrapped CJK lines", async () => {
   const stdout = createFakeStdout(12, 5);
   const stdin = createFakeStdin();
   const offset = createSignal(0);
@@ -1163,7 +1247,7 @@ test("tsx app scrolls ScrollView with wrapped CJK lines", async () => {
     exitOnCtrlC: false
   });
   const app = createApp(
-    <ScrollView
+    <VScrollView
       height={2}
       offset={offset}
       onOffsetChange={(nextOffset) => {
@@ -1174,7 +1258,7 @@ test("tsx app scrolls ScrollView with wrapped CJK lines", async () => {
       <text value="乙" />
       <text value="丙" />
       <text value="丁" />
-    </ScrollView>,
+    </VScrollView>,
     { terminal }
   );
 

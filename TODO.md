@@ -15,6 +15,7 @@
 - `bindtty` 顶层公共 API 冻结：`createApp`、`createSignal` / `computed` / `effect`、widgets、JSX 转发
 - GitHub Actions CI（`.github/workflows/ci.yml`：`npm ci` / `build` / `test` / `build:examples`）
 - npm 发布：`0.1.0-alpha.1` 已发布至 npm（11 包，tag `alpha`）
+- `ScrollView` → `VScrollView` + 新增 `HScrollView`（breaking rename）
 
 ---
 
@@ -22,7 +23,8 @@
 
 - [x] Layout prop matrix：`minWidth` / `minHeight` / `maxWidth` / `maxHeight`
 - [x] Layout prop matrix：edge `padding*`、`margin*`
-- [x] ScrollView `stickToBottom`（log viewer / chat 场景）
+- [x] VScrollView `stickToBottom`（log viewer / chat；原 `ScrollView`）
+- [x] `ScrollView` → `VScrollView` 重命名 + `HScrollView`（breaking，alpha.2）
 - [x] Layout 支持矩阵文档与 `layout-props.ts` 对齐（[doc/specs/LAYOUT_PROPS.md](doc/specs/LAYOUT_PROPS.md)）
 
 ---
@@ -32,7 +34,7 @@
 - [ ] `Checkbox` widget
 - [ ] `Select` widget（单选）
 - [ ] `ProgressBar` widget
-- [x] ScrollView scrollbar（视觉指示，非鼠标交互）
+- [x] VScrollView / HScrollView scrollbar（视觉指示，非鼠标交互）
 
 ---
 

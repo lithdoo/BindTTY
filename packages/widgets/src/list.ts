@@ -4,11 +4,11 @@ import {
   type Template
 } from "@bindtty/vnode";
 import {
-  ScrollView,
-  type ScrollViewStyleProps
-} from "./scroll-view.js";
+  VScrollView,
+  type VScrollViewStyleProps
+} from "./v-scroll-view.js";
 
-export interface ListProps<T = unknown> extends ScrollViewStyleProps {
+export interface ListProps<T = unknown> extends VScrollViewStyleProps {
   id?: BindingValue<string | number>;
   items: BindingValue<readonly T[]>;
   getKey?: (item: T, index: number) => string | number;
@@ -23,7 +23,7 @@ export interface ListProps<T = unknown> extends ScrollViewStyleProps {
 }
 
 export function List<T = unknown>(props: ListProps<T>): Template {
-  return ScrollView({
+  return VScrollView({
     id: props.id,
     offset: props.offset,
     height: props.height,

@@ -5,7 +5,8 @@ import { stripVTControlCharacters } from "node:util";
 import {
   Button,
   List,
-  ScrollView,
+  VScrollView,
+  HScrollView,
   TextInput,
   computed,
   createApp,
@@ -223,8 +224,9 @@ test("bindtty exports the TextInput widget", () => {
   assert.equal(typeof TextInput, "function");
 });
 
-test("bindtty exports ScrollView and List widgets", () => {
-  assert.equal(typeof ScrollView, "function");
+test("bindtty exports VScrollView, HScrollView and List widgets", () => {
+  assert.equal(typeof VScrollView, "function");
+  assert.equal(typeof HScrollView, "function");
   assert.equal(typeof List, "function");
 });
 
@@ -1093,11 +1095,11 @@ test("terminal mode renders with YogaLayoutEngine injection", () => {
   app.dispose();
 });
 
-test("terminal mode ScrollView uses YogaLayoutEngine scroll metadata", () => {
+test("terminal mode VScrollView uses YogaLayoutEngine scroll metadata", () => {
   const terminal = createMockTerminal(12, 8);
   const offset = createSignal(0);
   const app = createApp(
-    ScrollView({
+    VScrollView({
       height: 2,
       offset,
       onOffsetChange: (nextOffset) => {
@@ -1182,7 +1184,7 @@ test("terminal mode keeps scroll offset bindings controlled after layout clamp",
   const terminal = createMockTerminal(12, 8);
   const offset = createSignal(0);
   const app = createApp(
-    ScrollView({
+    VScrollView({
       height: 2,
       offset,
       onOffsetChange: (nextOffset) => {
@@ -1223,7 +1225,7 @@ test("terminal mode scrolls from applied offset without implicit signal writebac
   const terminal = createMockTerminal(12, 8);
   const offset = createSignal(-4);
   const app = createApp(
-    ScrollView({
+    VScrollView({
       height: 2,
       offset,
       onOffsetChange: (nextOffset) => {

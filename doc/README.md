@@ -9,7 +9,7 @@
 | 理解架构 | [architecture/DESIGN.md](./architecture/DESIGN.md) |
 | 改某个包 | [packages/](#packages) 下对应文档 |
 | 宽字符 / display width | [specs/DISPLAY_WIDTH.md](./specs/DISPLAY_WIDTH.md) |
-| 滚动 / ScrollView / List | [specs/SCROLL_VIEWPORT.md](./specs/SCROLL_VIEWPORT.md) |
+| 滚动 / VScrollView / HScrollView / List | [specs/SCROLL_VIEWPORT.md](./specs/SCROLL_VIEWPORT.md) |
 | Text + Yoga layout | [specs/YOGA_AND_TEXT.md](./specs/YOGA_AND_TEXT.md) |
 | Layout prop 支持矩阵 | [specs/LAYOUT_PROPS.md](./specs/LAYOUT_PROPS.md) |
 | Element Ref | [specs/ELEMENT_REF.md](./specs/ELEMENT_REF.md) |
@@ -46,7 +46,7 @@
 | 文档 | 内容 |
 | --- | --- |
 | [DISPLAY_WIDTH.md](./specs/DISPLAY_WIDTH.md) | Terminal display-width / grapheme |
-| [SCROLL_VIEWPORT.md](./specs/SCROLL_VIEWPORT.md) | Clip / scroll / ScrollView / List |
+| [SCROLL_VIEWPORT.md](./specs/SCROLL_VIEWPORT.md) | Clip / scroll / VScrollView / HScrollView / List |
 | [YOGA_AND_TEXT.md](./specs/YOGA_AND_TEXT.md) | @bindtty/text + Yoga 默认 engine |
 | [LAYOUT_PROPS.md](./specs/LAYOUT_PROPS.md) | intrinsic layout prop 支持矩阵 |
 | [ELEMENT_REF.md](./specs/ELEMENT_REF.md) | `ref(api)` / MountedElementApi |

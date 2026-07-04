@@ -1,12 +1,16 @@
 export { Button } from "./button.js";
+export { HScrollView } from "./h-scroll-view.js";
 export { List } from "./list.js";
+export { TextInput } from "./text-input.js";
 export {
-  ScrollView,
+  VScrollView,
   computeScrollbarThumb,
   renderScrollbarColumn
-} from "./scroll-view.js";
-export { TextInput } from "./text-input.js";
+} from "./v-scroll-view.js";
+export { renderScrollbarRow } from "./scroll-axis-shared.js";
 export type { ButtonProps, ButtonStyleProps } from "./button.js";
+export type { HScrollViewProps, HScrollViewStyleProps } from "./h-scroll-view.js";
 export type { ListProps } from "./list.js";
-export type { ScrollViewProps, ScrollViewStyleProps } from "./scroll-view.js";
+export type { VScrollViewProps, VScrollViewStyleProps } from "./v-scroll-view.js";
+export type { ScrollAxisStyleProps } from "./scroll-axis-shared.js";
 export type { TextInputProps, TextInputStyleProps } from "./text-input.js";

@@ -141,9 +141,9 @@ import {
 ### stickToBottom（P1）— 已实现
 
 ```tsx
-<ScrollView height={10} stickToBottom offset={scrollY} onOffsetChange={scrollY.set}>
+<VScrollView height={10} stickToBottom offset={scrollY} onOffsetChange={scrollY.set}>
   <List items={vm.logs} getKey={(log) => log.id} render={(log) => <text value={log.message} />} />
-</ScrollView>
+</VScrollView>
 ```
 
 语义见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §5.3.1：用户 `up`/`pageup`/`home` 后 detach；`end` 或滚到底 re-attach；内容追加时 auto stick。
@@ -211,7 +211,7 @@ import {
 | --- | --- |
 | counter | signal + Button |
 | form | TextInput |
-| log-viewer | ScrollView / List |
+| log-viewer | VScrollView / List |
 | wide-text | CJK / emoji / combining mark |
 | yoga-dashboard | Yoga layout + runtime stats |
 

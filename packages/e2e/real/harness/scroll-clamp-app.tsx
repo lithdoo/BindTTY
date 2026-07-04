@@ -1,6 +1,6 @@
 import fs from "node:fs";
 
-import { ScrollView, createApp } from "bindtty";
+import { VScrollView, createApp } from "bindtty";
 import { createSignal } from "@bindtty/signal";
 import { createNodeTerminal } from "@bindtty/terminal";
 
@@ -38,7 +38,7 @@ const terminal = createNodeTerminal({
 });
 
 const app = createApp(
-  <ScrollView
+  <VScrollView
     height={2}
     offset={offset}
     onOffsetChange={(nextOffset) => {
@@ -49,7 +49,7 @@ const app = createApp(
     <text value="B" />
     <text value="C" />
     <text value="D" />
-  </ScrollView>,
+  </VScrollView>,
   { terminal }
 );
 

@@ -82,8 +82,9 @@ packages/interaction/
 packages/widgets/
   src/button.ts       # Button 组件 + 类型
   src/text-input.ts   # TextInput 组件 + 类型（拆分光标方案）
-  src/scroll-view.ts  # ScrollView 裁剪与滚动窗口
-  src/list.ts         # List 语法糖（ScrollView + for）
+  src/v-scroll-view.ts  # VScrollView 垂直裁剪与滚动
+  src/h-scroll-view.ts  # HScrollView 水平裁剪与滚动
+  src/list.ts           # List 语法糖（VScrollView + for）
 ~~~
 
 当前完成状态：
@@ -98,7 +99,7 @@ packages/widgets/
 @bindtty/renderer-terminal: LayoutNode → Frame → ANSI diff（含 focusStyle/clip/scrollOffset）
 @bindtty/terminal:          TerminalHost（alt screen/cursor/raw mode/resize/keypress）
 @bindtty/interaction:       keyboard focus、onKey dispatch、Tab/Shift+Tab traversal
-@bindtty/widgets:           Button、TextInput、ScrollView、List
+@bindtty/widgets:           Button、TextInput、VScrollView、HScrollView、List
 bindtty:                    createApp、createSignal/computed/effect、widgets re-export、JSX 转发
 ```
 
@@ -115,6 +116,19 @@ bindtty:                    createApp、createSignal/computed/effect、widgets r
 | M7 | scroll / list / viewport | ✅ |
 
 详见 [architecture/ROADMAP.md](./doc/architecture/ROADMAP.md) 与 [specs/SCROLL_VIEWPORT.md](./doc/specs/SCROLL_VIEWPORT.md)。
+
+## Breaking change（alpha.2）
+
+`ScrollView` 已**硬重命名**为 `VScrollView`（无兼容别名）。新增 `HScrollView` 用于水平滚动。
+
+```tsx
+import { VScrollView, HScrollView } from "bindtty";
+
+<VScrollView height={10} offset={y} onOffsetChange={y.set}>...</VScrollView>
+<HScrollView width={40} offset={x} onOffsetChange={x.set}>...</HScrollView>
+```
+
+详见 [packages/widgets/README.md](./packages/widgets/README.md)。
 
 ## 快速开始
 

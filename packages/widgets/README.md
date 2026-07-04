@@ -1,22 +1,27 @@
 # @bindtty/widgets
 
-Reusable interactive widgets for BindTTY.
+高层 TUI 控件：`Button`、`TextInput`、`VScrollView`、`HScrollView`、`List`。
 
-Currently exported widgets:
+## 导出
 
-- `Button`
-- `TextInput`
-- `ScrollView`
-- `List`
+- `Button` / `TextInput`
+- `VScrollView` — 垂直滚动（`stickToBottom`、`showScrollbar`）
+- `HScrollView` — 水平滚动（`stickToEnd`、`showScrollbar`）
+- `List` — `VScrollView` + `<for>` 语法糖
 
-## 依赖
+## 规范
 
-本包生产代码直接使用 `@bindtty/signal`（内部 `createSignal` / `computed`）。`@bindtty/signal` 为 **peer dependency**（同时保留在 `dependencies` 中）。
+- [doc/specs/SCROLL_VIEWPORT.md](../../doc/specs/SCROLL_VIEWPORT.md) — VScrollView / HScrollView / List
+- [doc/specs/TEXT_INPUT.md](../../doc/specs/TEXT_INPUT.md) — TextInput
 
-应用侧 signal 与组件内部 signal **必须**解析到同一 `@bindtty/signal` 实例。推荐从 `bindtty` 导入 `createSignal` / `computed`，见 [packages/bindtty/README.md](../bindtty/README.md) 的 Peer dependencies 与排障说明。
+## Migration（alpha.2 breaking）
 
-## 文档
+`ScrollView` 已重命名为 `VScrollView`（无别名）。横向滚动使用新组件 `HScrollView`。
 
-- [doc/packages/WIDGETS.md](../../doc/packages/WIDGETS.md) — 包设计
-- [doc/specs/TEXT_INPUT.md](../../doc/specs/TEXT_INPUT.md) — TextInput 规范
-- [doc/specs/SCROLL_VIEWPORT.md](../../doc/specs/SCROLL_VIEWPORT.md) — ScrollView / List
+```tsx
+// before
+import { ScrollView } from "bindtty";
+
+// after
+import { VScrollView, HScrollView } from "bindtty";
+```
