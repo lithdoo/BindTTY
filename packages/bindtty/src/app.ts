@@ -95,10 +95,14 @@ export function createApp(
       return terminal.viewport;
     }
 
-    return {
-      width: options.stdout.columns ?? options.fallbackViewport?.width ?? 80,
-      height: options.stdout.rows ?? options.fallbackViewport?.height ?? 24
-    };
+    if ("stdout" in options) {
+      return {
+        width: options.stdout.columns ?? options.fallbackViewport?.width ?? 80,
+        height: options.stdout.rows ?? options.fallbackViewport?.height ?? 24
+      };
+    }
+
+    return { width: 80, height: 24 };
   }
 
   function writePatch(patch: string): void {
@@ -107,7 +111,9 @@ export function createApp(
       return;
     }
 
-    options.stdout.write(patch);
+    if ("stdout" in options) {
+      options.stdout.write(patch);
+    }
   }
 
   function render(): string {
@@ -163,7 +169,7 @@ export function createApp(
       if (terminal) {
         terminalResizeUnsubscribe = terminal.onResize(handleResize);
         terminalKeyUnsubscribe = terminal.onKey(handleKey);
-      } else {
+      } else if ("stdout" in options) {
         options.stdout.on?.("resize", handleResize);
       }
       render();
@@ -194,7 +200,7 @@ export function createApp(
       terminalKeyUnsubscribe = null;
       if (terminal) {
         terminal.stop();
-      } else {
+      } else if ("stdout" in options) {
         options.stdout.off?.("resize", handleResize);
       }
     },
