@@ -1,5 +1,4 @@
-import { TextInput, createApp } from "bindtty";
-import { createSignal } from "@bindtty/signal";
+import { TextInput, createApp, createSignal } from "bindtty";
 import { createNodeTerminal } from "@bindtty/terminal";
 
 const value = createSignal("");

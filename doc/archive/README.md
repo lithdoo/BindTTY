@@ -9,5 +9,6 @@
 | [WIDE_TEXT_IMPLEMENTATION_PLAN.md](./WIDE_TEXT_IMPLEMENTATION_PLAN.md) | 宽字符落地计划 → [../specs/DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) |
 | [plans/M7_SCROLL_VIEWPORT_PLAN.md](./plans/M7_SCROLL_VIEWPORT_PLAN.md) | M7 计划 → [../specs/SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) |
 | [plans/YOGA_LAYOUT_PLAN.md](./plans/YOGA_LAYOUT_PLAN.md) | Yoga/text 计划 → [../specs/YOGA_AND_TEXT.md](../specs/YOGA_AND_TEXT.md) |
+| [plans/PACKAGE_MODEL_HISTORY.md](./plans/PACKAGE_MODEL_HISTORY.md) | 历史 7 包 / 10 包模型 → 现行 11 包见 [../architecture/ROADMAP.md](../architecture/ROADMAP.md) |
 
 旧文件名 stub 见 [../redirects/](../redirects/)。

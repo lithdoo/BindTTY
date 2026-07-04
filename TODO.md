@@ -11,6 +11,8 @@
 - display-width / 宽字符全链路（见 [doc/specs/DISPLAY_WIDTH.md](doc/specs/DISPLAY_WIDTH.md)）
 - npm 发布工程配置：`0.1.0-alpha.1`、LICENSE、`scripts/publish-packages.mjs`（commit `8b03b27`）
 - `bindtty` JSX runtime 转发（`jsxImportSource: "bindtty"`）
+- ROADMAP 历史 7 包 / 10 包模型移入 [doc/archive/plans/PACKAGE_MODEL_HISTORY.md](doc/archive/plans/PACKAGE_MODEL_HISTORY.md)
+- `bindtty` 顶层公共 API 冻结：`createApp`、`createSignal` / `computed` / `effect`、widgets、JSX 转发
 
 ---
 
@@ -18,8 +20,6 @@
 
 - [ ] 添加 GitHub Actions CI（`npm ci` / `build` / `test` / `build:examples`）
 - [ ] 执行 npm 发布：`npm run pack:dry-run` → `npm run publish:packages`
-- [ ] 冻结 `bindtty` 顶层公共 API 并更新 quick start（是否 re-export `@bindtty/signal`）
-- [ ] ROADMAP 中历史 7 包 / 10 包模型移入 archive 或标明为历史
 
 ---
 

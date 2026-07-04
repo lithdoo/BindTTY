@@ -91,8 +91,8 @@ packages/bindtty/
 | `@bindtty/layout` | 已提供 `layoutRoot(root, { viewport })`，`LayoutNode` 使用绝对坐标 | 否 | app 只负责传 viewport |
 | `@bindtty/renderer-terminal` | 已提供 `createTerminalRenderer()`、`render()`、`reset()` | 否 | app 只负责持有 renderer |
 | `@bindtty/vnode` | 已提供 `ViewTemplate` / `Template` 类型 | 否 | app 参数使用 `ViewTemplate` |
-| `@bindtty/signal` | 已提供响应式 API | 否 | 顶层包后续可 re-export |
-| `bindtty` | 已实现 `createApp`、双模式、interaction 接入、widgets re-export | 否 | 已完成；后续可扩展 re-export 范围 |
+| `@bindtty/signal` | 已提供响应式 API | 否 | 已由 `bindtty` re-export；子包仍可独立使用 |
+| `bindtty` | `createApp`、signal、widgets、JSX 转发 | 否 | alpha 公共 API 已冻结，见 [packages/bindtty/README.md](../../packages/bindtty/README.md) |
 
 需要注意的现有行为：
 

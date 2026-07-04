@@ -83,23 +83,24 @@ npm run publish:packages   # 默认 --tag alpha
 
 `bindtty@0.1.0-alpha.0` 在 npm 上为占位包，需用 `0.1.0-alpha.1` 覆盖发布全部 `@bindtty/*` 子包。
 
-### 3.3 顶层 API 未完全冻结
+### 3.3 顶层 API（alpha 冻结）
 
-当前：
-
-```ts
-import { createSignal, computed } from "@bindtty/signal";
-import { createApp, Button, TextInput } from "bindtty";
-```
-
-`bindtty` 已导出 `createApp` 与 widgets，**尚未** re-export signal。待决定：
+`bindtty` 导出：
 
 ```ts
-// 可选：bindtty 顶层
-export { createSignal, computed, effect } from "@bindtty/signal";
+import {
+  Button,
+  List,
+  ScrollView,
+  TextInput,
+  computed,
+  createApp,
+  createSignal,
+  effect
+} from "bindtty";
 ```
 
-不建议从顶层导出 `runtime` / `vnode` / `layout` / `renderer-terminal`（公共面过大）。
+真实终端另引 `@bindtty/terminal` 的 `createNodeTerminal`。不导出 `runtime` / `vnode` / `layout` / `renderer-terminal`。
 
 ### 3.4 Layout prop matrix 待补齐
 
@@ -115,7 +116,7 @@ export { createSignal, computed, effect } from "@bindtty/signal";
 
 ### 3.5 文档漂移
 
-- ROADMAP 仍保留早期 7 包 / 10 包历史叙述（应移入 archive 或加「历史」标注）。
+- ~~ROADMAP 早期 7 包 / 10 包叙述~~ → 已移入 [archive/plans/PACKAGE_MODEL_HISTORY.md](../archive/plans/PACKAGE_MODEL_HISTORY.md)；ROADMAP 仅描述现行 11 包模型。
 - 部分 archive 文档描述落地前状态；以根 README「当前完成状态」与各包 README 为准。
 
 ---
@@ -126,8 +127,8 @@ export { createSignal, computed, effect } from "@bindtty/signal";
 
 1. GitHub Actions CI
 2. `npm run publish:packages`
-3. 冻结 `bindtty` 顶层导出并更新 quick start
-4. 文档统一为 11 包模型
+3. 冻结 `bindtty` 顶层导出并更新 quick start（已完成）
+4. 文档统一为 11 包模型（ROADMAP 已完成；见 [archive/plans/PACKAGE_MODEL_HISTORY.md](../archive/plans/PACKAGE_MODEL_HISTORY.md)）
 
 ### Phase B：Layout 与 Scroll（P1）
 
@@ -184,13 +185,13 @@ export { createSignal, computed, effect } from "@bindtty/signal";
 
 - CI
 - 实际 `npm publish`
-- 顶层 API 文档冻结
+- 顶层 API 文档冻结（[packages/bindtty/README.md](../../packages/bindtty/README.md)）
 
 ### 0.1.0-alpha.2（建议下一版）
 
 - GitHub Actions CI 绿
 - 全部包发布到 npm
-- `bindtty` 顶层 API 决策落地（含是否 re-export signal）
+- `bindtty` 顶层 API 决策落地（signal re-export 已完成）
 - ROADMAP / 文档去漂移
 
 ### 0.1.0-beta.0
@@ -239,8 +240,8 @@ API freeze → CI / release → layout prop matrix → Scroll/List → widgets e
 | Issue | 内容 | 状态 |
 | --- | --- | --- |
 | 1 | GitHub Actions CI | ⏳ open |
-| 2 | 文档统一为 11 包模型 | 🔶 partial |
-| 3 | `bindtty` 顶层 API 冻结 | 🔶 partial（widgets + jsx 已做，signal 待定） |
+| 2 | 文档统一为 11 包模型 | 🔶 partial（ROADMAP 包模型已统一；其余 doc 漂移待清理） |
+| 3 | `bindtty` 顶层 API 冻结 | ✅ done |
 | 4 | npm 发布元数据 | ✅ done |
 | 5 | TextInput display-column spec | ✅ done |
 | 6 | TextInput 水平滚动实现 | ✅ done |

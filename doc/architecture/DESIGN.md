@@ -1056,6 +1056,7 @@ frame diff
 | `@bindtty/vnode` | 声明层类型 |
 | `@bindtty/jsx-runtime` | TSX → ViewTemplate |
 | `@bindtty/runtime` | mount、binding、dirty、dispose、scheduler |
+| `@bindtty/text` | display-width-aware 文本测量 / wrapping / truncation |
 | `@bindtty/layout` | MountedNode → LayoutNode 几何计算 |
 | `@bindtty/renderer-terminal` | LayoutNode → Frame → ANSI diff |
 | `@bindtty/terminal` | 真实终端 lifecycle、viewport、stdin key event |

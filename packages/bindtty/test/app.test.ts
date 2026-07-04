@@ -4,13 +4,16 @@ import { stripVTControlCharacters } from "node:util";
 
 import {
   Button,
+  List,
   ScrollView,
   TextInput,
+  computed,
   createApp,
+  createSignal,
+  effect,
   type AppStdout,
   type CreateAppOptions
 } from "bindtty";
-import { createSignal } from "@bindtty/signal";
 import {
   createYogaLayoutEngine,
   type LayoutEngine,
@@ -206,12 +209,23 @@ test("bindtty exports the createApp entrypoint", () => {
   assert.equal(typeof createApp, "function");
 });
 
+test("bindtty exports signal primitives", () => {
+  assert.equal(typeof createSignal, "function");
+  assert.equal(typeof computed, "function");
+  assert.equal(typeof effect, "function");
+});
+
 test("bindtty exports the Button widget", () => {
   assert.equal(typeof Button, "function");
 });
 
 test("bindtty exports the TextInput widget", () => {
   assert.equal(typeof TextInput, "function");
+});
+
+test("bindtty exports ScrollView and List widgets", () => {
+  assert.equal(typeof ScrollView, "function");
+  assert.equal(typeof List, "function");
 });
 
 test("createApp returns lifecycle methods without rendering by default", () => {

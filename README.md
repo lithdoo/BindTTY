@@ -99,7 +99,7 @@ packages/widgets/
 @bindtty/terminal:          TerminalHost（alt screen/cursor/raw mode/resize/keypress）
 @bindtty/interaction:       keyboard focus、onKey dispatch、Tab/Shift+Tab traversal
 @bindtty/widgets:           Button、TextInput、ScrollView、List
-bindtty:                    createApp（stdout + terminal 双模式）、re-export widgets
+bindtty:                    createApp、createSignal/computed/effect、widgets re-export、JSX 转发
 ```
 
 ## 实现进度
@@ -119,36 +119,34 @@ bindtty:                    createApp（stdout + terminal 双模式）、re-expo
 ## 快速开始
 
 ```bash
-npm install bindtty @bindtty/signal
+npm install bindtty
 ```
 
+真实终端另装 `@bindtty/terminal`。从源码开发：
+
 ```bash
-# 从源码开发
 npm install
 npm run build
 npm test
 ```
 
 ```ts
-import { createSignal, computed } from "@bindtty/signal";
-import { createApp } from "bindtty";
+import { Button, computed, createApp, createSignal } from "bindtty";
 
-class CounterVM {
-  count = createSignal(0);
-  label = computed(() => `Count: ${this.count.get()}`);
-}
+const count = createSignal(0);
+const label = computed(() => `Count: ${count.get()}`);
 
-function App({ vm }: { vm: CounterVM }) {
-  return <text value={vm.label} />;
-}
-
-const app = createApp(<App vm={new CounterVM()} />, {
-  stdout: process.stdout
-});
+const app = createApp(
+  <vstack>
+    <text value={label} />
+    <Button label="+" onPress={() => count.set(count.get() + 1)} />
+  </vstack>,
+  { stdout: process.stdout, fallbackViewport: { width: 80, height: 24 } }
+);
 app.start();
 ```
 
-tsconfig 需设置 `jsx: "react-jsx"`、`jsxImportSource: "bindtty"`（`bindtty` 会转发 JSX runtime；也可直接用 `@bindtty/jsx-runtime`）。真实终端使用 `createNodeTerminal` + `createApp(view, { terminal })`，见 [APP.md](./doc/packages/APP.md)。
+tsconfig：`jsx: "react-jsx"`、`jsxImportSource: "bindtty"`。terminal 模式见 [APP.md](./doc/packages/APP.md)。完整公共 API 见 [packages/bindtty/README.md](./packages/bindtty/README.md)。
 
 真实 PTY E2E（`node-pty`，`packages/e2e/real/`）见 [packages/e2e/README.md](./packages/e2e/README.md)：
 
