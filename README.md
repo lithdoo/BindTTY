@@ -163,7 +163,7 @@ npm run test:e2e:real:wsl   # 需 WSL Ubuntu + Node.js
 
 完整索引见 **[doc/README.md](./doc/README.md)**（含 packages / specs / testing / archive 分类）。
 
-开放改进项：[TODO.md](./TODO.md)。
+开放改进项：[TODO.md](./TODO.md)（checklist）· [doc/architecture/NEXT_STEPS.md](./doc/architecture/NEXT_STEPS.md)（alpha 规划）
 
 ## 用户写法约定
 

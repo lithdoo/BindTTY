@@ -15,6 +15,7 @@
 | TextInput | [specs/TEXT_INPUT.md](./specs/TEXT_INPUT.md) |
 | E2E 测试 | [testing/E2E.md](./testing/E2E.md) |
 | 里程碑 / 路线图 | [architecture/ROADMAP.md](./architecture/ROADMAP.md) |
+| Alpha hardening 规划 | [architecture/NEXT_STEPS.md](./architecture/NEXT_STEPS.md) |
 | 历史计划 | [archive/plans/](./archive/plans/) |
 
 ## architecture/
@@ -23,6 +24,7 @@
 | --- | --- |
 | [DESIGN.md](./architecture/DESIGN.md) | 视图树总体设计、四层结构、BindingValue |
 | [ROADMAP.md](./architecture/ROADMAP.md) | M1–M7 里程碑与下一阶段 |
+| [NEXT_STEPS.md](./architecture/NEXT_STEPS.md) | Alpha hardening 阶段规划与 Issue 对照 |
 
 ## packages/
 
@@ -59,7 +61,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
-| [../TODO.md](../TODO.md) | 开放改进项 |
+| [../TODO.md](../TODO.md) | 开放改进项（可执行 checklist） |
 | [archive/](./archive/) | 历史备份与 [archive/plans/](./archive/plans/) |
 | [redirects/](./redirects/) | 旧文件名 stub |
 

@@ -7,7 +7,7 @@ BindTTY 在 **text → layout → renderer → ANSI** 全链路使用 **terminal
 > **状态**：implemented  
 > **最后核对**：2026-07  
 > **代码入口**：packages/text/src/ · packages/renderer-terminal/src/frame.ts  
-> **相关**：[RENDERER.md](../packages/RENDERER.md) · [TODO.md](../../TODO.md)  
+> **相关**：[RENDERER.md](../packages/RENDERER.md) · [../architecture/NEXT_STEPS.md](../architecture/NEXT_STEPS.md) · [../../TODO.md](../../TODO.md)  
 > 历史计划：[archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md](../archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md)
 
 相关文档：
@@ -17,7 +17,8 @@ BindTTY 在 **text → layout → renderer → ANSI** 全链路使用 **terminal
 - [LAYOUT.md](../packages/LAYOUT.md) — LayoutNode / contentSize
 - [TEXT_INPUT.md](./TEXT_INPUT.md) — TextInput 控件（**编辑语义见已知限制**）
 - [../packages/e2e/README.md](../packages/e2e/README.md) — 宽字符 E2E harness
-- [../TODO.md](../TODO.md) — 已知代码缺口与后续工作
+- [../architecture/NEXT_STEPS.md](../architecture/NEXT_STEPS.md) — alpha hardening 规划
+- [../../TODO.md](../../TODO.md) — 开放改进项 checklist
 
 ---
 
@@ -229,7 +230,7 @@ npm run start --workspace @bindtty/example-wide-text
 
 ## 11. 未来方向
 
-需单独 spec 的项（详见 [TODO.md](../TODO.md)「暂缓」）：
+需单独 spec 的项（详见 [TODO.md](../../TODO.md)「暂缓」与 [NEXT_STEPS.md](../architecture/NEXT_STEPS.md)）：
 
 ```text
 1. RichText / TextSpan

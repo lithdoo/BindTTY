@@ -112,7 +112,7 @@ doc/
 
 1. plan 全文移 `archive/plans/`
 2. 从 plan 摘现行行为到 `specs/`
-3. 从 [TODO.md](../TODO.md) 删除已完成项
+3. 从 [TODO.md](../TODO.md) 删除已完成项；阶段规划更新 [architecture/NEXT_STEPS.md](./architecture/NEXT_STEPS.md)
 
 新横切能力：
 
