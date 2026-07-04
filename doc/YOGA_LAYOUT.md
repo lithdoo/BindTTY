@@ -63,8 +63,8 @@ scrollY clamp
 4. hstack 只累加 child width，不支持 flex shrink / grow。
 5. row flow 不支持 wrap。
 6. box / vstack / hstack 不支持 gap、align、justify、min/max 等 flexbox 能力。
-7. 当前 Frame 是一列一个 Cell，尚不能正确表达 wide char / grapheme cluster。
-8. 当前 renderer 是 Frame/style 模型，不支持 text value 内嵌 ANSI escape。
+7. 原始 Frame 是一列一个 Cell，不能正确表达 wide char / grapheme cluster；当前已由 [WIDE_TEXT_FRAME.md](./WIDE_TEXT_FRAME.md) 升级为 wide-cell placeholder 模型。
+8. 当前 renderer 是 Frame/style 模型，仍不支持 text value 内嵌 ANSI escape。
 ```
 
 这些限制会影响：
@@ -151,10 +151,10 @@ YogaLayoutEngine
 7. 不实现 absolute / static / z-index 等复杂定位。
 8. 不完整处理 bidi。
 9. 不支持 rich text nested style span。
-10. 不改变 Frame / diff / ansi 基础模型。
+10. 不改变 FramePatch 基础结构；Frame / diff / ansi 已由 [WIDE_TEXT_FRAME.md](./WIDE_TEXT_FRAME.md) 补齐 wide-cell placeholder 语义。
 11. 不改变 Element Ref 的生命周期模型。
 12. MVP 不支持 text value 内嵌 ANSI escape。
-13. MVP 不承诺 CJK / emoji / combining mark 完全正确渲染；这需要先定义 Frame 的 wide-cell / grapheme 表示。
+13. CJK / common emoji / combining mark 已由 [WIDE_TEXT_FRAME.md](./WIDE_TEXT_FRAME.md) 落地；复杂 ZWJ emoji 与 ANSI text 仍不属于本计划。
 
 ## 4. 总体架构
 
@@ -290,9 +290,9 @@ ANSI escape 不是普通可见字符。
 
 这两个方向都不属于本阶段 MVP。
 
-### 5.2 MVP ASCII-first
+### 5.2 Text display-width 状态
 
-MVP 优先支持：
+原始 MVP 优先支持：
 
 ```text
 ASCII
@@ -303,9 +303,9 @@ hard wrap
 truncate
 ```
 
-CJK / emoji / combining mark 不作为 MVP 验收标准。
+当时 CJK / emoji / combining mark 不作为 MVP 验收标准。
 
-原因：
+当时原因：
 
 ```text
 当前 Frame 是一列一个 Cell。
@@ -314,15 +314,17 @@ normalizeChar() 会把 char 截成第一个 UTF-16 code unit。
 这种结构无法正确表达 emoji surrogate pair、wide char、combining mark、grapheme cluster。
 ```
 
-后续需要单独定义 wide-cell / grapheme 表示：
+当前已在 [WIDE_TEXT_FRAME.md](./WIDE_TEXT_FRAME.md) 中定义并落地 wide-cell / grapheme 表示：
 
 ```text
-方案 A：Cell.char 存 grapheme，Cell.width 表示占用列数。
-方案 B：leading Cell 存 grapheme，continuation Cell 标记为 occupied。
-方案 C：Frame 仍是一列一个 Cell，但 renderer 写入时展开 wide char 并占位。
+Cell.char 存 grapheme。
+Cell.width 表示 display width。
+width=2 的 leading cell 保存宽字符。
+width=0 的 placeholder cell 表示 continuation column。
+diff / ANSI patch 跳过 placeholder，并在覆盖旧宽字符时扩展 dirty range。
 ```
 
-该设计应独立成一节或单独文档，再进入 CJK / emoji hardening。
+仍不支持 text value 内嵌 ANSI escape；复杂 ZWJ emoji 仍按 display-width oracle 近似处理。
 
 ### 5.3 newline 兼容策略
 
@@ -1806,8 +1808,8 @@ examples/yoga-layout
 当前落地状态（2026-07-03）：
 
 ```text
-阶段 0：已完成范围决策，MVP 明确为 plain ASCII-first，不支持内嵌 ANSI / wide-cell 完整语义。
-阶段 1：已完成 @bindtty/text，包含 measure / wrap / truncate / cache 与 unit tests。
+阶段 0：已完成范围决策；原始 MVP 为 plain ASCII-first，wide-cell 后续计划已落地。
+阶段 1：已完成 @bindtty/text，包含 display-width measure / segment / slice / wrap / truncate / cache 与 unit tests。
 阶段 2：已完成 text.wrap 接入 BasicLayoutEngine、renderer 与 JSX/VNode schema。
 阶段 3：已完成 app 级 layoutEngine 注入，stdout / terminal mode 均覆盖测试。
 阶段 4：已完成 createYogaLayoutEngine() MVP。
@@ -1815,6 +1817,7 @@ examples/yoga-layout
 阶段 6：已打开第一批 Yoga flex props，包含 camelCase / kebab-case、Yoga 映射与 Basic 明确报错。
 阶段 7：已完成默认 engine 切换，layoutRoot 默认使用 YogaLayoutEngine，BasicLayoutEngine 保留为 legacy fallback。
 阶段 8：尚未决定 BasicLayoutEngine 的长期去留。
+Wide Text：已完成 @bindtty/text display-width、renderer wide-cell Frame、diff/ANSI placeholder、layout/Yoga CJK 回归，见 WIDE_TEXT_FRAME.md。
 ```
 
 ## 阶段 0：Frame wide-cell / ANSI 范围决策

@@ -49,7 +49,11 @@ export function encodeAnsiPatch(patch: FramePatch): string {
 
   let output = "";
 
-  for (const change of patch.changes) {
+  for (const change of [...patch.changes].sort((left, right) => left.y - right.y || left.x - right.x)) {
+    if (change.cell.width === 0) {
+      continue;
+    }
+
     output += moveCursor(change.x, change.y);
     output += RESET;
     output += encodeStyle(change.cell.style);

@@ -25,6 +25,11 @@ export interface TextLayout {
   lines: string[];
 }
 
+export interface TextSegment {
+  text: string;
+  width: 0 | 1 | 2;
+}
+
 export const TEXT_WRAP_MODES = [
   "legacy",
   "none",

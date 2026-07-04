@@ -1,7 +1,13 @@
 export {
+  createBlankCell,
   createFrame,
+  createPlaceholderCell,
+  createTextCell,
+  frameToDebugLines,
   frameToLines,
   getCell,
+  isPlaceholderCell,
+  isWideLeadingCell,
   setCell,
   writeText
 } from "./frame.js";

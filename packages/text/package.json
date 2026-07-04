@@ -33,5 +33,8 @@
   "bugs": {
     "url": "https://github.com/lithdoo/BindTTY/issues"
   },
-  "homepage": "https://github.com/lithdoo/BindTTY/tree/main/packages/text#readme"
+  "homepage": "https://github.com/lithdoo/BindTTY/tree/main/packages/text#readme",
+  "dependencies": {
+    "string-width": "7.2.0"
+  }
 }

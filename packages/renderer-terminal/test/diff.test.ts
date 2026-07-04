@@ -28,7 +28,8 @@ test("diffFrames creates a full patch when previous frame is null", () => {
       char: "A",
       style: {
         foreground: "red"
-      }
+      },
+      width: 1
     }
   });
 });
@@ -63,7 +64,8 @@ test("diffFrames reports changed cells", () => {
         y: 0,
         cell: {
           char: "B",
-          style: {}
+          style: {},
+          width: 1
         }
       }
     ]
@@ -85,7 +87,8 @@ test("diffFrames reports style-only changes", () => {
         char: "A",
         style: {
           foreground: "green"
-        }
+        },
+        width: 1
       }
     }
   ]);
@@ -116,7 +119,8 @@ test("diffFrames creates a full patch when frame size changes", () => {
         y: 0,
         cell: {
           char: " ",
-          style: {}
+          style: {},
+          width: 1
         }
       },
       {
@@ -124,7 +128,8 @@ test("diffFrames creates a full patch when frame size changes", () => {
         y: 0,
         cell: {
           char: "B",
-          style: {}
+          style: {},
+          width: 1
         }
       }
     ]
@@ -146,7 +151,74 @@ test("diffFrames clones changed cells", () => {
       char: "A",
       style: {
         foreground: "red"
-      }
+      },
+      width: 1
     }
   });
+});
+
+test("diffFrames expands dirty ranges around wide cells", () => {
+  const previous = createFrame(2, 1);
+  const next = createFrame(2, 1);
+
+  setCell(previous, 0, 0, { char: "中", style: {}, width: 2 });
+  setCell(previous, 1, 0, { char: "", style: {}, width: 0 });
+  setCell(next, 0, 0, { char: "A", style: {} });
+  setCell(next, 1, 0, { char: "B", style: {} });
+
+  assert.deepEqual(diffFrames(previous, next), {
+    width: 2,
+    height: 1,
+    changes: [
+      {
+        x: 0,
+        y: 0,
+        cell: {
+          char: "A",
+          style: {},
+          width: 1
+        }
+      },
+      {
+        x: 1,
+        y: 0,
+        cell: {
+          char: "B",
+          style: {},
+          width: 1
+        }
+      }
+    ]
+  });
+});
+
+test("diffFrames includes placeholder cells for new wide characters", () => {
+  const previous = createFrame(2, 1);
+  const next = createFrame(2, 1);
+
+  setCell(previous, 0, 0, { char: "A", style: {} });
+  setCell(previous, 1, 0, { char: "B", style: {} });
+  setCell(next, 0, 0, { char: "中", style: {}, width: 2 });
+  setCell(next, 1, 0, { char: "", style: {}, width: 0 });
+
+  assert.deepEqual(diffFrames(previous, next).changes, [
+    {
+      x: 0,
+      y: 0,
+      cell: {
+        char: "中",
+        style: {},
+        width: 2
+      }
+    },
+    {
+      x: 1,
+      y: 0,
+      cell: {
+        char: "",
+        style: {},
+        width: 0
+      }
+    }
+  ]);
 });

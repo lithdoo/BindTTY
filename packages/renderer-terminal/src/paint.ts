@@ -1,7 +1,13 @@
 import type { LayoutNode, LayoutRect, LayoutViewport } from "@bindtty/layout";
-import { layoutText, readTextWrapMode } from "@bindtty/text";
+import { layoutText, readTextWrapMode, segmentText } from "@bindtty/text";
 import type { MountedElementNode } from "@bindtty/vnode";
-import { createFrame, getCell, setCell } from "./frame.js";
+import {
+  createBlankCell,
+  createFrame,
+  createPlaceholderCell,
+  getCell,
+  setCell
+} from "./frame.js";
 import { readPaintStyle, toBorderCellStyle, toCellStyle } from "./style.js";
 import type { CellStyle, Frame } from "./types.js";
 
@@ -122,7 +128,8 @@ function paintText(
       frame,
       node.rect.x + context.offsetX,
       node.rect.y + row + context.offsetY,
-      (lines[row] ?? "").slice(0, node.rect.width),
+      lines[row] ?? "",
+      node.rect.width,
       style,
       context
     );
@@ -168,7 +175,8 @@ function fillRect(
     for (let x = rect.x; x < rect.x + rect.width; x += 1) {
       setCellClipped(frame, x, y, {
         char: " ",
-        style
+        style,
+        width: 1
       }, context);
     }
   }
@@ -226,7 +234,8 @@ function paintChar(
 ): void {
   setCellClipped(frame, x, y, {
     char,
-    style
+    style,
+    width: 1
   }, context);
 }
 
@@ -271,7 +280,8 @@ function paintFocusedState(
           style: {
             ...cell.style,
             inverse: true
-          }
+          },
+          width: cell.width
         }, context);
       }
     }
@@ -283,23 +293,103 @@ function writeTextClipped(
   x: number,
   y: number,
   text: string,
+  maxWidth: number,
   style: CellStyle,
   context: PaintContext
 ): number {
   let written = 0;
+  let cursorX = x;
+  let usedWidth = 0;
 
-  for (let offset = 0; offset < text.length; offset += 1) {
-    if (
-      setCellClipped(frame, x + offset, y, {
-        char: text[offset] ?? " ",
-        style
-      }, context)
-    ) {
-      written += 1;
+  for (const segment of segmentText(text)) {
+    if (segment.width <= 0) {
+      continue;
     }
+
+    if (usedWidth + segment.width > maxWidth) {
+      break;
+    }
+
+    if (canDrawWholeSegment(cursorX, y, segment.width, context.clip)) {
+      clearCellsForWrite(frame, cursorX, y, segment.width);
+      setCellClipped(frame, cursorX, y, {
+        char: segment.text,
+        style,
+        width: segment.width
+      }, context);
+
+      for (let offset = 1; offset < segment.width; offset += 1) {
+        setCellClipped(
+          frame,
+          cursorX + offset,
+          y,
+          createPlaceholderCell(style),
+          context
+        );
+      }
+
+      written += segment.width;
+    }
+
+    cursorX += segment.width;
+    usedWidth += segment.width;
   }
 
   return written;
+}
+
+function canDrawWholeSegment(
+  x: number,
+  y: number,
+  width: number,
+  clip: LayoutRect
+): boolean {
+  return (
+    y >= clip.y &&
+    y < clip.y + clip.height &&
+    x >= clip.x &&
+    x + width <= clip.x + clip.width
+  );
+}
+
+function clearCellsForWrite(
+  frame: Frame,
+  x: number,
+  y: number,
+  width: number
+): void {
+  for (let col = x; col < x + width; col += 1) {
+    clearWideCellAt(frame, col, y);
+  }
+}
+
+function clearWideCellAt(frame: Frame, x: number, y: number): void {
+  const cell = getCell(frame, x, y);
+
+  if (!cell) {
+    return;
+  }
+
+  if (cell.width === 2) {
+    setCell(frame, x, y, createBlankCell());
+    setCell(frame, x + 1, y, createBlankCell());
+    return;
+  }
+
+  if (cell.width === 0) {
+    const leadingX = findWideLeadingCell(frame, x, y);
+
+    if (leadingX !== null) {
+      setCell(frame, leadingX, y, createBlankCell());
+      setCell(frame, leadingX + 1, y, createBlankCell());
+    }
+  }
+}
+
+function findWideLeadingCell(frame: Frame, x: number, y: number): number | null {
+  const previous = getCell(frame, x - 1, y);
+
+  return previous?.width === 2 ? x - 1 : null;
 }
 
 function setCellClipped(

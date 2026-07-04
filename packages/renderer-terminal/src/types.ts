@@ -7,6 +7,7 @@ export interface Frame {
 export interface Cell {
   char: string;
   style: CellStyle;
+  width?: 0 | 1 | 2;
 }
 
 export interface CellStyle {

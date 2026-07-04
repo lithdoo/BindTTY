@@ -457,6 +457,7 @@ export interface Frame {
 export interface Cell {
   char: string;
   style: CellStyle;
+  width?: 0 | 1 | 2;
 }
 
 export interface CellStyle {
@@ -470,6 +471,8 @@ export interface CellStyle {
 }
 ```
 
+`width` 在 public 类型上保留可选，以兼容旧测试 helper 和手写 `FramePatch`；`createFrame()`、`setCell()`、`diffFrames()` 产出的实际 Frame cell 会归一为 `width: 0 | 1 | 2`。
+
 第一版 `cells` 可以是一维数组：
 
 ```text
@@ -481,11 +484,25 @@ index = y * width + x
 ```ts
 {
   char: " ",
-  style: {}
+  style: {},
+  width: 1
 }
 ```
 
-第一版只支持单宽字符。宽字符、emoji、组合字符、East Asian Width 先作为后续能力。
+当前 Frame 支持 wide-cell / grapheme 表示：
+
+```text
+width = 1:
+  普通 cell，char 是一个 display width 1 的 grapheme 或空格。
+
+width = 2:
+  wide leading cell，char 是 display width 2 的 grapheme，例如 CJK 或常见 emoji。
+
+width = 0:
+  placeholder cell，char = ""，表示该列被前一个 wide grapheme 占用。
+```
+
+`frameToLines()` 会跳过 placeholder，`frameToDebugLines()` 使用 `·` 显示 placeholder 位置，便于测试。
 
 ## 6. Paint 规则
 
@@ -682,17 +699,20 @@ width >= 2 且 height >= 2
 
 ### 7.5 text 写入规则
 
-`text` 第一版只处理单行、单宽字符。
+`text` 使用 `@bindtty/text` 的 `layoutText()` 和 `segmentText()`，按 terminal display columns 绘制。
 
 规则：
 
 ```text
 1. props.value 为 null 或 undefined 时视为 ""。
 2. 其他值使用 String(value)。
-3. 遇到 "\n" 时只绘制第一行。
-4. 超出 rect.width 的部分裁剪。
+3. wrap 未设置时保持 legacy first-line 行为。
+4. wrap="none" / "wrap" / "hard" / truncate 模式使用 layoutText() 产出的 lines。
 5. rect.width <= 0 或 rect.height <= 0 时不绘制。
-6. 只写入 rect 的第一行，不做 wrapping。
+6. 写入时按 grapheme segment 前进 display columns。
+7. wide grapheme 必须完整落入 rect 与 clip 才绘制；不绘制半个宽字符。
+8. 写入 wide grapheme 时写 leading cell + placeholder cell。
+9. 覆盖旧 wide grapheme 的任一列前，先清理旧 leading / placeholder 两列。
 ```
 
 ### 7.6 style 归一化与比较
@@ -701,6 +721,7 @@ width >= 2 且 height >= 2
 
 ```text
 char
+width
 foreground
 background
 bold

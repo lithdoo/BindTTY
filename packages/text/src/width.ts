@@ -1,3 +1,5 @@
+import { measureSegmentsWidth, segmentText } from "./segment.js";
+
 export function measureTextWidth(text: string): number {
-  return text.length;
+  return measureSegmentsWidth(segmentText(text));
 }

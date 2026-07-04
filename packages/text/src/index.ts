@@ -9,6 +9,8 @@ export {
   truncateMiddle,
   truncateStart
 } from "./truncate.js";
+export { segmentText } from "./segment.js";
+export { sliceTextByWidth } from "./slice.js";
 export { hardWrapLine, wordWrapLine } from "./wrap.js";
 export { measureTextWidth } from "./width.js";
 export type {
@@ -16,6 +18,7 @@ export type {
   TextLayout,
   TextLayoutOptions,
   TextMeasure,
+  TextSegment,
   TextWrapMode
 } from "./types.js";
 export { TEXT_WRAP_MODES } from "./types.js";

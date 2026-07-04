@@ -1652,6 +1652,58 @@ test("YogaLayoutEngine supports flexWrap", () => {
   });
 });
 
+test("BasicLayoutEngine measures CJK text using display width", () => {
+  const root = createMountedText("中");
+  const layout = layoutRootWithBasic(root);
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 2,
+    height: 1
+  });
+});
+
+test("YogaLayoutEngine measures CJK text using display width", () => {
+  const root = createMountedText("中");
+  const layout = layoutRootWithYoga(root);
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 2,
+    height: 1
+  });
+});
+
+test("YogaLayoutEngine wraps CJK text by display width", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      width: 4,
+      height: 1,
+      overflow: "clip",
+      scrollY: 99
+    },
+    [
+      createMountedElement("text", {
+        value: "中中中",
+        wrap: "hard"
+      })
+    ]
+  );
+  const layout = layoutRootWithYoga(root);
+
+  assert.deepEqual(layout?.contentSize, {
+    width: 4,
+    height: 2
+  });
+  assert.deepEqual(layout?.scrollOffset, {
+    x: 0,
+    y: 1
+  });
+});
+
 test("YogaLayoutEngine rejects invalid Yoga flex prop values", () => {
   assert.throws(
     () =>

@@ -16,6 +16,7 @@ npm start --workspace @bindtty/example-counter
 npm start --workspace @bindtty/example-form
 npm start --workspace @bindtty/example-log-viewer
 npm start --workspace @bindtty/example-yoga-dashboard
+npm start --workspace @bindtty/example-wide-text
 ```
 
 | 目录 | 说明 |
@@ -24,3 +25,4 @@ npm start --workspace @bindtty/example-yoga-dashboard
 | [form](./form/) | `TextInput` 输入与提交 |
 | [log-viewer](./log-viewer/) | `List` / `ScrollView` 长列表滚动 |
 | [yoga-dashboard](./yoga-dashboard/) | Yoga layout + 真实 runtime stats dashboard |
+| [wide-text](./wide-text/) | CJK / emoji / combining mark 宽字符渲染 |

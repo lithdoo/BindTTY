@@ -163,3 +163,32 @@ test("encodeAnsiPatch throws for unsupported colors", () => {
     /Unsupported background color: orange/
   );
 });
+
+test("encodeAnsiPatch skips wide placeholder cells", () => {
+  const patch: FramePatch = {
+    width: 2,
+    height: 1,
+    changes: [
+      {
+        x: 0,
+        y: 0,
+        cell: {
+          char: "中",
+          style: {},
+          width: 2
+        }
+      },
+      {
+        x: 1,
+        y: 0,
+        cell: {
+          char: "",
+          style: {},
+          width: 0
+        }
+      }
+    ]
+  };
+
+  assert.equal(encodeAnsiPatch(patch), "\x1b[1;1H\x1b[0m中\x1b[0m");
+});

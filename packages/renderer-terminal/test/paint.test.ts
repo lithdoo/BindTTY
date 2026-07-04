@@ -3,6 +3,7 @@ import test from "node:test";
 
 import type { LayoutNode, LayoutRect, LayoutViewport } from "@bindtty/layout";
 import {
+  frameToDebugLines,
   frameToLines,
   getCell,
   paintLayout
@@ -154,6 +155,37 @@ test("paintLayout paints wrapped text within the layout rect height", () => {
     "world",
     "     "
   ]);
+});
+
+test("paintLayout paints wide text with placeholder cells", () => {
+  const root = layout(
+    element("text", { value: "A中B" }),
+    rect(0, 0, 4, 1)
+  );
+  const frame = paintLayout(root, { viewport: { width: 4, height: 1 } });
+
+  assert.deepEqual(frameToLines(frame), ["A中B"]);
+  assert.deepEqual(frameToDebugLines(frame), ["A中·B"]);
+  assert.deepEqual(getCell(frame, 1, 0), {
+    char: "中",
+    style: {},
+    width: 2
+  });
+  assert.deepEqual(getCell(frame, 2, 0), {
+    char: "",
+    style: {},
+    width: 0
+  });
+});
+
+test("paintLayout clips wide text by whole grapheme", () => {
+  const root = layout(
+    element("text", { value: "中" }),
+    rect(0, 0, 1, 1)
+  );
+  const frame = paintLayout(root, { viewport: { width: 1, height: 1 } });
+
+  assert.deepEqual(frameToLines(frame), [" "]);
 });
 
 test("paintLayout treats null and undefined text values as empty text", () => {

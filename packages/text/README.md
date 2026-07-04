@@ -1,10 +1,13 @@
 # @bindtty/text
 
-Plain ASCII-first terminal text measurement and wrapping utilities for BindTTY.
+Plain terminal text measurement and wrapping utilities for BindTTY.
 
 MVP scope:
 
 - Plain text only.
-- ASCII-first cell width.
+- Display-width-aware measurement via `string-width`.
+- Grapheme segmentation via `Intl.Segmenter`, with code point fallback.
+- CJK, common emoji, and combining mark measurement.
+- Display-column wrap, hard wrap, truncate, and slice helpers.
 - No embedded ANSI escape support.
-- No CJK / emoji / grapheme cluster guarantees.
+- Complex ZWJ emoji sequence behavior follows the package display-width oracle and is not font/terminal perfect.

@@ -18,7 +18,8 @@ test("createFrame fills cells with blank spaces", () => {
   assert.deepEqual(frameToLines(frame), ["   ", "   "]);
   assert.deepEqual(getCell(frame, 0, 0), {
     char: " ",
-    style: {}
+    style: {},
+    width: 1
   });
 });
 
@@ -37,8 +38,8 @@ test("createFrame clamps invalid and non-positive sizes to empty frames", () => 
     width: 2,
     height: 1,
     cells: [
-      { char: " ", style: {} },
-      { char: " ", style: {} }
+      { char: " ", style: {}, width: 1 },
+      { char: " ", style: {}, width: 1 }
     ]
   });
 });
@@ -53,7 +54,7 @@ test("getCell and setCell clip out-of-bounds coordinates", () => {
   assert.deepEqual(frameToLines(frame), ["  "]);
 });
 
-test("setCell writes a cloned single-character cell", () => {
+test("setCell writes a cloned normalized cell without slicing graphemes", () => {
   const frame = createFrame(2, 1);
   const style = { foreground: "red", bold: true };
   const cell = { char: "XYZ", style };
@@ -62,13 +63,14 @@ test("setCell writes a cloned single-character cell", () => {
   style.foreground = "blue";
 
   assert.deepEqual(getCell(frame, 1, 0), {
-    char: "X",
+    char: "XYZ",
     style: {
       foreground: "red",
       bold: true
-    }
+    },
+    width: 1
   });
-  assert.deepEqual(frameToLines(frame), [" X"]);
+  assert.deepEqual(frameToLines(frame), [" XYZ"]);
 });
 
 test("writeText writes a single line and clips horizontally", () => {
@@ -102,5 +104,52 @@ test("writeText applies cloned style to written cells", () => {
   assert.deepEqual(getCell(frame, 1, 0)?.style, {
     foreground: "green",
     underline: true
+  });
+});
+
+test("writeText writes wide graphemes with placeholder cells", () => {
+  const frame = createFrame(4, 1);
+
+  assert.equal(writeText(frame, 0, 0, "A中"), 3);
+
+  assert.deepEqual(frameToLines(frame), ["A中 "]);
+  assert.deepEqual(getCell(frame, 1, 0), {
+    char: "中",
+    style: {},
+    width: 2
+  });
+  assert.deepEqual(getCell(frame, 2, 0), {
+    char: "",
+    style: {},
+    width: 0
+  });
+});
+
+test("writeText preserves emoji surrogate pairs", () => {
+  const frame = createFrame(3, 1);
+
+  assert.equal(writeText(frame, 0, 0, "🙂"), 2);
+
+  assert.deepEqual(frameToLines(frame), ["🙂 "]);
+  assert.equal(getCell(frame, 0, 0)?.char, "🙂");
+  assert.equal(getCell(frame, 1, 0)?.width, 0);
+});
+
+test("writeText clears an old wide character when writing into its placeholder", () => {
+  const frame = createFrame(3, 1);
+
+  writeText(frame, 0, 0, "中");
+  writeText(frame, 1, 0, "A");
+
+  assert.deepEqual(frameToLines(frame), [" A "]);
+  assert.deepEqual(getCell(frame, 0, 0), {
+    char: " ",
+    style: {},
+    width: 1
+  });
+  assert.deepEqual(getCell(frame, 1, 0), {
+    char: "A",
+    style: {},
+    width: 1
   });
 });

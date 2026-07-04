@@ -15,6 +15,8 @@ LayoutNode → Frame → cell diff → ANSI patch string
 - `renderer.reset()` — clear previous frame (for resize/clear screen)
 - Default focused inverse style with `focusStyle: "none"` opt-out
 - Cell-level diff for minimal ANSI output
+- Wide-cell frame model for CJK, common emoji, and combining marks
+- Placeholder cells for wide grapheme continuation columns
 
 ## Usage
 

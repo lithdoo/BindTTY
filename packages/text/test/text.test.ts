@@ -5,12 +5,38 @@ import {
   layoutText,
   measureText,
   measureTextWidth,
-  readTextWrapMode
+  readTextWrapMode,
+  segmentText,
+  sliceTextByWidth
 } from "@bindtty/text";
 
 test("measureTextWidth measures ASCII length", () => {
   assert.equal(measureTextWidth("BindTTY"), 7);
   assert.equal(measureTextWidth(""), 0);
+});
+
+test("measureTextWidth uses terminal display width", () => {
+  assert.equal(measureTextWidth("中"), 2);
+  assert.equal(measureTextWidth("🙂"), 2);
+  assert.equal(measureTextWidth("e\u0301"), 1);
+  assert.equal(measureTextWidth("A中🙂e\u0301"), 6);
+});
+
+test("segmentText returns grapheme display widths", () => {
+  assert.deepEqual(segmentText("A中🙂e\u0301"), [
+    { text: "A", width: 1 },
+    { text: "中", width: 2 },
+    { text: "🙂", width: 2 },
+    { text: "e\u0301", width: 1 }
+  ]);
+});
+
+test("sliceTextByWidth does not return partial wide graphemes", () => {
+  assert.equal(sliceTextByWidth("A中B", 0, 2), "A");
+  assert.equal(sliceTextByWidth("A中B", 1, 3), "中");
+  assert.equal(sliceTextByWidth("A中B", 2, 4), "B");
+  assert.equal(sliceTextByWidth("🙂A", 0, 1), "");
+  assert.equal(sliceTextByWidth("🙂A", 0, 2), "🙂");
 });
 
 test("measureText measures multiline ASCII by widest line", () => {
@@ -64,6 +90,16 @@ test("layoutText hard mode chunks by width", () => {
     height: 2,
     lines: ["abc", "def"]
   });
+  assert.deepEqual(layoutText("中中中", { width: 4, wrap: "hard" }), {
+    width: 4,
+    height: 2,
+    lines: ["中中", "中"]
+  });
+  assert.deepEqual(layoutText("A中B", { width: 3, wrap: "hard" }), {
+    width: 3,
+    height: 2,
+    lines: ["A中", "B"]
+  });
 });
 
 test("layoutText supports truncate modes", () => {
@@ -81,6 +117,16 @@ test("layoutText supports truncate modes", () => {
     width: 4,
     height: 1,
     lines: ["…def"]
+  });
+  assert.deepEqual(layoutText("中中中", { width: 5, wrap: "truncate-end" }), {
+    width: 5,
+    height: 1,
+    lines: ["中中…"]
+  });
+  assert.deepEqual(layoutText("🙂🙂🙂", { width: 3, wrap: "truncate-middle" }), {
+    width: 1,
+    height: 1,
+    lines: ["…"]
   });
 });
 

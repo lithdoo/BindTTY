@@ -1,4 +1,5 @@
 import type { Cell, CellStyle, Frame } from "./types.js";
+import { segmentText } from "@bindtty/text";
 
 export function createFrame(width: number, height: number): Frame {
   const normalizedWidth = toNonNegativeInteger(width);
@@ -43,16 +44,29 @@ export function writeText(
 ): number {
   const firstLine = text.split("\n", 1)[0] ?? "";
   let written = 0;
+  let cursorX = x;
 
-  for (let offset = 0; offset < firstLine.length; offset += 1) {
-    if (
-      setCell(frame, x + offset, y, {
-        char: firstLine[offset] ?? " ",
-        style
-      })
-    ) {
-      written += 1;
+  for (const segment of segmentText(firstLine)) {
+    if (segment.width <= 0) {
+      continue;
     }
+
+    if (canDrawWholeSegment(frame, cursorX, y, segment.width)) {
+      clearCellsForWrite(frame, cursorX, y, segment.width);
+      setCell(frame, cursorX, y, {
+        char: segment.text,
+        style,
+        width: segment.width
+      });
+
+      for (let offset = 1; offset < segment.width; offset += 1) {
+        setCell(frame, cursorX + offset, y, createPlaceholderCell(style));
+      }
+
+      written += segment.width;
+    }
+
+    cursorX += segment.width;
   }
 
   return written;
@@ -65,7 +79,8 @@ export function frameToLines(frame: Frame): string[] {
     let line = "";
 
     for (let x = 0; x < frame.width; x += 1) {
-      line += getCell(frame, x, y)?.char ?? " ";
+      const cell = getCell(frame, x, y);
+      line += cell?.width === 0 ? "" : cell?.char ?? " ";
     }
 
     lines.push(line);
@@ -74,17 +89,66 @@ export function frameToLines(frame: Frame): string[] {
   return lines;
 }
 
-function createBlankCell(): Cell {
+export function frameToDebugLines(frame: Frame): string[] {
+  const lines: string[] = [];
+
+  for (let y = 0; y < frame.height; y += 1) {
+    let line = "";
+
+    for (let x = 0; x < frame.width; x += 1) {
+      const cell = getCell(frame, x, y);
+      line += cell?.width === 0 ? "·" : cell?.char ?? " ";
+    }
+
+    lines.push(line);
+  }
+
+  return lines;
+}
+
+export function createBlankCell(style: CellStyle = {}): Cell {
   return {
     char: " ",
-    style: {}
+    style: cloneStyle(style),
+    width: 1
   };
 }
 
-function cloneCell(cell: Cell): Cell {
+export function createTextCell(
+  text: string,
+  width: 1 | 2,
+  style: CellStyle = {}
+): Cell {
   return {
-    char: normalizeChar(cell.char),
-    style: cloneStyle(cell.style)
+    char: text,
+    style: cloneStyle(style),
+    width
+  };
+}
+
+export function createPlaceholderCell(style: CellStyle = {}): Cell {
+  return {
+    char: "",
+    style: cloneStyle(style),
+    width: 0
+  };
+}
+
+export function isPlaceholderCell(cell: Cell): boolean {
+  return cell.width === 0;
+}
+
+export function isWideLeadingCell(cell: Cell): boolean {
+  return cell.width === 2;
+}
+
+function cloneCell(cell: Cell): Cell {
+  const width = normalizeWidth(cell);
+
+  return {
+    char: width === 0 ? "" : normalizeChar(cell.char),
+    style: cloneStyle(cell.style),
+    width
   };
 }
 
@@ -93,7 +157,71 @@ function cloneStyle(style: CellStyle): CellStyle {
 }
 
 function normalizeChar(char: string): string {
-  return char.length > 0 ? char[0] ?? " " : " ";
+  return char.length > 0 ? char : " ";
+}
+
+function normalizeWidth(cell: Cell): 0 | 1 | 2 {
+  if (cell.width === 0 || cell.width === 1 || cell.width === 2) {
+    return cell.width;
+  }
+
+  return 1;
+}
+
+function canDrawWholeSegment(
+  frame: Frame,
+  x: number,
+  y: number,
+  width: number
+): boolean {
+  return (
+    Number.isInteger(x) &&
+    Number.isInteger(y) &&
+    y >= 0 &&
+    y < frame.height &&
+    x >= 0 &&
+    x + width <= frame.width
+  );
+}
+
+function clearCellsForWrite(
+  frame: Frame,
+  x: number,
+  y: number,
+  width: number
+): void {
+  for (let col = x; col < x + width; col += 1) {
+    clearWideCellAt(frame, col, y);
+  }
+}
+
+function clearWideCellAt(frame: Frame, x: number, y: number): void {
+  const cell = getCell(frame, x, y);
+
+  if (!cell) {
+    return;
+  }
+
+  if (cell.width === 2) {
+    setCell(frame, x, y, createBlankCell());
+    setCell(frame, x + 1, y, createBlankCell());
+    return;
+  }
+
+  if (cell.width === 0) {
+    const leadingX = findWideLeadingCell(frame, x, y);
+
+    if (leadingX !== null) {
+      setCell(frame, leadingX, y, createBlankCell());
+      setCell(frame, leadingX + 1, y, createBlankCell());
+    }
+  }
+}
+
+function findWideLeadingCell(frame: Frame, x: number, y: number): number | null {
+  const previous = getCell(frame, x - 1, y);
+
+  return previous?.width === 2 ? x - 1 : null;
 }
 
 function getCellIndex(frame: Frame, x: number, y: number): number {

@@ -1,4 +1,5 @@
 import { measureTextWidth } from "./width.js";
+import { segmentText } from "./segment.js";
 
 export function hardWrapLine(line: string, width: number): string[] {
   if (width <= 0 || line === "") {
@@ -6,9 +7,38 @@ export function hardWrapLine(line: string, width: number): string[] {
   }
 
   const lines: string[] = [];
+  let current = "";
+  let currentWidth = 0;
 
-  for (let index = 0; index < line.length; index += width) {
-    lines.push(line.slice(index, index + width));
+  for (const segment of segmentText(line)) {
+    if (segment.width === 0) {
+      current += segment.text;
+      continue;
+    }
+
+    if (current !== "" && currentWidth + segment.width > width) {
+      lines.push(current);
+      current = "";
+      currentWidth = 0;
+    }
+
+    if (segment.width > width) {
+      if (current !== "") {
+        lines.push(current);
+        current = "";
+        currentWidth = 0;
+      }
+
+      lines.push(segment.text);
+      continue;
+    }
+
+    current += segment.text;
+    currentWidth += segment.width;
+  }
+
+  if (current !== "" || lines.length === 0) {
+    lines.push(current);
   }
 
   return lines;
