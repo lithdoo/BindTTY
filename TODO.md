@@ -32,7 +32,7 @@
 ## P2 — 组件生态
 
 - [x] `Checkbox` widget
-- [ ] `Select` widget（单选）
+- [x] `Select` widget（单选）
 - [x] `ProgressBar` widget（见 [doc/specs/PROGRESS_BAR.md](doc/specs/PROGRESS_BAR.md)）
 - [x] VScrollView / HScrollView scrollbar（视觉指示，非鼠标交互）
 - [x] ScrollView 双轴滚动（X+Y；见 [doc/specs/SCROLL_VIEWPORT.md](doc/specs/SCROLL_VIEWPORT.md) §5.6）

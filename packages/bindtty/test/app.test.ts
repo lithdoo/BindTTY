@@ -10,6 +10,7 @@ import {
   HScrollView,
   ScrollView,
   ProgressBar,
+  Select,
   TextInput,
   computed,
   createApp,
@@ -225,6 +226,10 @@ test("bindtty exports the Button widget", () => {
 
 test("bindtty exports the Checkbox widget", () => {
   assert.equal(typeof Checkbox, "function");
+});
+
+test("bindtty exports the Select widget", () => {
+  assert.equal(typeof Select, "function");
 });
 
 test("bindtty exports the ProgressBar widget", () => {

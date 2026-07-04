@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { stripVTControlCharacters } from "node:util";
 
-import { Button, Checkbox, HScrollView, List, ProgressBar, ScrollView, VScrollView, TextInput, createApp } from "bindtty";
+import { Button, Checkbox, HScrollView, List, ProgressBar, ScrollView, Select, VScrollView, TextInput, createApp } from "bindtty";
 import type { LayoutNode } from "@bindtty/layout";
 import { createSignal } from "@bindtty/signal";
 import { ANSI, createNodeTerminal } from "@bindtty/terminal";
@@ -410,6 +410,49 @@ test("tsx app toggles Checkbox with Space", async () => {
   await nextMicrotask();
 
   assert.match(visibleText(stdout.writes.at(-1)), /\[x\] Agree/);
+
+  app.dispose();
+});
+
+test("tsx app changes Select with Down", async () => {
+  const stdout = createFakeStdout(24, 12);
+  const stdin = createFakeStdin();
+  const value = createSignal("a");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <Select
+      label="Pick"
+      height={3}
+      options={[
+        { value: "a", label: "Option A" },
+        { value: "b", label: "Option B" },
+        { value: "c", label: "Option C" }
+      ]}
+      value={value}
+      onChange={(nextValue) => {
+        value.set(nextValue);
+      }}
+    />,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /> Option A/);
+
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+
+  assert.equal(value.get(), "b");
+  stdout.emitResize();
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /> Option B/);
 
   app.dispose();
 });

@@ -3,6 +3,7 @@ export { Checkbox } from "./checkbox.js";
 export { HScrollView } from "./h-scroll-view.js";
 export { List } from "./list.js";
 export { ProgressBar, renderProgressBar, renderProgressPercent } from "./progress-bar.js";
+export { Select } from "./select.js";
 export { ScrollView } from "./scroll-view.js";
 export { TextInput } from "./text-input.js";
 export {
@@ -19,6 +20,11 @@ export type {
   ProgressBarProps,
   ProgressBarStyleProps
 } from "./progress-bar.js";
+export type {
+  SelectOption,
+  SelectProps,
+  SelectStyleProps
+} from "./select.js";
 export type {
   ScrollViewProps,
   ScrollViewShowScrollbar,

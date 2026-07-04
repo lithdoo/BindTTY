@@ -7,6 +7,7 @@ export {
   List,
   ProgressBar,
   ScrollView,
+  Select,
   TextInput,
   VScrollView
 } from "@bindtty/widgets";
@@ -36,6 +37,9 @@ export type {
   ListProps,
   ProgressBarProps,
   ProgressBarStyleProps,
+  SelectOption,
+  SelectProps,
+  SelectStyleProps,
   ScrollViewProps,
   ScrollViewShowScrollbar,
   ScrollViewStyleProps,

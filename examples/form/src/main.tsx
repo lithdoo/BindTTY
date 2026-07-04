@@ -1,8 +1,9 @@
-import { Checkbox, TextInput, createApp, createSignal } from "bindtty";
+import { Checkbox, Select, TextInput, createApp, createSignal } from "bindtty";
 import { createNodeTerminal } from "@bindtty/terminal";
 
 const value = createSignal("");
 const agree = createSignal(false);
+const language = createSignal("ts");
 const status = createSignal("Type a name and press Enter");
 
 const terminal = createNodeTerminal({
@@ -31,6 +32,19 @@ const app = createApp(
       checked={agree}
       onChange={(nextChecked) => {
         agree.set(nextChecked);
+      }}
+    />
+    <Select
+      label="Language"
+      height={3}
+      options={[
+        { value: "ts", label: "TypeScript" },
+        { value: "js", label: "JavaScript" },
+        { value: "rs", label: "Rust" }
+      ]}
+      value={language}
+      onChange={(nextLanguage) => {
+        language.set(nextLanguage);
       }}
     />
     <text value={status} />
