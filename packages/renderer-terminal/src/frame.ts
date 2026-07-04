@@ -34,11 +34,41 @@ export function setCell(frame: Frame, x: number, y: number, cell: Cell): boolean
   const clonedCell = cloneCell(cell);
   const width = clonedCell.width ?? 1;
 
+  if (width === 0) {
+    throw new Error("Invalid placeholder cell: use wide text writes to create placeholders");
+  }
+
   if (width > 1 && x + width > frame.width) {
     throw new Error("Invalid wide cell: cell width exceeds frame bounds");
   }
 
-  frame.cells[getCellIndex(frame, x, y)] = clonedCell;
+  clearCellsForWrite(frame, x, y, width);
+  setCellRaw(frame, x, y, clonedCell);
+
+  for (let offset = 1; offset < width; offset += 1) {
+    setCellRaw(frame, x + offset, y, createPlaceholderCell(clonedCell.style));
+  }
+
+  return true;
+}
+
+export function transformCellStyle(
+  frame: Frame,
+  x: number,
+  y: number,
+  transform: (style: CellStyle) => CellStyle
+): boolean {
+  const cell = getCell(frame, x, y);
+
+  if (!cell) {
+    return false;
+  }
+
+  setCellRaw(frame, x, y, {
+    char: cell.char,
+    style: transform(cell.style),
+    width: cell.width
+  });
   return true;
 }
 
@@ -60,14 +90,14 @@ export function writeText(
 
     if (canDrawWholeSegment(frame, cursorX, y, segment.width)) {
       clearCellsForWrite(frame, cursorX, y, segment.width);
-      setCell(frame, cursorX, y, {
+      setCellRaw(frame, cursorX, y, {
         char: segment.text,
         style,
         width: segment.width
       });
 
       for (let offset = 1; offset < segment.width; offset += 1) {
-        setCell(frame, cursorX + offset, y, createPlaceholderCell(style));
+        setCellRaw(frame, cursorX + offset, y, createPlaceholderCell(style));
       }
 
       written += segment.width;
@@ -168,6 +198,22 @@ function cloneStyle(style: CellStyle): CellStyle {
   return { ...style };
 }
 
+function setCellRaw(frame: Frame, x: number, y: number, cell: Cell): boolean {
+  if (!isInsideFrame(frame, x, y)) {
+    return false;
+  }
+
+  const clonedCell = cloneCell(cell);
+  const width = clonedCell.width ?? 1;
+
+  if (width > 1 && x + width > frame.width) {
+    throw new Error("Invalid wide cell: cell width exceeds frame bounds");
+  }
+
+  frame.cells[getCellIndex(frame, x, y)] = clonedCell;
+  return true;
+}
+
 function normalizeChar(char: string): string {
   return char.length > 0 ? char : " ";
 }
@@ -239,8 +285,8 @@ function clearWideCellAt(frame: Frame, x: number, y: number): void {
   }
 
   if (cell.width === 2) {
-    setCell(frame, x, y, createBlankCell());
-    setCell(frame, x + 1, y, createBlankCell());
+    setCellRaw(frame, x, y, createBlankCell());
+    setCellRaw(frame, x + 1, y, createBlankCell());
     return;
   }
 
@@ -248,8 +294,8 @@ function clearWideCellAt(frame: Frame, x: number, y: number): void {
     const leadingX = findWideLeadingCell(frame, x, y);
 
     if (leadingX !== null) {
-      setCell(frame, leadingX, y, createBlankCell());
-      setCell(frame, leadingX + 1, y, createBlankCell());
+      setCellRaw(frame, leadingX, y, createBlankCell());
+      setCellRaw(frame, leadingX + 1, y, createBlankCell());
     }
   }
 }

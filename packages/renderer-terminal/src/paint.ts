@@ -2,11 +2,10 @@ import type { LayoutNode, LayoutRect, LayoutViewport } from "@bindtty/layout";
 import { layoutText, readTextWrapMode, segmentText } from "@bindtty/text";
 import type { MountedElementNode } from "@bindtty/vnode";
 import {
-  createBlankCell,
   createFrame,
-  createPlaceholderCell,
   getCell,
-  setCell
+  setCell,
+  transformCellStyle
 } from "./frame.js";
 import { readPaintStyle, toBorderCellStyle, toCellStyle } from "./style.js";
 import type { CellStyle, Frame } from "./types.js";
@@ -275,14 +274,10 @@ function paintFocusedState(
       const cell = getCell(frame, col, row);
 
       if (cell) {
-        setCellClipped(frame, col, row, {
-          char: cell.char,
-          style: {
-            ...cell.style,
-            inverse: true
-          },
-          width: cell.width
-        }, context);
+        transformCellStyle(frame, col, row, (style) => ({
+          ...style,
+          inverse: true
+        }));
       }
     }
   }
@@ -311,22 +306,11 @@ function writeTextClipped(
     }
 
     if (canDrawWholeSegment(cursorX, y, segment.width, context.clip)) {
-      clearCellsForWrite(frame, cursorX, y, segment.width);
       setCellClipped(frame, cursorX, y, {
         char: segment.text,
         style,
         width: segment.width
       }, context);
-
-      for (let offset = 1; offset < segment.width; offset += 1) {
-        setCellClipped(
-          frame,
-          cursorX + offset,
-          y,
-          createPlaceholderCell(style),
-          context
-        );
-      }
 
       written += segment.width;
     }
@@ -350,46 +334,6 @@ function canDrawWholeSegment(
     x >= clip.x &&
     x + width <= clip.x + clip.width
   );
-}
-
-function clearCellsForWrite(
-  frame: Frame,
-  x: number,
-  y: number,
-  width: number
-): void {
-  for (let col = x; col < x + width; col += 1) {
-    clearWideCellAt(frame, col, y);
-  }
-}
-
-function clearWideCellAt(frame: Frame, x: number, y: number): void {
-  const cell = getCell(frame, x, y);
-
-  if (!cell) {
-    return;
-  }
-
-  if (cell.width === 2) {
-    setCell(frame, x, y, createBlankCell());
-    setCell(frame, x + 1, y, createBlankCell());
-    return;
-  }
-
-  if (cell.width === 0) {
-    const leadingX = findWideLeadingCell(frame, x, y);
-
-    if (leadingX !== null) {
-      setCell(frame, leadingX, y, createBlankCell());
-      setCell(frame, leadingX + 1, y, createBlankCell());
-    }
-  }
-}
-
-function findWideLeadingCell(frame: Frame, x: number, y: number): number | null {
-  const previous = getCell(frame, x - 1, y);
-
-  return previous?.width === 2 ? x - 1 : null;
 }
 
 function setCellClipped(

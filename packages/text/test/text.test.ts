@@ -102,6 +102,19 @@ test("layoutText hard mode chunks by width", () => {
   });
 });
 
+test("layoutText wrap modes preserve graphemes wider than the target width", () => {
+  assert.deepEqual(layoutText("中", { width: 1, wrap: "hard" }), {
+    width: 2,
+    height: 1,
+    lines: ["中"]
+  });
+  assert.deepEqual(layoutText("🙂", { width: 1, wrap: "wrap" }), {
+    width: 2,
+    height: 1,
+    lines: ["🙂"]
+  });
+});
+
 test("layoutText supports truncate modes", () => {
   assert.deepEqual(layoutText("abcdef", { width: 4, wrap: "truncate-end" }), {
     width: 4,

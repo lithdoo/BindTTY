@@ -545,6 +545,8 @@ hard:
 
 ```
 
+注意：wrap / hard wrap 的优先级是“不切断 grapheme”。如果单个 grapheme 的 display width 大于目标 width，例如 width = 1 时遇到 `"中"` 或 `"🙂"`，结果允许产生 display width 大于目标 width 的单行。最终 renderer 绘制时仍按完整 grapheme clipping，不绘制半个宽字符。
+
 ## 8. Frame / Cell 设计
 
 ### 8.1 当前问题
@@ -656,10 +658,12 @@ char[0]
 ```text
 setCell 不负责把任意 string 切成 char。
 setCell 只接受已经规范化过的 Cell。
-setCell 必须拒绝不规范 Cell，而不是静默截断或静默改写。
-setCell 不自动写 placeholder；写入 width=2 leading cell 时，x + width 必须落在 frame 内。
+setCell 必须拒绝不规范 Cell，而不是静默截断。
+setCell 是 public safe write：写入 width=1 / width=2 前会清理目标区域已有 wide cell。
+setCell 写入 width=2 leading cell 时，会自动写入后一列 placeholder。
+setCell 不允许外部直接写入 width=0 placeholder；placeholder 只能由 wide text / wide cell 写入流程创建。
 写入 text 的地方必须先 segmentText()。
-frame.writeText() 当前也是 text 写入入口，必须同步改为 segment-based，或在阶段 4 标记为仅测试/内部 helper 并改用统一 writeTextLineClipped()。
+frame.writeText() 当前也是 text 写入入口，必须同步改为 segment-based。
 
 ```
 
@@ -670,8 +674,9 @@ frame.writeText() 当前也是 text 写入入口，必须同步改为 segment-ba
 2. width = 1/2 时 char 必须是单个 grapheme。
 3. width = 1/2 时 grapheme display width 必须匹配 cell.width。
 4. width = 2 时必须完整落在 frame 内，否则抛错。
-5. width 缺省时按 1 处理，用于兼容旧 ASCII helper。
-6. style shallow clone。
+5. public setCell() 不接受直接写入 width = 0 placeholder。
+6. width 缺省时按 1 处理，用于兼容旧 ASCII helper。
+7. style shallow clone。
 
 ```
 
@@ -720,24 +725,16 @@ function writeSegment(
     return;
   }
 
-  clearCellsForWrite(frame, x, y, segment.width);
-
   setCell(frame, x, y, {
     char: segment.text,
     width: segment.width,
     style
   });
-
-  for (let offset = 1; offset < segment.width; offset += 1) {
-    setCell(frame, x + offset, y, {
-      char: "",
-      width: 0,
-      style
-    });
-  }
 }
 
 ```
+
+public `setCell()` 已经承担清理旧 wide cell 和写入 placeholder 的责任。内部可以保留 raw setter，但 raw setter 只能被 Frame writer 使用，不能作为 painter 的通用出口。
 
 ### 9.3 canDrawWholeSegment()
 
@@ -770,7 +767,7 @@ function canDrawWholeSegment(
 
 ### 9.4 clearCellsForWrite()
 
-写入任何 segment 前，必须清理目标区域内可能存在的旧 wide char。
+写入任何内容 cell 前，必须清理目标区域内可能存在的旧 wide char。这个规则由 Frame writer / public `setCell()` 统一维护，painter 不应复制一份清理逻辑。
 
 ```ts
 function clearCellsForWrite(

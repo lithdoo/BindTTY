@@ -477,19 +477,21 @@ export interface CellStyle {
 
 ```text
 width = 0:
-  char 必须是 ""
+  char 必须是 ""，且不能通过 public setCell() 直接写入
 
 width = 1 / 2:
   char 必须是单个 grapheme，且 display width 必须等于 cell.width
 
 width = 2:
-  x + width 必须小于等于 frame.width；setCell() 不自动写 placeholder
+  x + width 必须小于等于 frame.width；setCell() 会自动写后一列 placeholder
 
 width 缺省:
   按 width = 1 处理，用于兼容旧 ASCII helper
 ```
 
 不合法的 cell 会抛错，避免一个 width=1 cell 存入多个 grapheme 后破坏 Frame column 语义。
+
+内容写入统一走 safe writer：`setCell()` / text 写入会在落笔前清理目标区域关联的旧 wide leading / placeholder。style-only 操作使用独立的 style transform，不改变 `char` / `width` 结构。
 
 第一版 `cells` 可以是一维数组：
 

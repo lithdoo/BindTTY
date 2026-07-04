@@ -70,7 +70,15 @@ test("setCell writes a cloned normalized cell without slicing graphemes", () => 
     },
     width: 2
   });
-  assert.deepEqual(frameToLines(frame), ["🙂 "]);
+  assert.deepEqual(frameToLines(frame), ["🙂"]);
+  assert.deepEqual(getCell(frame, 1, 0), {
+    char: "",
+    style: {
+      foreground: "red",
+      bold: true
+    },
+    width: 0
+  });
 });
 
 test("setCell rejects cells whose char does not match their width", () => {
@@ -91,6 +99,10 @@ test("setCell rejects cells whose char does not match their width", () => {
   assert.throws(
     () => setCell(frame, 0, 0, { char: "A", style: {}, width: 0 }),
     /placeholder cell/
+  );
+  assert.throws(
+    () => setCell(frame, 0, 0, { char: "", style: {}, width: 0 }),
+    /use wide text writes/
   );
   assert.throws(
     () => setCell(frame, 1, 0, { char: "中", style: {}, width: 2 }),
@@ -174,6 +186,44 @@ test("writeText clears an old wide character when writing into its placeholder",
   });
   assert.deepEqual(getCell(frame, 1, 0), {
     char: "A",
+    style: {},
+    width: 1
+  });
+});
+
+test("setCell clears an old wide character when writing into its placeholder", () => {
+  const frame = createFrame(3, 1);
+
+  writeText(frame, 0, 0, "中");
+  setCell(frame, 1, 0, { char: "A", style: {} });
+
+  assert.deepEqual(frameToLines(frame), [" A "]);
+  assert.deepEqual(getCell(frame, 0, 0), {
+    char: " ",
+    style: {},
+    width: 1
+  });
+  assert.deepEqual(getCell(frame, 1, 0), {
+    char: "A",
+    style: {},
+    width: 1
+  });
+});
+
+test("setCell clears an old wide character when writing over its leading cell", () => {
+  const frame = createFrame(3, 1);
+
+  writeText(frame, 0, 0, "中");
+  setCell(frame, 0, 0, { char: "A", style: {} });
+
+  assert.deepEqual(frameToLines(frame), ["A  "]);
+  assert.deepEqual(getCell(frame, 0, 0), {
+    char: "A",
+    style: {},
+    width: 1
+  });
+  assert.deepEqual(getCell(frame, 1, 0), {
+    char: " ",
     style: {},
     width: 1
   });

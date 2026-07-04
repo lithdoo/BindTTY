@@ -188,6 +188,48 @@ test("paintLayout clips wide text by whole grapheme", () => {
   assert.deepEqual(frameToLines(frame), [" "]);
 });
 
+test("paintLayout clears wide text when background covers its placeholder", () => {
+  const text = layout(element("text", { value: "中" }), rect(0, 0, 2, 1));
+  const cover = layout(element("box", { background: "blue" }), rect(1, 0, 1, 1));
+  const root = layout(element("screen"), rect(0, 0, 2, 1), [text, cover]);
+  const frame = paintLayout(root, { viewport: { width: 2, height: 1 } });
+
+  assert.deepEqual(frameToLines(frame), ["  "]);
+  assertFrameInvariant(frame);
+  assert.deepEqual(getCell(frame, 0, 0), {
+    char: " ",
+    style: {},
+    width: 1
+  });
+  assert.deepEqual(getCell(frame, 1, 0), {
+    char: " ",
+    style: {
+      background: "blue"
+    },
+    width: 1
+  });
+});
+
+test("paintLayout clears wide text when border covers its leading cell", () => {
+  const text = layout(element("text", { value: "中" }), rect(0, 0, 2, 1));
+  const cover = layout(element("box", { border: true }), rect(0, 0, 1, 1));
+  const root = layout(element("screen"), rect(0, 0, 2, 1), [text, cover]);
+  const frame = paintLayout(root, { viewport: { width: 2, height: 1 } });
+
+  assert.deepEqual(frameToLines(frame), ["│ "]);
+  assertFrameInvariant(frame);
+  assert.deepEqual(getCell(frame, 0, 0), {
+    char: "│",
+    style: {},
+    width: 1
+  });
+  assert.deepEqual(getCell(frame, 1, 0), {
+    char: " ",
+    style: {},
+    width: 1
+  });
+});
+
 test("paintLayout treats null and undefined text values as empty text", () => {
   const nullText = layout(element("text", { value: null }), rect(0, 0, 4, 1));
   const undefinedText = layout(
@@ -276,6 +318,36 @@ test("paintLayout applies inverse style to focused text", () => {
     foreground: "red",
     bold: true,
     inverse: true
+  });
+});
+
+test("paintLayout applies inverse style to focused wide text without breaking placeholders", () => {
+  const root = layout(
+    element("text", { value: "中", color: "red" }),
+    rect(0, 0, 2, 1)
+  );
+  const frame = paintLayout(root, {
+    viewport: { width: 2, height: 1 },
+    isFocused: (mounted) => mounted === root.mounted
+  });
+
+  assert.deepEqual(frameToDebugLines(frame), ["中·"]);
+  assertFrameInvariant(frame);
+  assert.deepEqual(getCell(frame, 0, 0), {
+    char: "中",
+    style: {
+      foreground: "red",
+      inverse: true
+    },
+    width: 2
+  });
+  assert.deepEqual(getCell(frame, 1, 0), {
+    char: "",
+    style: {
+      foreground: "red",
+      inverse: true
+    },
+    width: 0
   });
 });
 
@@ -445,3 +517,30 @@ test("paintLayout throws for unsupported interactive elements", () => {
     /Unsupported paint element: input/
   );
 });
+
+function assertFrameInvariant(frame: ReturnType<typeof paintLayout>): void {
+  for (let y = 0; y < frame.height; y += 1) {
+    for (let x = 0; x < frame.width; x += 1) {
+      const cell = getCell(frame, x, y);
+
+      assert.ok(cell, `missing cell at ${x},${y}`);
+
+      if (cell.width === 2) {
+        assert.notEqual(x + 1, frame.width, `wide cell overflows at ${x},${y}`);
+        assert.equal(
+          getCell(frame, x + 1, y)?.width,
+          0,
+          `wide cell missing placeholder at ${x},${y}`
+        );
+      }
+
+      if (cell.width === 0) {
+        assert.equal(
+          getCell(frame, x - 1, y)?.width,
+          2,
+          `placeholder missing leading cell at ${x},${y}`
+        );
+      }
+    }
+  }
+}

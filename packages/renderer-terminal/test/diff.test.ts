@@ -4,7 +4,8 @@ import test from "node:test";
 import {
   createFrame,
   diffFrames,
-  setCell
+  setCell,
+  writeText
 } from "@bindtty/renderer-terminal";
 
 test("diffFrames creates a full patch when previous frame is null", () => {
@@ -161,8 +162,7 @@ test("diffFrames expands dirty ranges around wide cells", () => {
   const previous = createFrame(2, 1);
   const next = createFrame(2, 1);
 
-  setCell(previous, 0, 0, { char: "中", style: {}, width: 2 });
-  setCell(previous, 1, 0, { char: "", style: {}, width: 0 });
+  writeText(previous, 0, 0, "中");
   setCell(next, 0, 0, { char: "A", style: {} });
   setCell(next, 1, 0, { char: "B", style: {} });
 
@@ -198,8 +198,7 @@ test("diffFrames includes placeholder cells for new wide characters", () => {
 
   setCell(previous, 0, 0, { char: "A", style: {} });
   setCell(previous, 1, 0, { char: "B", style: {} });
-  setCell(next, 0, 0, { char: "中", style: {}, width: 2 });
-  setCell(next, 1, 0, { char: "", style: {}, width: 0 });
+  writeText(next, 0, 0, "中");
 
   assert.deepEqual(diffFrames(previous, next).changes, [
     {
