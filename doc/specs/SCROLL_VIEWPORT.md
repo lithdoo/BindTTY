@@ -702,4 +702,4 @@ const app = createApp(
 
 ## 10. 历史计划
 
-见 [archive/plans/M7_SCROLL_VIEWPORT_PLAN.md](../archive/plans/M7_SCROLL_VIEWPORT_PLAN.md)。
+见 [archive/plans/M7_SCROLL_VIEWPORT_PLAN.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/plans/M7_SCROLL_VIEWPORT_PLAN.md)。

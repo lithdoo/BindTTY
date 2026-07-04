@@ -34,7 +34,7 @@ doc/
 | plan 不进 specs/ | 计划全文只在 `archive/plans/`；spec 只写现行行为 |
 | 每个 rename 必有 redirect | 旧路径 stub 放在 `redirects/` |
 
-`@bindtty/signal` 无独立 doc：见 [architecture/DESIGN.md](./architecture/DESIGN.md) §20 与 [packages/signal/README.md](../packages/signal/README.md)。
+`@bindtty/signal` 无独立 doc：见 [architecture/DESIGN.md](./architecture/DESIGN.md) §20 与 [@bindtty/signal README](https://github.com/lithdoo/BindTTY/blob/main/packages/signal/README.md)。
 
 ---
 
@@ -138,7 +138,7 @@ doc/
 
 1. plan 全文移 `archive/plans/`
 2. 从 plan 摘现行行为到 `specs/`
-3. 从 [TODO.md](../TODO.md) 删除已完成项；阶段规划更新 [architecture/NEXT_STEPS.md](./architecture/NEXT_STEPS.md)
+3. 从 [TODO.md](https://github.com/lithdoo/BindTTY/blob/main/TODO.md) 删除已完成项；阶段规划更新 [architecture/NEXT_STEPS.md](./architecture/NEXT_STEPS.md)
 
 新横切能力：
 
@@ -147,3 +147,16 @@ doc/
 3. plan 细节直接进 `archive/plans/`
 
 可发布包若生产代码 `import "@bindtty/signal"`，须在 `package.json` 声明 `peerDependencies` + 保留 `dependencies` 中的同版本 `@bindtty/signal`（见 `bindtty`、`@bindtty/widgets`）。`runtime` / `layout` 等仅测试使用 signal 的包只放 `devDependencies`。
+
+---
+
+## 5. 站点发布
+
+Markdown 源码仍在 `doc/`；VitePress（`doc/.vitepress/config.mts`）仅负责构建静态站点，发布到 [https://lithdoo.github.io/BindTTY/](https://lithdoo.github.io/BindTTY/)。
+
+| 规则 | 说明 |
+| --- | --- |
+| 站外链接 | 链到仓库根、`TODO.md`、`packages/*/README`、`.github/` 时使用 GitHub blob 绝对 URL，不用 `../` 相对路径 |
+| Sidebar | 改文档索引时同步更新 `doc/.vitepress/config.mts` 的 `themeConfig.sidebar`（结构对齐 [README.md](./README.md)） |
+| 不上站 | `archive/`、`redirects/` 由 `srcExclude` / `rewrites` 处理，不直接出现在导航 |
+| 生成文档 | `docs:build` 会先运行 `gen:layout-props`，保证 [LAYOUT_PROPS.md](./specs/LAYOUT_PROPS.md) 为最新 |

@@ -229,7 +229,7 @@ MVP 建议：
 
 ## 7. 第一批 Widgets
 
-各控件 API 与行为见 [../widgets/](../widgets/)：
+各控件 API 与行为见 [../widgets/README.md](../widgets/README.md)：
 
 | 控件 | 文档 | 状态 |
 | --- | --- | --- |

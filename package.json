@@ -17,7 +17,13 @@
     "test:e2e:real:win": "npm run run:real:win --workspace @bindtty/e2e",
     "test:e2e:real:wsl": "npm run run:real:wsl --workspace @bindtty/e2e",
     "gen:layout-props": "npm run build --workspace @bindtty/layout && node scripts/gen-layout-props-matrix.mjs",
-    "check:layout-props": "npm run gen:layout-props && git diff --exit-code -- doc/specs/LAYOUT_PROPS.md"
+    "check:layout-props": "npm run gen:layout-props && git diff --exit-code -- doc/specs/LAYOUT_PROPS.md",
+    "docs:dev": "vitepress dev doc",
+    "docs:build": "npm run gen:layout-props && vitepress build doc",
+    "docs:preview": "vitepress preview doc"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.3"
   },
   "engines": {
     "node": ">=18"

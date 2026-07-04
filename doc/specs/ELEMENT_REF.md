@@ -860,7 +860,7 @@ state -> layout -> state
 任务：
 
 - [x] 更新 [VNODE.md](../packages/VNODE.md) 的 common props。
-- [x] 更新 [RUNTIME.md](./RUNTIME.md) 的 mount / dispose 语义。
+- [x] 更新 [RUNTIME.md](../packages/RUNTIME.md) 的 mount / dispose 语义。
 - [x] 更新 [APP.md](../packages/APP.md) 的 layout dispatch。
 - [x] 更新 [M7_SCROLL_VIEWPORT.md](./SCROLL_VIEWPORT.md) 的 scroll 数据流。
 - [x] 新增一个 ref 示例。

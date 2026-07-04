@@ -3,9 +3,9 @@
 > **类型**：architecture  
 > **状态**：active  
 > **最后核对**：2026-07  
-> **相关**：[ROADMAP.md](./ROADMAP.md) · [../../TODO.md](../../TODO.md) · [../widgets/TEXT_INPUT.md](../widgets/TEXT_INPUT.md)
+> **相关**：[ROADMAP.md](./ROADMAP.md) · [TODO.md](https://github.com/lithdoo/BindTTY/blob/main/TODO.md) · [../widgets/TEXT_INPUT.md](../widgets/TEXT_INPUT.md)
 
-开放任务 checklist 见根目录 [TODO.md](../../TODO.md)。本文档记录阶段判断、已完成项、优先级与版本目标。
+开放任务 checklist 见根目录 [TODO.md](https://github.com/lithdoo/BindTTY/blob/main/TODO.md)。本文档记录阶段判断、已完成项、优先级与版本目标。
 
 ---
 
@@ -48,7 +48,7 @@ TSX → ViewTemplate → MountedNode → LayoutNode → Frame → ANSI Patch
 
 ### 3.1 CI
 
-主 CI：GitHub Actions [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)（`ubuntu-latest`、Node 22）
+主 CI：GitHub Actions [ci.yml](https://github.com/lithdoo/BindTTY/blob/main/.github/workflows/ci.yml)（`ubuntu-latest`、Node 22）
 
 ```yaml
 npm ci
@@ -95,7 +95,7 @@ import { Button, List, TextInput } from "@bindtty/widgets";
 
 ### 3.5 文档漂移
 
-- ~~ROADMAP 早期 7 包 / 10 包叙述~~ → 已移入 [archive/plans/PACKAGE_MODEL_HISTORY.md](../archive/plans/PACKAGE_MODEL_HISTORY.md)；ROADMAP 仅描述现行 11 包模型。
+- ~~ROADMAP 早期 7 包 / 10 包叙述~~ → 已移入 [archive/plans/PACKAGE_MODEL_HISTORY.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/plans/PACKAGE_MODEL_HISTORY.md)；ROADMAP 仅描述现行 11 包模型。
 - 部分 archive 文档描述落地前状态；以根 README「当前完成状态」与各包 README 为准。
 
 ---
@@ -107,7 +107,7 @@ import { Button, List, TextInput } from "@bindtty/widgets";
 1. ~~GitHub Actions CI~~（已完成）
 2. `npm run publish:packages`
 3. 冻结 `bindtty` 顶层导出并更新 quick start（已完成）
-4. 文档统一为 11 包模型（ROADMAP 已完成；见 [archive/plans/PACKAGE_MODEL_HISTORY.md](../archive/plans/PACKAGE_MODEL_HISTORY.md)）
+4. 文档统一为 11 包模型（ROADMAP 已完成；见 [archive/plans/PACKAGE_MODEL_HISTORY.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/plans/PACKAGE_MODEL_HISTORY.md)）
 
 ### Phase B：Layout 与 Scroll（P1）
 
@@ -124,7 +124,7 @@ import { Button, List, TextInput } from "@bindtty/widgets";
 
 ### Phase D：暂缓项
 
-见 [TODO.md](../../TODO.md)「暂缓」与各 spec 非目标章节。
+见 [TODO.md](https://github.com/lithdoo/BindTTY/blob/main/TODO.md)「暂缓」与各 spec 非目标章节。
 
 ---
 
@@ -164,7 +164,7 @@ import { Button, List, TextInput } from "@bindtty/widgets";
 
 - CI
 - 实际 `npm publish`
-- 顶层 API 文档冻结（[packages/bindtty/README.md](../../packages/bindtty/README.md)）
+- 顶层 API 文档冻结（[bindtty README](https://github.com/lithdoo/BindTTY/blob/main/packages/bindtty/README.md)）
 
 ### 0.1.0-alpha.2（建议下一版）
 

@@ -92,7 +92,7 @@ packages/bindtty/
 | `@bindtty/renderer-terminal` | 已提供 `createTerminalRenderer()`、`render()`、`reset()` | 否 | app 只负责持有 renderer |
 | `@bindtty/vnode` | 已提供 `ViewTemplate` / `Template` 类型 | 否 | app 参数使用 `ViewTemplate` |
 | `@bindtty/signal` | 已提供响应式 API | 否 | 已由 `bindtty` re-export；子包仍可独立使用 |
-| `bindtty` | `createApp`、signal、widgets、JSX 转发 | 否 | alpha 公共 API 已冻结，见 [packages/bindtty/README.md](../../packages/bindtty/README.md) |
+| `bindtty` | `createApp`、signal、widgets、JSX 转发 | 否 | alpha 公共 API 已冻结，见 [bindtty README](https://github.com/lithdoo/BindTTY/blob/main/packages/bindtty/README.md) |
 
 需要注意的现有行为：
 

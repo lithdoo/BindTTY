@@ -11,7 +11,7 @@
 
 - [packages/LAYOUT.md](../packages/LAYOUT.md) — LayoutEngine、LayoutNode
 - [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md) — display-width / grapheme
-- [archive/plans/YOGA_LAYOUT_PLAN.md](../archive/plans/YOGA_LAYOUT_PLAN.md) — 完整历史计划
+- [archive/plans/YOGA_LAYOUT_PLAN.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/plans/YOGA_LAYOUT_PLAN.md) — 完整历史计划
 
 ---
 
@@ -131,4 +131,4 @@ layoutRoot(root, { viewport, engine: createBasicLayoutEngine() });
 
 ## 7. 历史计划
 
-完整分阶段 checklist（阶段 0–8、子计划 A/B）见 [archive/plans/YOGA_LAYOUT_PLAN.md](../archive/plans/YOGA_LAYOUT_PLAN.md)。
+完整分阶段 checklist（阶段 0–8、子计划 A/B）见 [archive/plans/YOGA_LAYOUT_PLAN.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/plans/YOGA_LAYOUT_PLAN.md)。

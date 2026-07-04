@@ -4,7 +4,7 @@
 
 - 总体架构见 [DESIGN.md](../architecture/DESIGN.md)
 - 实现计划见 [TUI_IMPLEMENTATION_PLAN.md](../architecture/ROADMAP.md)
-- 原始分拆文档备份见 [archive/VIEW_TEMPLATE.md](./archive/VIEW_TEMPLATE.md)、[archive/MOUNTED_NODE.md](./archive/MOUNTED_NODE.md)
+- 原始分拆文档备份见 [archive/VIEW_TEMPLATE.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/VIEW_TEMPLATE.md)、[archive/MOUNTED_NODE.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/MOUNTED_NODE.md)
 
 BindTTY 是一个面向 **MVVM + signal-driven TUI** 的 TypeScript/TSX 框架。
 

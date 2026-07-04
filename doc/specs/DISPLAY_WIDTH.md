@@ -7,8 +7,8 @@ BindTTY 在 **text → layout → renderer → ANSI** 全链路使用 **terminal
 > **状态**：implemented  
 > **最后核对**：2026-07  
 > **代码入口**：packages/text/src/ · packages/renderer-terminal/src/frame.ts  
-> **相关**：[RENDERER.md](../packages/RENDERER.md) · [../architecture/NEXT_STEPS.md](../architecture/NEXT_STEPS.md) · [../../TODO.md](../../TODO.md)  
-> 历史计划：[archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md](../archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md)
+> **相关**：[RENDERER.md](../packages/RENDERER.md) · [../architecture/NEXT_STEPS.md](../architecture/NEXT_STEPS.md) · [TODO.md](https://github.com/lithdoo/BindTTY/blob/main/TODO.md)  
+> 历史计划：[archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md)
 
 相关文档：
 
@@ -16,9 +16,9 @@ BindTTY 在 **text → layout → renderer → ANSI** 全链路使用 **terminal
 - [YOGA_AND_TEXT.md](./YOGA_AND_TEXT.md) — Yoga measure 与 `layoutText()` 集成
 - [LAYOUT.md](../packages/LAYOUT.md) — LayoutNode / contentSize
 - [TEXT_INPUT.md](../widgets/TEXT_INPUT.md) — TextInput 控件（**编辑语义见已知限制**）
-- [../packages/e2e/README.md](../packages/e2e/README.md) — 宽字符 E2E harness
+- [@bindtty/e2e README](https://github.com/lithdoo/BindTTY/blob/main/packages/e2e/README.md) — 宽字符 E2E harness
 - [../architecture/NEXT_STEPS.md](../architecture/NEXT_STEPS.md) — alpha hardening 规划
-- [../../TODO.md](../../TODO.md) — 开放改进项 checklist
+- [TODO.md](https://github.com/lithdoo/BindTTY/blob/main/TODO.md) — 开放改进项 checklist
 
 ---
 
@@ -230,7 +230,7 @@ npm run start --workspace @bindtty/example-wide-text
 
 ## 11. 未来方向
 
-需单独 spec 的项（详见 [TODO.md](../../TODO.md)「暂缓」与 [NEXT_STEPS.md](../architecture/NEXT_STEPS.md)）：
+需单独 spec 的项（详见 [TODO.md](https://github.com/lithdoo/BindTTY/blob/main/TODO.md)「暂缓」与 [NEXT_STEPS.md](../architecture/NEXT_STEPS.md)）：
 
 ```text
 1. RichText / TextSpan
@@ -243,5 +243,5 @@ npm run start --workspace @bindtty/example-wide-text
 
 ## 12. 文档迁移说明
 
-原 `doc/WIDE_TEXT_FRAME.md`（落地计划 + Ink 参考 + 分阶段 PR）已归档为 [archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md](../archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md)。  
+原 `doc/WIDE_TEXT_FRAME.md`（落地计划 + Ink 参考 + 分阶段 PR）已归档为 [archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md)。  
 日常开发与 code review 以 **本文档 + RENDERER.md** 为准。

@@ -2,6 +2,8 @@
 
 BindTTY 是一个面向 **MVVM + signal-driven TUI** 的 TypeScript/TSX 框架。它不是 React VDOM 的复刻，而是以 ViewModel binding 为核心的终端 UI 声明系统。
 
+📖 完整文档：https://lithdoo.github.io/BindTTY/
+
 ## 主链路
 
 ~~~text

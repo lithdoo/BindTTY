@@ -6,7 +6,7 @@
 > **代码入口**：packages/e2e/mock/ · packages/e2e/real/  
 > **相关**：[APP.md](../packages/APP.md) · [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) · [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md)
 
-相关文档：[packages/e2e/README.md](../../packages/e2e/README.md) · [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §8 · [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) §9
+相关文档：[@bindtty/e2e README](https://github.com/lithdoo/BindTTY/blob/main/packages/e2e/README.md) · [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §8 · [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) §9
 
 ## 1. 目标与范围
 
@@ -128,7 +128,7 @@ Real PTY（`packages/e2e/real/harness/`）：
 - `wide-text-app.tsx` — CJK + emoji 标题、ScrollView 滚动
 - `wide-text-resize-app.tsx` — 终端列宽变化后 hard wrap 高度变化
 
-详见 [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) §9 与 [../packages/e2e/README.md](../packages/e2e/README.md)。
+详见 [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) §9 与 [@bindtty/e2e README](https://github.com/lithdoo/BindTTY/blob/main/packages/e2e/README.md)。
 
 ## 后续阶段
 
@@ -156,7 +156,7 @@ npm run test:e2e:real:win   # Windows ConPTY
 npm run test:e2e:real:wsl   # WSL/Linux PTY（需 Ubuntu 等带 Node 的发行版）
 ```
 
-详见 [packages/e2e/README.md](../packages/e2e/README.md)。
+详见 [@bindtty/e2e README](https://github.com/lithdoo/BindTTY/blob/main/packages/e2e/README.md)。
 
 ### 阶段 5：Real PTY Smoke / Regression（已实现）
 

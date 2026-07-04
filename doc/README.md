@@ -1,6 +1,6 @@
 # BindTTY 文档
 
-项目主文档：[../README.md](../README.md)。维护规范：[CONVENTIONS.md](./CONVENTIONS.md)。
+项目主文档：[仓库 README](https://github.com/lithdoo/BindTTY/blob/main/README.md)。维护规范：[CONVENTIONS.md](./CONVENTIONS.md)。
 
 ## 读者路径
 
@@ -18,7 +18,7 @@
 | E2E 测试 | [testing/E2E.md](./testing/E2E.md) |
 | 里程碑 / 路线图 | [architecture/ROADMAP.md](./architecture/ROADMAP.md) |
 | Alpha hardening 规划 | [architecture/NEXT_STEPS.md](./architecture/NEXT_STEPS.md) |
-| 历史计划 | [archive/plans/](./archive/plans/) |
+| 历史计划 | [archive/plans（GitHub）](https://github.com/lithdoo/BindTTY/tree/main/doc/archive/plans) |
 
 ## architecture/
 
@@ -59,15 +59,15 @@
 | 文档 | 内容 |
 | --- | --- |
 | [E2E.md](./testing/E2E.md) | mock + real PTY E2E |
-| [../.github/workflows/ci.yml](../.github/workflows/ci.yml) | GitHub Actions CI（build / test / examples） |
-| [../packages/e2e/README.md](../packages/e2e/README.md) | E2E 包说明 |
+| [ci.yml](https://github.com/lithdoo/BindTTY/blob/main/.github/workflows/ci.yml) | GitHub Actions CI（build / test / examples） |
+| [@bindtty/e2e README](https://github.com/lithdoo/BindTTY/blob/main/packages/e2e/README.md) | E2E 包说明 |
 
 ## 其它
 
 | 文档 | 内容 |
 | --- | --- |
-| [../TODO.md](../TODO.md) | 开放改进项（可执行 checklist） |
-| [archive/](./archive/) | 历史备份与 [archive/plans/](./archive/plans/) |
-| [redirects/](./redirects/) | 旧文件名 stub |
+| [TODO.md](https://github.com/lithdoo/BindTTY/blob/main/TODO.md) | 开放改进项（可执行 checklist） |
+| [archive（GitHub）](https://github.com/lithdoo/BindTTY/tree/main/doc/archive) | 历史备份与 [archive/plans（GitHub）](https://github.com/lithdoo/BindTTY/tree/main/doc/archive/plans) |
+| [redirects（GitHub）](https://github.com/lithdoo/BindTTY/tree/main/doc/redirects) | 旧文件名 stub |
 
-`@bindtty/signal` 见 [architecture/DESIGN.md](./architecture/DESIGN.md) §20 与 [packages/signal/README.md](../packages/signal/README.md)。
+`@bindtty/signal` 见 [architecture/DESIGN.md](./architecture/DESIGN.md) §20 与 [@bindtty/signal README](https://github.com/lithdoo/BindTTY/blob/main/packages/signal/README.md)。
