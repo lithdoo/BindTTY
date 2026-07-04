@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { stripVTControlCharacters } from "node:util";
 
-import { Button, HScrollView, List, ScrollView, VScrollView, TextInput, createApp } from "bindtty";
+import { Button, Checkbox, HScrollView, List, ScrollView, VScrollView, TextInput, createApp } from "bindtty";
 import type { LayoutNode } from "@bindtty/layout";
 import { createSignal } from "@bindtty/signal";
 import { ANSI, createNodeTerminal } from "@bindtty/terminal";
@@ -375,6 +375,43 @@ test("tsx app dispatches terminal keys through Button widgets", async () => {
   await nextMicrotask();
 
   assert.equal(stdout.writes.length, writeCountAfterDispose);
+});
+
+test("tsx app toggles Checkbox with Space", async () => {
+  const stdout = createFakeStdout(24, 12);
+  const stdin = createFakeStdin();
+  const checked = createSignal(false);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <Checkbox
+      label="Agree"
+      checked={checked}
+      onChange={(nextChecked) => {
+        checked.set(nextChecked);
+      }}
+    />,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /\[ \] Agree/);
+
+  stdin.emitKey(" ", { name: "space" });
+  await nextMicrotask();
+
+  assert.equal(checked.get(), true);
+  stdout.emitResize();
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /\[x\] Agree/);
+
+  app.dispose();
 });
 
 test("tsx app dispatches terminal keys through TextInput widgets", async () => {

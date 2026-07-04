@@ -1,7 +1,8 @@
-import { TextInput, createApp, createSignal } from "bindtty";
+import { Checkbox, TextInput, createApp, createSignal } from "bindtty";
 import { createNodeTerminal } from "@bindtty/terminal";
 
 const value = createSignal("");
+const agree = createSignal(false);
 const status = createSignal("Type a name and press Enter");
 
 const terminal = createNodeTerminal({
@@ -23,6 +24,13 @@ const app = createApp(
       }}
       onSubmit={(nextValue) => {
         status.set(`Sent: ${nextValue}`);
+      }}
+    />
+    <Checkbox
+      label="Subscribe to updates"
+      checked={agree}
+      onChange={(nextChecked) => {
+        agree.set(nextChecked);
       }}
     />
     <text value={status} />

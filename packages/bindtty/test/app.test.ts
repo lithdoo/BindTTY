@@ -4,6 +4,7 @@ import { stripVTControlCharacters } from "node:util";
 
 import {
   Button,
+  Checkbox,
   List,
   VScrollView,
   HScrollView,
@@ -219,6 +220,10 @@ test("bindtty exports signal primitives", () => {
 
 test("bindtty exports the Button widget", () => {
   assert.equal(typeof Button, "function");
+});
+
+test("bindtty exports the Checkbox widget", () => {
+  assert.equal(typeof Checkbox, "function");
 });
 
 test("bindtty exports the TextInput widget", () => {

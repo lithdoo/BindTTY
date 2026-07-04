@@ -31,7 +31,7 @@
 
 ## P2 — 组件生态
 
-- [ ] `Checkbox` widget
+- [x] `Checkbox` widget
 - [ ] `Select` widget（单选）
 - [ ] `ProgressBar` widget
 - [x] VScrollView / HScrollView scrollbar（视觉指示，非鼠标交互）

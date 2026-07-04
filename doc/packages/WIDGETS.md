@@ -28,7 +28,7 @@ TSX
 它负责：
 
 ```text
-1. 提供 Button / TextInput / ScrollView / VScrollView / HScrollView / List 等高层组件，Checkbox / Select 等后续扩展。
+1. 提供 Button / TextInput / Checkbox / ScrollView / VScrollView / HScrollView / List 等高层组件，Select 等后续扩展。
 2. 把业务 props 转换成 intrinsic element 的 style props / interaction props。
 3. 把 keyboard event 转换成控件语义，例如 onPress、onInput、onChange。
 4. 通过 signal-friendly props 支持受控组件。
@@ -346,24 +346,53 @@ TextInput 是第二个落地控件，在 Button 之后实现。
 
 详细设计见 [TEXT_INPUT.md](../specs/TEXT_INPUT.md)。
 
-### 7.3 Checkbox / Select
+### 7.3 Checkbox
 
-这些控件可以在当前 Button / TextInput / VScrollView / List 之后逐步补。
+状态：已完成。
 
-建议顺序：
+受控 boolean 控件，验证 `onChange` 与 dynamic style（marker / label 分离渲染）。
 
-```text
-1. Button
-2. TextInput
-3. VScrollView
-4. HScrollView
-5. ScrollView（双轴）
-5. List
-5. Checkbox
-6. Select / Menu
+API：
+
+```ts
+export interface CheckboxProps extends CheckboxStyleProps {
+  id?: BindingValue<string | number>;
+  label?: BindingValue<string | number>;
+  checked: BindingValue<boolean>;
+  disabled?: BindingValue<boolean>;
+  onChange?: (nextChecked: boolean) => void;
+  onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
+}
 ```
 
-Checkbox 尚未实现，可用于进一步验证 `onChange` 与 dynamic style。
+TSX：
+
+```tsx
+const agree = createSignal(false);
+
+<Checkbox
+  label="Subscribe"
+  checked={agree}
+  onChange={(next) => agree.set(next)}
+/>
+```
+
+渲染：
+
+```text
+box (onKey, border=false)
+  hstack gap=1
+    text "[ ]" | "[x]"
+    text label
+```
+
+按键：Space / Enter → `onChange(!checked)`；disabled → `onKey=false` + label dim。
+
+测试：`packages/widgets/test/checkbox.test.ts`；mock E2E `app-terminal.test.tsx`。
+
+### 7.4 Select
+
+Select / Menu 尚未实现。建议顺序：Select → ProgressBar。
 
 ## 8. 与 Intrinsic button / input 的关系
 
@@ -413,9 +442,11 @@ packages/widgets/
   src/
     index.ts
     button.ts
+    checkbox.ts
     text-input.ts
   test/
     widgets.test.ts
+    checkbox.test.ts
     text-input.test.ts
     tsconfig.json
 ```
@@ -628,6 +659,6 @@ Button、TextInput、VScrollView 和 List 跑通后，下一步建议：
   增强 TextInput（width、selection、多行）。
 ```
 
-Checkbox 尚未实现，可用于进一步验证 `onChange` 与 dynamic style。
+Checkbox 已实现（§7.3），可用于验证 `onChange` 与 dynamic style；下一项建议 Select（§7.4）。
 
 VScrollView / List API 与行为见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §4.3–§4.4；TextInput 见 [TEXT_INPUT.md](../specs/TEXT_INPUT.md)。

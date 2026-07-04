@@ -1,10 +1,10 @@
 # @bindtty/widgets
 
-高层 TUI 控件：`Button`、`TextInput`、`ScrollView`、`VScrollView`、`HScrollView`、`List`。
+高层 TUI 控件：`Button`、`Checkbox`、`TextInput`、`ScrollView`、`VScrollView`、`HScrollView`、`List`。
 
 ## 导出
 
-- `Button` / `TextInput`
+- `Button` / `Checkbox` / `TextInput`
 - `ScrollView` — 双轴 X+Y 滚动（`stickToBottom` / `stickToEnd`、`showScrollbar`）
 - `VScrollView` — 垂直滚动（`stickToBottom`、`showScrollbar`）
 - `HScrollView` — 水平滚动（`stickToEnd`、`showScrollbar`）

@@ -1,4 +1,5 @@
 export { Button } from "./button.js";
+export { Checkbox } from "./checkbox.js";
 export { HScrollView } from "./h-scroll-view.js";
 export { List } from "./list.js";
 export { ScrollView } from "./scroll-view.js";
@@ -10,6 +11,7 @@ export {
 } from "./v-scroll-view.js";
 export { renderScrollbarRow } from "./scroll-axis-shared.js";
 export type { ButtonProps, ButtonStyleProps } from "./button.js";
+export type { CheckboxProps, CheckboxStyleProps } from "./checkbox.js";
 export type { HScrollViewProps, HScrollViewStyleProps } from "./h-scroll-view.js";
 export type { ListProps } from "./list.js";
 export type {
