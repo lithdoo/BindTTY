@@ -40,9 +40,10 @@ const scrollY = createSignal(0);
 
 ## 规范
 
-- [doc/specs/SCROLL_VIEWPORT.md](../../doc/specs/SCROLL_VIEWPORT.md) — ScrollView / VScrollView / HScrollView / List
-- [doc/specs/TEXT_INPUT.md](../../doc/specs/TEXT_INPUT.md) — TextInput
-- [doc/specs/PROGRESS_BAR.md](../../doc/specs/PROGRESS_BAR.md) — ProgressBar
+- [doc/specs/SCROLL_VIEWPORT.md](../../doc/specs/SCROLL_VIEWPORT.md) — clip / scroll 引擎
+- [doc/widgets/SCROLL.md](../../doc/widgets/SCROLL.md) — ScrollView / VScrollView / HScrollView / List
+- [doc/widgets/TEXT_INPUT.md](../../doc/widgets/TEXT_INPUT.md) — TextInput
+- [doc/widgets/PROGRESS_BAR.md](../../doc/widgets/PROGRESS_BAR.md) — ProgressBar
 
 ## Migration（alpha.2 breaking）
 

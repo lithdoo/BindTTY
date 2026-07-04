@@ -13,35 +13,40 @@ import type {
   InteractionNodeFocusChangeEvent
 } from "@bindtty/interaction";
 import {
-  applyStickToEndOnLayout,
-  createScrollAxisState,
   omitUndefined,
   readBooleanBindingValue,
-  readNumberBindingValue,
-  renderScrollbarRow,
+  readNumberBindingValue
+} from "../shared/binding.js";
+import {
+  applyStickToEndOnLayout,
+  createScrollAxisState,
+  renderScrollbarColumn,
   resetScrollAxisState,
   type ScrollAxisAppliedState,
   type ScrollAxisStyleProps
-} from "./scroll-axis-shared.js";
+} from "./axis-shared.js";
 
-export type HScrollViewStyleProps = ScrollAxisStyleProps;
+export type VScrollViewStyleProps = ScrollAxisStyleProps;
 
-export interface HScrollViewProps extends HScrollViewStyleProps {
+export interface VScrollViewProps extends VScrollViewStyleProps {
   id?: BindingValue<string | number>;
   offset?: BindingValue<number>;
-  width: BindingValue<number>;
-  height?: BindingValue<number>;
+  height: BindingValue<number>;
+  width?: BindingValue<number>;
   children?: TemplateChildren;
   scrollOnArrow?: BindingValue<boolean>;
-  stickToEnd?: BindingValue<boolean>;
+  stickToBottom?: BindingValue<boolean>;
   showScrollbar?: BindingValue<boolean>;
   onOffsetChange?: (nextOffset: number) => void;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }
 
-export { renderScrollbarRow } from "./scroll-axis-shared.js";
+export {
+  computeScrollbarThumb,
+  renderScrollbarColumn
+} from "./axis-shared.js";
 
-export function HScrollView(props: HScrollViewProps): Template {
+export function VScrollView(props: VScrollViewProps): Template {
   const scrollState = createScrollAxisState();
   const layoutTick = createSignal(0);
   const scrollbarText = createSignal("");
@@ -51,15 +56,15 @@ export function HScrollView(props: HScrollViewProps): Template {
     "box",
     omitUndefined({
       id: props.id,
-      ref: createHScrollViewRef(props, scrollState, layoutTick, scrollbarText),
-      onKey: createHScrollViewOnKey(props, scrollState),
+      ref: createVScrollViewRef(props, scrollState, layoutTick, scrollbarText),
+      onKey: createVScrollViewOnKey(props, scrollState),
       onFocusChange: props.onFocusChange,
-      width: props.width,
-      height: usesScrollbar ? undefined : props.height,
+      height: props.height,
+      width: usesScrollbar ? undefined : props.width,
       flexGrow: usesScrollbar ? 1 : undefined,
       overflow: "clip",
-      scrollX: props.offset ?? 0,
-      scrollY: 0,
+      scrollX: 0,
+      scrollY: props.offset ?? 0,
       border: usesScrollbar ? undefined : props.border,
       padding: usesScrollbar ? undefined : props.padding,
       background: usesScrollbar ? undefined : props.background,
@@ -84,19 +89,19 @@ export function HScrollView(props: HScrollViewProps): Template {
   return elementTemplate(
     "box",
     omitUndefined({
-      height: props.height,
+      width: props.width,
       border: props.border,
       padding: props.padding,
       background: props.background,
       borderColor: props.borderColor
     }),
-    elementTemplate("vstack", {}, [
+    elementTemplate("hstack", {}, [
       scrollBox,
       elementTemplate(
         "box",
         {
-          height: 1,
-          width: props.width
+          width: 1,
+          height: props.height
         },
         elementTemplate("text", {
           value: scrollbarValue
@@ -106,53 +111,53 @@ export function HScrollView(props: HScrollViewProps): Template {
   );
 }
 
-interface HScrollViewLayoutState {
+interface VScrollViewLayoutState {
   rect: {
-    width: number;
+    height: number;
   };
   contentRect: {
-    width: number;
+    height: number;
   };
   clip?: {
-    width: number;
+    height: number;
   };
   scrollOffset?: {
-    x: number;
+    y: number;
   };
   contentSize?: {
-    width: number;
+    height: number;
   };
 }
 
-function createHScrollViewRef(
-  props: HScrollViewProps,
+function createVScrollViewRef(
+  props: VScrollViewProps,
   state: ScrollAxisAppliedState,
   layoutTick: ReturnType<typeof createSignal<number>>,
   scrollbarText: ReturnType<typeof createSignal<string>>
 ): (api: MountedElementApi) => void {
   return (api) => {
     api.onLayout = (layout) => {
-      const nextLayout = layout as HScrollViewLayoutState;
+      const nextLayout = layout as VScrollViewLayoutState;
       const hadLayout = state.hasLayout;
       const previousMax = state.max;
-      const viewportWidth =
-        nextLayout.clip?.width ??
-        nextLayout.contentRect.width ??
-        nextLayout.rect.width;
-      const contentWidth =
-        nextLayout.contentSize?.width ??
-        nextLayout.contentRect.width ??
-        nextLayout.rect.width;
+      const viewportHeight =
+        nextLayout.clip?.height ??
+        nextLayout.contentRect.height ??
+        nextLayout.rect.height;
+      const contentHeight =
+        nextLayout.contentSize?.height ??
+        nextLayout.contentRect.height ??
+        nextLayout.rect.height;
 
       state.hasLayout = true;
-      state.applied = nextLayout.scrollOffset?.x ?? 0;
-      state.max = Math.max(0, contentWidth - viewportWidth);
-      state.page = Math.max(1, viewportWidth);
-      state.viewportSize = Math.max(1, viewportWidth);
-      state.contentSize = Math.max(1, contentWidth);
+      state.applied = nextLayout.scrollOffset?.y ?? 0;
+      state.max = Math.max(0, contentHeight - viewportHeight);
+      state.page = Math.max(1, viewportHeight);
+      state.viewportSize = Math.max(1, viewportHeight);
+      state.contentSize = Math.max(1, contentHeight);
 
       applyStickToEndOnLayout(state, {
-        sticky: readBooleanBindingValue(props.stickToEnd, false),
+        sticky: readBooleanBindingValue(props.stickToBottom, false),
         hadLayout,
         externalOffset: readNumberBindingValue(props.offset, 0),
         previousMax,
@@ -163,7 +168,7 @@ function createHScrollViewRef(
       layoutTick.set(layoutTick.get() + 1);
       scrollbarText.set(
         readBooleanBindingValue(props.showScrollbar, false) && state.max > 0
-          ? renderScrollbarRow(
+          ? renderScrollbarColumn(
               state.applied,
               state.max,
               state.viewportSize,
@@ -180,12 +185,12 @@ function createHScrollViewRef(
   };
 }
 
-function createHScrollViewOnKey(
-  props: HScrollViewProps,
+function createVScrollViewOnKey(
+  props: VScrollViewProps,
   state: ScrollAxisAppliedState
 ): BindingValue<InteractionKeyBinding> {
   const handler = props.onOffsetChange
-    ? createHScrollHandler(props, state)
+    ? createVScrollHandler(props, state)
     : false;
   const scrollOnArrow = props.scrollOnArrow;
 
@@ -196,27 +201,43 @@ function createHScrollViewOnKey(
   return scrollOnArrow === false ? false : handler;
 }
 
-function createHScrollHandler(
-  props: HScrollViewProps,
+function createVScrollHandler(
+  props: VScrollViewProps,
   state: ScrollAxisAppliedState
 ): InteractionKeyHandler {
   return (event) => {
-    const sticky = readBooleanBindingValue(props.stickToEnd, false);
+    const sticky = readBooleanBindingValue(props.stickToBottom, false);
     const fallbackOffset = readNumberBindingValue(props.offset, 0);
-    const fallbackPage = Math.max(1, readNumberBindingValue(props.width, 1));
+    const fallbackPage = Math.max(1, readNumberBindingValue(props.height, 1));
     const offset = state.hasLayout ? state.applied : fallbackOffset;
     const max = state.hasLayout ? state.max : Number.MAX_SAFE_INTEGER;
+    const page = state.hasLayout ? state.page : fallbackPage;
 
     switch (event.name) {
-      case "left": {
+      case "up": {
         if (sticky) {
           state.userDetached = true;
         }
         props.onOffsetChange?.(Math.max(0, offset - 1));
         return true;
       }
-      case "right": {
+      case "down": {
         const next = Math.min(max, offset + 1);
+        if (sticky && next >= max) {
+          state.userDetached = false;
+        }
+        props.onOffsetChange?.(next);
+        return true;
+      }
+      case "pageup": {
+        if (sticky) {
+          state.userDetached = true;
+        }
+        props.onOffsetChange?.(Math.max(0, offset - page));
+        return true;
+      }
+      case "pagedown": {
+        const next = Math.min(max, offset + page);
         if (sticky && next >= max) {
           state.userDetached = false;
         }

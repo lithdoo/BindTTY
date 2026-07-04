@@ -47,7 +47,7 @@
 | 文档 | 内容 |
 | --- | --- |
 | [DISPLAY_WIDTH.md](./specs/DISPLAY_WIDTH.md) | Terminal display-width / grapheme |
-| [SCROLL_VIEWPORT.md](./specs/SCROLL_VIEWPORT.md) | Clip / scroll / ScrollView / VScrollView / HScrollView / List |
+| [SCROLL_VIEWPORT.md](./specs/SCROLL_VIEWPORT.md) | Clip / scroll 引擎契约（layout / renderer） |
 | [YOGA_AND_TEXT.md](./specs/YOGA_AND_TEXT.md) | @bindtty/text + Yoga 默认 engine |
 | [LAYOUT_PROPS.md](./specs/LAYOUT_PROPS.md) | intrinsic layout prop 支持矩阵 |
 | [ELEMENT_REF.md](./specs/ELEMENT_REF.md) | `ref(api)` / MountedElementApi |

@@ -12,7 +12,8 @@ doc/
 ├── CONVENTIONS.md         # 本文件
 ├── architecture/          # 总览与路线图
 ├── packages/              # 1 包 1 文
-├── specs/                 # 横切 / 控件现行规范
+├── specs/                 # 横切现行规范（layout / renderer / intrinsic）
+├── widgets/               # @bindtty/widgets 控件现行规范
 ├── testing/               # 测试规范
 ├── archive/               # 只读备份
 │   └── plans/             # 已落地里程碑的完整计划
@@ -28,7 +29,7 @@ doc/
 | 规则 | 说明 |
 | --- | --- |
 | 禁止里程碑前缀 | 已落地能力不得用 `M7_` 等命名活跃文档 |
-| 目录即类型 | `packages/` = 包设计；`specs/` = 规范；`archive/plans/` = 历史计划 |
+| 目录即类型 | `packages/` = 包设计；`specs/` = 横切规范；`widgets/` = 控件规范；`archive/plans/` = 历史计划 |
 | 文件名 = 主题 | 大写蛇形，不含「计划」「落地」 |
 | plan 不进 specs/ | 计划全文只在 `archive/plans/`；spec 只写现行行为 |
 | 每个 rename 必有 redirect | 旧路径 stub 放在 `redirects/` |
@@ -37,9 +38,9 @@ doc/
 
 ---
 
-## 3. 四类文档强制章节
+## 3. 文档类型与强制章节
 
-某节无内容时写「无」或合并到相邻节。**不得**在文末添加 `## M7 当前实现` 类平行附录；改在 §9（package）或链 `specs/`。
+某节无内容时写「无」或合并到相邻节。**不得**在文末添加 `## M7 当前实现` 类平行附录；改在 §9（package）或链 `specs/` / `widgets/`。
 
 ### A. `packages/<PKG>.md`
 
@@ -73,7 +74,7 @@ doc/
 ```markdown
 # <Topic 中文名>（English subtitle）
 
-> **类型**：spec | widget
+> **类型**：spec
 > …
 
 ## 1. 范围（1.1 已支持 / 1.2 不在范围 / 1.3 术语）
@@ -83,6 +84,8 @@ doc/
 ## 已知限制
 ## 历史计划（仅链 archive/plans/）
 ```
+
+控件 API **不**写入 `specs/`；见 `widgets/`。
 
 ### C. `architecture/*.md`
 
@@ -97,16 +100,39 @@ doc/
 
 文首 blockquote：`类型: plan · 状态: archived · 现行规范: ../../specs/XXX.md`。正文完整保留。
 
+### F. `widgets/<WIDGET>.md`
+
+```markdown
+# <Widget 中文名>（EnglishName）
+
+> **类型**：widget
+> **范围**：@bindtty/widgets
+> **状态**：implemented | partial
+> **最后核对**：YYYY-MM
+> **代码入口**：packages/widgets/src/<group>/<file>.ts
+> **相关**：[WIDGETS.md](../packages/WIDGETS.md) · …
+
+## 1. 范围（1.1 已支持 / 1.2 不在范围 / 1.3 术语）
+## 2. 数据流
+## 3. 对外 API
+## 4–N. 行为语义 / 布局 / 按键
+## 测试回归索引
+## 已知限制
+```
+
+功能相近的控件可合并为一文（如 `SCROLL.md` 覆盖 VScrollView / HScrollView / ScrollView / List）。引擎层 clip/scroll 契约仍写在 `specs/`。
+
 ---
 
 ## 4. 维护 checklist
 
 改公开 API 时：
 
-1. 更新 `packages/*.md` §4
-2. 更新相关 `specs/*.md` §范围
-3. 刷新 front-matter「最后核对」
-4. 核对 `packages/<pkg>/test/` 与 doc §8 / spec 测试索引
+1. 更新 `packages/*.md` §4（包级摘要）
+2. 更新相关 `doc/widgets/*.md` §API 与 §范围
+3. 若涉及 layout / renderer 横切行为，更新 `specs/*.md`
+4. 刷新 front-matter「最后核对」
+5. 核对 `packages/<pkg>/test/` 与 doc 测试回归索引
 
 里程碑完成时：
 

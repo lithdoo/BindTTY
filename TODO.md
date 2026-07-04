@@ -7,7 +7,7 @@
 ## 已完成（2026-07）
 
 - M1–M7 主链路（TSX → mount → layout → paint → ANSI diff → terminal → interaction → widgets）
-- TextInput grapheme-aware 编辑与 **display-column 输入窗口**（`overflow: "clip"` + `scrollX`；见 [doc/specs/TEXT_INPUT.md](doc/specs/TEXT_INPUT.md) §1.1）
+- TextInput grapheme-aware 编辑与 **display-column 输入窗口**（`overflow: "clip"` + `scrollX`；见 [doc/widgets/TEXT_INPUT.md](doc/widgets/TEXT_INPUT.md) §1.1）
 - display-width / 宽字符全链路（见 [doc/specs/DISPLAY_WIDTH.md](doc/specs/DISPLAY_WIDTH.md)）
 - npm 发布工程配置：`0.1.0-alpha.1`、LICENSE、`scripts/publish-packages.mjs`（commit `8b03b27`）
 - `bindtty` JSX runtime 转发（`jsxImportSource: "bindtty"`）
@@ -33,7 +33,7 @@
 
 - [x] `Checkbox` widget
 - [x] `Select` widget（单选）
-- [x] `ProgressBar` widget（见 [doc/specs/PROGRESS_BAR.md](doc/specs/PROGRESS_BAR.md)）
+- [x] `ProgressBar` widget（见 [doc/widgets/PROGRESS_BAR.md](doc/widgets/PROGRESS_BAR.md)）
 - [x] VScrollView / HScrollView scrollbar（视觉指示，非鼠标交互）
 - [x] ScrollView 双轴滚动（X+Y；见 [doc/specs/SCROLL_VIEWPORT.md](doc/specs/SCROLL_VIEWPORT.md) §5.6）
 
@@ -45,7 +45,7 @@
 
 - RichText / TextSpan（text value 内嵌 ANSI）
 - Frame `width > 2` / placeholder 链扩展
-- IME / 多行 / 文本选区 / 鼠标定位（见 [doc/specs/TEXT_INPUT.md](doc/specs/TEXT_INPUT.md) 非目标）
+- IME / 多行 / 文本选区 / 鼠标定位（见 [doc/widgets/TEXT_INPUT.md](doc/widgets/TEXT_INPUT.md) 非目标）
 - Scroll/List 虚拟化（先 benchmark 再决定）
 - Modal / Overlay（需 overlay layer、focus trap，暂缓）
 

@@ -229,235 +229,18 @@ MVP 建议：
 
 ## 7. 第一批 Widgets
 
-### 7.1 Button
+各控件 API 与行为见 [../widgets/](../widgets/)：
 
-Button 是第一个落地控件。
+| 控件 | 文档 | 状态 |
+| --- | --- | --- |
+| Button | [BUTTON.md](../widgets/BUTTON.md) | implemented |
+| TextInput | [TEXT_INPUT.md](../widgets/TEXT_INPUT.md) | implemented |
+| Checkbox | [CHECKBOX.md](../widgets/CHECKBOX.md) | implemented |
+| Select | [SELECT.md](../widgets/SELECT.md) | implemented |
+| ProgressBar | [PROGRESS_BAR.md](../widgets/PROGRESS_BAR.md) | implemented |
+| VScrollView / HScrollView / ScrollView / List | [SCROLL.md](../widgets/SCROLL.md) | implemented |
 
-目标：
-
-```text
-1. 验证 @bindtty/widgets 包边界。
-2. 验证 widget custom props -> intrinsic props 转换。
-3. 验证 disabled -> onKey=false。
-4. 验证 Enter / Space -> onPress。
-5. 验证 focused 可见输出。
-6. 验证 TSX + e2e 链路。
-```
-
-建议 API：
-
-```ts
-export interface ButtonProps extends ButtonStyleProps {
-  id?: BindingValue<string | number>;
-  label?: BindingValue<string | number>;
-  disabled?: BindingValue<boolean>;
-  onPress?: () => void;
-  onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
-}
-
-export interface ButtonStyleProps {
-  color?: BindingValue<string>;
-  background?: BindingValue<string>;
-  borderColor?: BindingValue<string>;
-  bold?: BindingValue<boolean>;
-  dim?: BindingValue<boolean>;
-  padding?: BindingValue<number>;
-  border?: BindingValue<boolean | number>;
-}
-```
-
-TSX 用法：
-
-```tsx
-<Button label="Save" onPress={save} />
-<Button id="submit" label={vm.submitLabel} disabled={vm.saving} onPress={submit} />
-```
-
-渲染策略：
-
-```text
-Button
-  -> box border padding onKey
-       -> text value=label
-```
-
-按键策略：
-
-```text
-Enter:
-  onPress()
-  handled=true
-
-Space:
-  onPress()
-  handled=true
-
-其它 key:
-  handled=false
-```
-
-disabled 策略：
-
-```text
-disabled=true:
-  onKey=false
-  dim=true 或 color="gray"
-  不触发 onPress
-
-disabled=false:
-  onKey=handler
-```
-
-### 7.2 TextInput
-
-状态：已完成。
-
-TextInput 是第二个落地控件，在 Button 之后实现。
-
-已实现目标：
-
-```text
-1. controlled value（受控模式，value 必填）。
-2. onChange(nextValue) 每次编辑通知父组件。
-3. printable char 在 cursor 位置插入。
-4. Backspace / Delete 编辑。
-5. Left / Right / Home / End 光标移动。
-6. focused 时拆分三 text 节点（beforeCursor / cursorChar / afterCursor）显示反显光标。
-7. blur 时光标隐藏、cursor 重置。
-8. placeholder 显示（未聚焦 + 空值）。
-9. disabled 映射为 onKey=false + dim。
-10. onSubmit(value) 回调。
-11. focusStyle="none" 关闭 renderer 默认整块 inverse。
-12. 单元测试 + App 集成测试 + E2E 测试全覆盖。
-```
-
-不纳入当前版本：
-
-```text
-1. IME preedit / 候选窗。
-2. 文本选区（Shift+方向键）。
-3. 鼠标定位光标。
-4. 多行编辑。
-5. 密码遮蔽模式。
-6. 输入校验 / mask / maxLength。
-7. Ctrl+U / Ctrl+W 等高级编辑快捷键。
-8. width / 固定宽度 / 横向滚动（等待 layout width 支持）。
-```
-
-详细设计见 [TEXT_INPUT.md](../specs/TEXT_INPUT.md)。
-
-### 7.3 Checkbox
-
-状态：已完成。
-
-受控 boolean 控件，验证 `onChange` 与 dynamic style（marker / label 分离渲染）。
-
-API：
-
-```ts
-export interface CheckboxProps extends CheckboxStyleProps {
-  id?: BindingValue<string | number>;
-  label?: BindingValue<string | number>;
-  checked: BindingValue<boolean>;
-  disabled?: BindingValue<boolean>;
-  onChange?: (nextChecked: boolean) => void;
-  onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
-}
-```
-
-TSX：
-
-```tsx
-const agree = createSignal(false);
-
-<Checkbox
-  label="Subscribe"
-  checked={agree}
-  onChange={(next) => agree.set(next)}
-/>
-```
-
-渲染：
-
-```text
-box (onKey, border=false)
-  hstack gap=1
-    text "[ ]" | "[x]"
-    text label
-```
-
-按键：Space / Enter → `onChange(!checked)`；disabled → `onKey=false` + label dim。
-
-测试：`packages/widgets/test/checkbox.test.ts`；mock E2E `app-terminal.test.tsx`。
-
-### 7.4 Select
-
-状态：已完成。
-
-Inline 单选列表：始终显示选项，Up/Down 即时 `onChange`，`>` 标记当前选中项；可选 `height` 启用 clip + `scrollY` 滚动。
-
-API：
-
-```ts
-export interface SelectOption<T = string> {
-  value: T;
-  label: BindingValue<string | number>;
-}
-
-export interface SelectProps<T = string> extends SelectStyleProps {
-  id?: BindingValue<string | number>;
-  label?: BindingValue<string | number>;
-  options: BindingValue<readonly SelectOption<T>[]>;
-  value: BindingValue<T>;
-  disabled?: BindingValue<boolean>;
-  height?: BindingValue<number>;
-  onChange?: (nextValue: T) => void;
-  onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
-}
-```
-
-TSX：
-
-```tsx
-const lang = createSignal("ts");
-
-<Select
-  label="Language"
-  height={5}
-  options={[
-    { value: "ts", label: "TypeScript" },
-    { value: "js", label: "JavaScript" },
-  ]}
-  value={lang}
-  onChange={(next) => lang.set(next)}
-/>
-```
-
-渲染：
-
-```text
-box (onKey, border=false)
-  vstack
-    text label
-    box (overflow=clip, scrollY, height?)
-      for options -> text "> Label" | "  Label"
-```
-
-按键：Up/Down 上一项/下一项；Home/End 首/末项；Enter/Space 不处理；disabled → `onKey=false` + dim。
-
-测试：`packages/widgets/test/select.test.ts`；mock E2E `app-terminal.test.tsx`。
-
-### 7.5 ProgressBar
-
-纯展示进度条，见 [PROGRESS_BAR.md](../specs/PROGRESS_BAR.md)。
-
-```tsx
-<ProgressBar width={30} value={progress} max={100} label="Loading" showPercent />
-```
-
-- 单行 `hstack`：`label` | 条 | 可选 `%`
-- 无 focus / `onKey`
-- 测试：`packages/widgets/test/widgets.test.ts`；mock E2E
+滚动引擎层契约见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md)。
 
 ## 8. 与 Intrinsic button / input 的关系
 
@@ -506,18 +289,30 @@ packages/widgets/
   tsconfig.json
   src/
     index.ts
-    button.ts
-    checkbox.ts
-    select.ts
-    text-input.ts
+    shared/
+      binding.ts
+    scroll/
+      axis-shared.ts
+      v-scroll-view.ts
+      h-scroll-view.ts
+      scroll-view.ts
+      list.ts
+    form/
+      button.ts
+      checkbox.ts
+      text-input.ts
+      select.ts
+    display/
+      progress-bar.ts
   test/
     widgets.test.ts
     checkbox.test.ts
+    select.test.ts
     text-input.test.ts
     tsconfig.json
 ```
 
-ButtonProps / TextInputProps 等类型定义直接内联在各组件文件中（button.ts / text-input.ts），不使用独立的 types.ts。
+ButtonProps / TextInputProps 等类型定义直接内联在各组件文件中（`form/button.ts`、`form/text-input.ts` 等），不使用独立的 types.ts。
 
 ## 10. JSX 与导出方式
 
@@ -707,7 +502,7 @@ npm test
 16. bindtty 顶层 re-export Button、TextInput、ScrollView、VScrollView、HScrollView 和 List。
 17. VScrollView 受控 offset、clip、键盘滚动已覆盖。
 18. List 作为 VScrollView + forTemplate 语法糖已覆盖。
-19. VScrollView `stickToBottom` 与 `showScrollbar`、HScrollView、ScrollView 双轴已覆盖（见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §5.3–§5.6）。
+19. VScrollView `stickToBottom` 与 `showScrollbar`、HScrollView、ScrollView 双轴已覆盖（见 [SCROLL.md](../widgets/SCROLL.md)）。
 ```
 
 ## 14. 后续方向
@@ -727,4 +522,4 @@ Button、TextInput、VScrollView 和 List 跑通后，下一步建议：
 
 Checkbox 已实现（§7.3）；Select 已实现（§7.4）。下一项可考虑 Tabs 或 TextInput 增强。
 
-VScrollView / List API 与行为见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §4.3–§4.4；TextInput 见 [TEXT_INPUT.md](../specs/TEXT_INPUT.md)。
+VScrollView / List API 与行为见 [SCROLL.md](../widgets/SCROLL.md)；TextInput 见 [TEXT_INPUT.md](../widgets/TEXT_INPUT.md)。

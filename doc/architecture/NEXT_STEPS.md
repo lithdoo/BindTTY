@@ -3,7 +3,7 @@
 > **类型**：architecture  
 > **状态**：active  
 > **最后核对**：2026-07  
-> **相关**：[ROADMAP.md](./ROADMAP.md) · [../../TODO.md](../../TODO.md) · [../specs/TEXT_INPUT.md](../specs/TEXT_INPUT.md)
+> **相关**：[ROADMAP.md](./ROADMAP.md) · [../../TODO.md](../../TODO.md) · [../widgets/TEXT_INPUT.md](../widgets/TEXT_INPUT.md)
 
 开放任务 checklist 见根目录 [TODO.md](../../TODO.md)。本文档记录阶段判断、已完成项、优先级与版本目标。
 
@@ -34,7 +34,7 @@ TSX → ViewTemplate → MountedNode → LayoutNode → Frame → ANSI Patch
 | 领域 | 状态 | 参考 |
 | --- | --- | --- |
 | M1–M7 主链路 | ✅ | [ROADMAP.md](./ROADMAP.md) |
-| TextInput display-column 输入窗口 | ✅ | [TEXT_INPUT.md](../specs/TEXT_INPUT.md) §1.1、`packages/widgets/src/text-input.ts` |
+| TextInput display-column 输入窗口 | ✅ | [TEXT_INPUT.md](../widgets/TEXT_INPUT.md) §1.1、`packages/widgets/src/form/text-input.ts` |
 | display-width / CJK / emoji | ✅ | [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) |
 | npm 发布元数据 | ✅ | `LICENSE`、`publishConfig`、`scripts/publish-packages.mjs`，版本 `0.1.0-alpha.1` |
 | `bindtty` JSX 转发 | ✅ | `packages/bindtty` 导出 `./jsx-runtime`、`./jsx-dev-runtime` |

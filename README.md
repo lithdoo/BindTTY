@@ -80,11 +80,10 @@ packages/interaction/
   src/types.ts
 
 packages/widgets/
-  src/button.ts       # Button 组件 + 类型
-  src/text-input.ts   # TextInput 组件 + 类型（拆分光标方案）
-  src/v-scroll-view.ts  # VScrollView 垂直裁剪与滚动
-  src/h-scroll-view.ts  # HScrollView 水平裁剪与滚动
-  src/list.ts           # List 语法糖（VScrollView + for）
+  src/form/           # Button、Checkbox、TextInput、Select
+  src/scroll/         # VScrollView、HScrollView、ScrollView、List
+  src/display/        # ProgressBar
+  src/shared/         # binding helpers
 ~~~
 
 当前完成状态：

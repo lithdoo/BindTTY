@@ -10,7 +10,7 @@ import {
   omitUndefined,
   readBooleanBindingValue,
   readNumberBindingValue
-} from "./scroll-axis-shared.js";
+} from "../shared/binding.js";
 
 export interface ProgressBarStyleProps {
   color?: BindingValue<string>;

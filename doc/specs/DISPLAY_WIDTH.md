@@ -15,7 +15,7 @@ BindTTY 在 **text → layout → renderer → ANSI** 全链路使用 **terminal
 - [RENDERER.md](../packages/RENDERER.md) — Frame / Cell / paint / diff / ANSI 细节
 - [YOGA_AND_TEXT.md](./YOGA_AND_TEXT.md) — Yoga measure 与 `layoutText()` 集成
 - [LAYOUT.md](../packages/LAYOUT.md) — LayoutNode / contentSize
-- [TEXT_INPUT.md](./TEXT_INPUT.md) — TextInput 控件（**编辑语义见已知限制**）
+- [TEXT_INPUT.md](../widgets/TEXT_INPUT.md) — TextInput 控件（**编辑语义见已知限制**）
 - [../packages/e2e/README.md](../packages/e2e/README.md) — 宽字符 E2E harness
 - [../architecture/NEXT_STEPS.md](../architecture/NEXT_STEPS.md) — alpha hardening 规划
 - [../../TODO.md](../../TODO.md) — 开放改进项 checklist

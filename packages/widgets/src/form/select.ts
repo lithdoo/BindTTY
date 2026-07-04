@@ -11,7 +11,7 @@ import {
   type InteractionKeyHandler,
   type InteractionNodeFocusChangeEvent
 } from "@bindtty/interaction";
-import { readNumberBindingValue } from "./scroll-axis-shared.js";
+import { readNumberBindingValue } from "../shared/binding.js";
 
 export interface SelectOption<T = string> {
   value: T;

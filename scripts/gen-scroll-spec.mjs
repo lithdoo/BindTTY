@@ -16,8 +16,10 @@ const header = `# Scroll / Viewport / List 规范（Scroll Viewport）
 > **范围**：@bindtty/layout · @bindtty/renderer-terminal · @bindtty/widgets · @bindtty/interaction
 > **状态**：implemented
 > **最后核对**：2026-07
-> **代码入口**：packages/layout/src/ · packages/widgets/src/scroll-view.ts
-> **相关**：[LAYOUT.md](../packages/LAYOUT.md) · [RENDERER.md](../packages/RENDERER.md) · [WIDGETS.md](../packages/WIDGETS.md)
+> **代码入口**：packages/layout/src/ · packages/widgets/src/scroll/
+> **相关**：[LAYOUT.md](../packages/LAYOUT.md) · [RENDERER.md](../packages/RENDERER.md) · [WIDGETS.md](../packages/WIDGETS.md) · [SCROLL.md](../widgets/SCROLL.md)
+
+<!-- Widget API § 已外置至 doc/widgets/SCROLL.md；勿在此文件维护 VScrollView/HScrollView/ScrollView/List props -->
 
 相关文档： [ROADMAP.md](../architecture/ROADMAP.md) · [E2E.md](../testing/E2E.md) · [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md)
 

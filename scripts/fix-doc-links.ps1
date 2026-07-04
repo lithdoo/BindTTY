@@ -11,7 +11,8 @@ foreach ($file in $files) {
 
   # Root-level path updates (doc/xxx.md -> doc/sub/xxx.md)
   $content = $content -replace 'doc/DISPLAY_WIDTH\.md', 'doc/specs/DISPLAY_WIDTH.md'
-  $content = $content -replace 'doc/TEXT_INPUT\.md', 'doc/specs/TEXT_INPUT.md'
+  $content = $content -replace 'doc/TEXT_INPUT\.md', 'doc/widgets/TEXT_INPUT.md'
+  $content = $content -replace 'doc/PROGRESS_BAR\.md', 'doc/widgets/PROGRESS_BAR.md'
   $content = $content -replace 'doc/ELEMENT_REF\.md', 'doc/specs/ELEMENT_REF.md'
   $content = $content -replace 'doc/SCROLL_VIEWPORT\.md', 'doc/specs/SCROLL_VIEWPORT.md'
   $content = $content -replace 'doc/YOGA_AND_TEXT\.md', 'doc/specs/YOGA_AND_TEXT.md'
@@ -31,7 +32,8 @@ foreach ($file in $files) {
   $content = $content -replace '\./doc/WIDGETS\.md', './doc/packages/WIDGETS.md'
   $content = $content -replace '\./doc/APP\.md', './doc/packages/APP.md'
   $content = $content -replace '\./doc/DISPLAY_WIDTH\.md', './doc/specs/DISPLAY_WIDTH.md'
-  $content = $content -replace '\./doc/TEXT_INPUT\.md', './doc/specs/TEXT_INPUT.md'
+  $content = $content -replace '\./doc/TEXT_INPUT\.md', './doc/widgets/TEXT_INPUT.md'
+  $content = $content -replace '\./doc/PROGRESS_BAR\.md', './doc/widgets/PROGRESS_BAR.md'
   $content = $content -replace '\./doc/E2E_TESTING\.md', './doc/testing/E2E.md'
   $content = $content -replace '\./doc/DESIGN\.md', './doc/architecture/DESIGN.md'
   $content = $content -replace '\./doc/TUI_IMPLEMENTATION_PLAN\.md', './doc/architecture/ROADMAP.md'
@@ -41,12 +43,17 @@ foreach ($file in $files) {
     $content = $content -replace '\(\./DESIGN\.md\)', '(../architecture/DESIGN.md)'
     $content = $content -replace '\(\./TUI_IMPLEMENTATION_PLAN\.md\)', '(../architecture/ROADMAP.md)'
     $content = $content -replace '\(\./DISPLAY_WIDTH\.md\)', '(../specs/DISPLAY_WIDTH.md)'
-    $content = $content -replace '\(\./TEXT_INPUT\.md\)', '(../specs/TEXT_INPUT.md)'
+    $content = $content -replace '\(\./TEXT_INPUT\.md\)', '(../widgets/TEXT_INPUT.md)'
+    $content = $content -replace '\(\./PROGRESS_BAR\.md\)', '(../widgets/PROGRESS_BAR.md)'
     $content = $content -replace '\(\./E2E_TESTING\.md\)', '(../testing/E2E.md)'
     $content = $content -replace '\(\./M7_SCROLL_VIEWPORT\.md\)', '(../specs/SCROLL_VIEWPORT.md)'
     $content = $content -replace '\(\./NODE_SETUP\.md\)', '(../specs/ELEMENT_REF.md)'
     $content = $content -replace '\(\./YOGA_LAYOUT\.md\)', '(../specs/YOGA_AND_TEXT.md)'
     $content = $content -replace 'DISPLAY_WIDTH\.md', '../specs/DISPLAY_WIDTH.md'
+  }
+  elseif ($rel -like 'doc/widgets/*') {
+    $content = $content -replace '\(\./DISPLAY_WIDTH\.md\)', '(../specs/DISPLAY_WIDTH.md)'
+    $content = $content -replace '\(\./WIDGETS\.md\)', '(../packages/WIDGETS.md)'
   }
   elseif ($rel -like 'doc/specs/*') {
     $content = $content -replace '\(\./WIDGETS\.md\)', '(../packages/WIDGETS.md)'

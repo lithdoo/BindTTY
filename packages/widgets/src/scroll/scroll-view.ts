@@ -13,12 +13,14 @@ import type {
   InteractionNodeFocusChangeEvent
 } from "@bindtty/interaction";
 import {
+  omitUndefined,
+  readBooleanBindingValue,
+  readNumberBindingValue
+} from "../shared/binding.js";
+import {
   applyAxisLayoutState,
   applyStickToEndOnLayout,
   createScrollAxisState,
-  omitUndefined,
-  readBooleanBindingValue,
-  readNumberBindingValue,
   readScrollbarAxisFlags,
   renderScrollbarColumn,
   renderScrollbarRow,
@@ -28,9 +30,9 @@ import {
   type ScrollAxisStyleProps,
   type ScrollbarAxisFlags,
   type ResolvedScrollbarAxisFlags
-} from "./scroll-axis-shared.js";
+} from "./axis-shared.js";
 
-export type { ScrollbarAxisFlags } from "./scroll-axis-shared.js";
+export type { ScrollbarAxisFlags } from "./axis-shared.js";
 
 export type ScrollViewStyleProps = ScrollAxisStyleProps;
 
