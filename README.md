@@ -148,6 +148,8 @@ app.start();
 
 tsconfig：`jsx: "react-jsx"`、`jsxImportSource: "bindtty"`。terminal 模式见 [APP.md](./doc/packages/APP.md)。完整公共 API 见 [packages/bindtty/README.md](./packages/bindtty/README.md)。
 
+勿单独安装与 `bindtty` 版本不一致的 `@bindtty/signal`；全应用应只有一份 signal 实例（`npm ls @bindtty/signal` 排障）。
+
 真实 PTY E2E（`node-pty`，`packages/e2e/real/`）见 [packages/e2e/README.md](./packages/e2e/README.md)：
 
 ```bash

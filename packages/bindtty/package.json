@@ -39,6 +39,14 @@
     "@bindtty/vnode": "0.1.0-alpha.1",
     "@bindtty/widgets": "0.1.0-alpha.1"
   },
+  "peerDependencies": {
+    "@bindtty/signal": "0.1.0-alpha.1"
+  },
+  "peerDependenciesMeta": {
+    "@bindtty/signal": {
+      "optional": false
+    }
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"

@@ -37,6 +37,14 @@ class CounterVM {
 
 View 中绑定 `vm.countLabel`，signal 更新后由 runtime binding 驱动局部 repaint，无需整树重渲染。
 
+## 单实例要求
+
+`@bindtty/signal` 在模块内维护 `computationStack` 与订阅图，**全应用只能有一份物理拷贝**。若应用与 `@bindtty/widgets` 各解析到不同版本的 signal，computed 与 binding 可能异常。
+
+- 推荐从 `bindtty` 导入（re-export 同源 signal）
+- 若单独安装本包，版本须与 `bindtty` / `@bindtty/widgets` 的 peer 声明一致
+- 检查：`npm ls @bindtty/signal` 应只有一棵树、一个版本
+
 ## 文档
 
 - [doc/architecture/ROADMAP.md](../../doc/architecture/ROADMAP.md) — 实现计划

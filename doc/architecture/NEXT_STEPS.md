@@ -38,6 +38,7 @@ TSX → ViewTemplate → MountedNode → LayoutNode → Frame → ANSI Patch
 | display-width / CJK / emoji | ✅ | [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) |
 | npm 发布元数据 | ✅ | `LICENSE`、`publishConfig`、`scripts/publish-packages.mjs`，版本 `0.1.0-alpha.1` |
 | `bindtty` JSX 转发 | ✅ | `packages/bindtty` 导出 `./jsx-runtime`、`./jsx-dev-runtime` |
+| `@bindtty/signal` peer 单实例 | ✅ | `bindtty` / `widgets`：`peerDependencies` + `dependencies` |
 | Yoga flex 基础 props | ✅ | `gap`、`flexWrap`、`alignItems`、`justifyContent`、`flexGrow`、`flexShrink` |
 | box 尺寸与滚动 | ✅ | `width`、`height`、`overflow`、`scrollX`、`scrollY` |
 

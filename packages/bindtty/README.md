@@ -61,6 +61,24 @@ import {
 
 **不**从 `bindtty` 导出 `runtime` / `vnode` / `layout` / `renderer-terminal`，避免公共面过大。
 
+### Peer dependencies
+
+`@bindtty/signal` 为 **peer dependency**（同时保留在 `dependencies` 中，以便 `npm install bindtty` 自动安装）。全应用应只有**一份** `@bindtty/signal` 实例——应用与 widgets 内部 `createSignal` / `computed` 须解析到同一模块，否则可能出现 computed 不更新、订阅链断裂。
+
+推荐统一从 `bindtty` 导入 signal，勿单独安装另一版本的 `@bindtty/signal`。
+
+**排障：**
+
+```text
+症状：computed 不更新、控件状态异常
+检查：npm ls @bindtty/signal
+修复：
+  1. 只从 bindtty 导入 createSignal / computed / effect
+  2. npm uninstall @bindtty/signal（若单独装了冲突版本）
+  3. npm dedupe && npm install
+  4. 应用 package.json overrides: { "@bindtty/signal": "0.1.0-alpha.1" }
+```
+
 ## 快速开始
 
 ```ts

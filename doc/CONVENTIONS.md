@@ -119,3 +119,5 @@ doc/
 1. 新建 `specs/<TOPIC>.md`
 2. 在 [README.md](./README.md) 加一行
 3. plan 细节直接进 `archive/plans/`
+
+可发布包若生产代码 `import "@bindtty/signal"`，须在 `package.json` 声明 `peerDependencies` + 保留 `dependencies` 中的同版本 `@bindtty/signal`（见 `bindtty`、`@bindtty/widgets`）。`runtime` / `layout` 等仅测试使用 signal 的包只放 `devDependencies`。
