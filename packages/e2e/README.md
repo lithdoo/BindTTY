@@ -74,6 +74,8 @@ npm run test:e2e:real:wsl
 | `scroll-clamp-app.tsx` | ScrollView 受控 offset 超界时只 clamp 画面，按键后基于 applied offset 更新 |
 | `list-app.tsx` | List Down 键滚动 |
 | `dashboard-app.tsx` | Yoga dashboard 首屏渲染、List End 滚动、sidebar toggle |
+| `wide-text-app.tsx` | 宽字符 CJK/emoji 渲染、ScrollView 滚动 CJK 行 |
+| `wide-text-resize-app.tsx` | 终端 resize 后 CJK/emoji hard wrap 重新换行 |
 
 ## 目录结构
 

@@ -61,6 +61,10 @@ function textLayout(value: string): LayoutNode {
   return layout(element("text", { value }), rect(0, 0, value.length, 1));
 }
 
+function textLayoutWithWidth(value: string, width: number): LayoutNode {
+  return layout(element("text", { value }), rect(0, 0, width, 1));
+}
+
 test("TerminalRenderer renders a full patch on first render", () => {
   const renderer = createTerminalRenderer();
 
@@ -115,6 +119,41 @@ test("TerminalRenderer emits only changed cells on content updates", () => {
   assert.equal(
     renderer.render(textLayout("B"), { viewport }),
     "\x1b[1;1H\x1b[0mB\x1b[0m"
+  );
+});
+
+test("TerminalRenderer clears wide text when rendering ASCII over it", () => {
+  const renderer = createTerminalRenderer();
+
+  renderer.render(textLayoutWithWidth("中", 2), {
+    viewport: {
+      width: 2,
+      height: 1
+    }
+  });
+
+  assert.equal(
+    renderer.render(textLayoutWithWidth("A", 2), {
+      viewport: {
+        width: 2,
+        height: 1
+      }
+    }),
+    "\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[0m"
+  );
+});
+
+test("TerminalRenderer writes wide text once and skips placeholders", () => {
+  const renderer = createTerminalRenderer();
+
+  assert.equal(
+    renderer.render(textLayoutWithWidth("中", 2), {
+      viewport: {
+        width: 2,
+        height: 1
+      }
+    }),
+    "\x1b[1;1H\x1b[0m中\x1b[0m"
   );
 });
 

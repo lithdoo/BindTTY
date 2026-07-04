@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   createFrame,
   diffFrames,
+  encodeAnsiPatch,
   setCell,
   writeText
 } from "@bindtty/renderer-terminal";
@@ -220,4 +221,153 @@ test("diffFrames includes placeholder cells for new wide characters", () => {
       }
     }
   ]);
+});
+
+test("diffFrames clears wide text when cells become blank", () => {
+  const previous = createFrame(2, 1);
+  const next = createFrame(2, 1);
+
+  writeText(previous, 0, 0, "中");
+  setCell(next, 0, 0, { char: " ", style: {}, width: 1 });
+  setCell(next, 1, 0, { char: " ", style: {}, width: 1 });
+
+  assert.deepEqual(diffFrames(previous, next), {
+    width: 2,
+    height: 1,
+    changes: [
+      {
+        x: 0,
+        y: 0,
+        cell: {
+          char: " ",
+          style: {},
+          width: 1
+        }
+      },
+      {
+        x: 1,
+        y: 0,
+        cell: {
+          char: " ",
+          style: {},
+          width: 1
+        }
+      }
+    ]
+  });
+});
+
+test("diffFrames replaces one wide character with another", () => {
+  const previous = createFrame(2, 1);
+  const next = createFrame(2, 1);
+
+  writeText(previous, 0, 0, "中");
+  writeText(next, 0, 0, "文");
+
+  assert.deepEqual(diffFrames(previous, next).changes, [
+    {
+      x: 0,
+      y: 0,
+      cell: {
+        char: "文",
+        style: {},
+        width: 2
+      }
+    },
+    {
+      x: 1,
+      y: 0,
+      cell: {
+        char: "",
+        style: {},
+        width: 0
+      }
+    }
+  ]);
+});
+
+test("diffFrames sorts dirty cells by y then x", () => {
+  const previous = createFrame(3, 2);
+  const next = createFrame(3, 2);
+
+  setCell(previous, 0, 0, { char: "A", style: {} });
+  setCell(previous, 1, 0, { char: "B", style: {} });
+  setCell(previous, 0, 1, { char: "C", style: {} });
+  setCell(next, 0, 0, { char: "X", style: {} });
+  setCell(next, 1, 0, { char: "Y", style: {} });
+  setCell(next, 0, 1, { char: "Z", style: {} });
+
+  assert.deepEqual(
+    diffFrames(previous, next).changes.map(({ x, y }) => `${y}:${x}`),
+    ["0:0", "0:1", "1:0"]
+  );
+});
+
+test("encodeAnsiPatch clears wide text from diffFrames CJK to blank patch", () => {
+  const previous = createFrame(2, 1);
+  const next = createFrame(2, 1);
+
+  writeText(previous, 0, 0, "中");
+  setCell(next, 0, 0, { char: " ", style: {}, width: 1 });
+  setCell(next, 1, 0, { char: " ", style: {}, width: 1 });
+
+  assert.equal(
+    encodeAnsiPatch(diffFrames(previous, next)),
+    "\x1b[1;1H\x1b[0m \x1b[1;2H\x1b[0m \x1b[0m"
+  );
+});
+
+test("diffFrames returns no changes for equal wide frames", () => {
+  const previous = createFrame(2, 1);
+  const next = createFrame(2, 1);
+
+  writeText(previous, 0, 0, "中");
+  writeText(next, 0, 0, "中");
+
+  assert.deepEqual(diffFrames(previous, next), {
+    width: 2,
+    height: 1,
+    changes: []
+  });
+});
+
+test("diffFrames expands dirty range when only a wide placeholder is overwritten", () => {
+  const previous = createFrame(2, 1);
+  const next = createFrame(2, 1);
+
+  writeText(previous, 0, 0, "中");
+  writeText(next, 0, 0, "中");
+  setCell(next, 1, 0, { char: "X", style: {}, width: 1 });
+
+  assert.deepEqual(diffFrames(previous, next).changes, [
+    {
+      x: 0,
+      y: 0,
+      cell: {
+        char: " ",
+        style: {},
+        width: 1
+      }
+    },
+    {
+      x: 1,
+      y: 0,
+      cell: {
+        char: "X",
+        style: {},
+        width: 1
+      }
+    }
+  ]);
+});
+
+test("encodeAnsiPatch writes only leading cells from full wide frame patches", () => {
+  const frame = createFrame(2, 1);
+
+  writeText(frame, 0, 0, "中");
+
+  assert.equal(
+    encodeAnsiPatch(diffFrames(null, frame)),
+    "\x1b[1;1H\x1b[0m中\x1b[0m"
+  );
 });

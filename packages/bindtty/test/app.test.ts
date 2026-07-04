@@ -331,6 +331,81 @@ test("signal updates render through the runtime flush listener", async () => {
   assert.match(stdout.writes[1], /B/);
 });
 
+test("stdout mode renders and updates wide text without stale cells", async () => {
+  const stdout = createMockStdout(4, 1);
+  const label = createSignal("A中");
+  const app = createApp(elementTemplate("text", { value: label }), { stdout });
+
+  app.start();
+
+  assert.match(stripVTControlCharacters(stdout.writes[0] ?? ""), /A中/);
+  assert.equal(app.render(), "");
+  assert.equal(stdout.writes.length, 1);
+
+  label.set("AB");
+  await nextMicrotask();
+
+  assert.equal(stdout.writes.length, 2);
+  assert.match(stripVTControlCharacters(stdout.writes[1] ?? ""), /B/);
+  assert.match(stripVTControlCharacters(stdout.writes[1] ?? ""), / /);
+  assert.doesNotMatch(stripVTControlCharacters(stdout.writes[1] ?? ""), /中/);
+});
+
+test("terminal mode renders and updates wide text without stale cells", async () => {
+  const terminal = createMockTerminal(4, 1);
+  const label = createSignal("A中");
+  const app = createApp(elementTemplate("text", { value: label }), { terminal });
+
+  app.start();
+
+  assert.match(stripVTControlCharacters(terminal.writes[0] ?? ""), /A中/);
+  assert.equal(app.render(), "");
+  assert.equal(terminal.writes.length, 1);
+
+  label.set("AB");
+  await nextMicrotask();
+
+  assert.equal(terminal.writes.length, 2);
+  assert.match(stripVTControlCharacters(terminal.writes[1] ?? ""), /B/);
+  assert.match(stripVTControlCharacters(terminal.writes[1] ?? ""), / /);
+  assert.doesNotMatch(stripVTControlCharacters(terminal.writes[1] ?? ""), /中/);
+});
+
+test("terminal mode render is a no-op when wide text is unchanged", () => {
+  const terminal = createMockTerminal(2, 1);
+  const app = createApp(elementTemplate("text", { value: "中" }), { terminal });
+
+  app.start();
+
+  assert.match(stripVTControlCharacters(terminal.writes[0] ?? ""), /中/);
+  assert.equal(app.render(), "");
+  assert.equal(terminal.writes.length, 1);
+});
+
+test("terminal mode renders emoji on the first frame", () => {
+  const terminal = createMockTerminal(3, 1);
+  const app = createApp(elementTemplate("text", { value: "A🙂" }), { terminal });
+
+  app.start();
+
+  assert.match(stripVTControlCharacters(terminal.writes[0] ?? ""), /A/);
+  assert.match(stripVTControlCharacters(terminal.writes[0] ?? ""), /🙂/);
+});
+
+test("terminal resize repaints wide text across viewport changes", () => {
+  const terminal = createMockTerminal(3, 1);
+  const app = createApp(elementTemplate("text", { value: "A中" }), { terminal });
+
+  app.start();
+  assert.match(stripVTControlCharacters(terminal.writes[0] ?? ""), /A中/);
+
+  terminal.setViewport({ width: 6, height: 1 });
+  terminal.emitResize();
+
+  assert.equal(terminal.writes.length, 2);
+  assert.match(stripVTControlCharacters(terminal.writes[1] ?? ""), /A中/);
+});
+
 test("same-tick signal updates are coalesced by the runtime scheduler", async () => {
   const stdout = createMockStdout(1, 1);
   const label = createSignal("A");

@@ -1664,6 +1664,33 @@ test("BasicLayoutEngine measures CJK text using display width", () => {
   });
 });
 
+test("BasicLayoutEngine records wrapped CJK content size", () => {
+  const child = createMountedElement("text", {
+    value: "中中中",
+    wrap: "hard"
+  });
+  const root = createMountedElement(
+    "box",
+    {
+      width: 4,
+      height: 1,
+      overflow: "clip",
+      scrollY: 9
+    },
+    [child]
+  );
+  const layout = layoutRootWithBasic(root);
+
+  assert.deepEqual(layout?.contentSize, {
+    width: 4,
+    height: 2
+  });
+  assert.deepEqual(layout?.scrollOffset, {
+    x: 0,
+    y: 1
+  });
+});
+
 test("YogaLayoutEngine measures CJK text using display width", () => {
   const root = createMountedText("中");
   const layout = layoutRootWithYoga(root);
@@ -1701,6 +1728,175 @@ test("YogaLayoutEngine wraps CJK text by display width", () => {
   assert.deepEqual(layout?.scrollOffset, {
     x: 0,
     y: 1
+  });
+});
+
+test("YogaLayoutEngine updates CJK scroll metadata after resize rewrap", () => {
+  const root = createMountedElement(
+    "screen",
+    {},
+    [
+      createMountedElement(
+        "box",
+        {
+          height: 1,
+          overflow: "clip",
+          scrollY: 99
+        },
+        [
+          createMountedElement("text", {
+            value: "中中中",
+            wrap: "hard"
+          })
+        ]
+      )
+    ]
+  );
+  const wide = layoutRoot(root, {
+    viewport: { width: 4, height: 1 },
+    engine: createYogaLayoutEngine()
+  });
+  const narrow = layoutRoot(root, {
+    viewport: { width: 2, height: 1 },
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(wide?.children[0]?.contentSize, {
+    width: 4,
+    height: 2
+  });
+  assert.deepEqual(wide?.children[0]?.scrollOffset, {
+    x: 0,
+    y: 1
+  });
+  assert.deepEqual(narrow?.children[0]?.contentSize, {
+    width: 2,
+    height: 3
+  });
+  assert.deepEqual(narrow?.children[0]?.scrollOffset, {
+    x: 0,
+    y: 2
+  });
+});
+
+test("YogaLayoutEngine updates emoji scroll metadata after resize rewrap", () => {
+  const root = createMountedElement(
+    "screen",
+    {},
+    [
+      createMountedElement(
+        "box",
+        {
+          height: 1,
+          overflow: "clip",
+          scrollY: 99
+        },
+        [
+          createMountedElement("text", {
+            value: "🙂🙂🙂",
+            wrap: "hard"
+          })
+        ]
+      )
+    ]
+  );
+  const wide = layoutRoot(root, {
+    viewport: { width: 4, height: 1 },
+    engine: createYogaLayoutEngine()
+  });
+  const narrow = layoutRoot(root, {
+    viewport: { width: 2, height: 1 },
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(wide?.children[0]?.contentSize, {
+    width: 4,
+    height: 2
+  });
+  assert.deepEqual(wide?.children[0]?.scrollOffset, {
+    x: 0,
+    y: 1
+  });
+  assert.deepEqual(narrow?.children[0]?.contentSize, {
+    width: 2,
+    height: 3
+  });
+  assert.deepEqual(narrow?.children[0]?.scrollOffset, {
+    x: 0,
+    y: 2
+  });
+});
+
+test("YogaLayoutEngine clamps scroll offset after CJK content shrink", () => {
+  const children = [
+    createMountedText("甲"),
+    createMountedText("乙"),
+    createMountedText("丙"),
+    createMountedText("丁")
+  ];
+  const root = createMountedElement(
+    "box",
+    {
+      height: 2,
+      overflow: "clip",
+      scrollY: 99
+    },
+    children
+  );
+  const full = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  root.children = [children[0] as MountedNode];
+  const shrunk = layoutRoot(root, {
+    viewport,
+    engine: createYogaLayoutEngine()
+  });
+
+  assert.deepEqual(full?.contentSize, {
+    width: 2,
+    height: 4
+  });
+  assert.deepEqual(full?.scrollOffset, {
+    x: 0,
+    y: 2
+  });
+  assert.deepEqual(shrunk?.contentSize, {
+    width: 2,
+    height: 2
+  });
+  assert.deepEqual(shrunk?.scrollOffset, {
+    x: 0,
+    y: 0
+  });
+});
+
+test("YogaLayoutEngine measures wrapped emoji text height", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      width: 2,
+      height: 1,
+      overflow: "clip",
+      scrollY: 99
+    },
+    [
+      createMountedElement("text", {
+        value: "🙂🙂🙂",
+        wrap: "hard"
+      })
+    ]
+  );
+  const layout = layoutRootWithYoga(root);
+
+  assert.deepEqual(layout?.contentSize, {
+    width: 2,
+    height: 3
+  });
+  assert.deepEqual(layout?.scrollOffset, {
+    x: 0,
+    y: 2
   });
 });
 

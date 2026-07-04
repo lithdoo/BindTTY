@@ -37,6 +37,8 @@ test("sliceTextByWidth does not return partial wide graphemes", () => {
   assert.equal(sliceTextByWidth("A中B", 2, 4), "B");
   assert.equal(sliceTextByWidth("🙂A", 0, 1), "");
   assert.equal(sliceTextByWidth("🙂A", 0, 2), "🙂");
+  assert.equal(sliceTextByWidth("e\u0301A", 0, 1), "e\u0301");
+  assert.equal(sliceTextByWidth("e\u0301A", 1, 2), "A");
 });
 
 test("measureText measures multiline ASCII by widest line", () => {
@@ -141,6 +143,21 @@ test("layoutText supports truncate modes", () => {
     height: 1,
     lines: ["…"]
   });
+  assert.deepEqual(layoutText("中A", { width: 1, wrap: "truncate-end" }), {
+    width: 1,
+    height: 1,
+    lines: ["…"]
+  });
+  assert.deepEqual(layoutText("中A", { width: 2, wrap: "truncate-end" }), {
+    width: 1,
+    height: 1,
+    lines: ["…"]
+  });
+  assert.deepEqual(layoutText("A中B", { width: 3, wrap: "truncate-start" }), {
+    width: 2,
+    height: 1,
+    lines: ["…B"]
+  });
 });
 
 test("layoutText handles undefined zero and one widths", () => {
@@ -174,4 +191,94 @@ test("readTextWrapMode validates wrap modes", () => {
   assert.equal(readTextWrapMode(undefined), "legacy");
   assert.equal(readTextWrapMode("wrap"), "wrap");
   assert.throws(() => readTextWrapMode("bad"), /Unsupported text wrap mode/);
+});
+
+test("layoutText word wrap mode wraps CJK tokens by display width", () => {
+  assert.deepEqual(layoutText("你好 世界", { width: 4, wrap: "wrap" }), {
+    width: 4,
+    height: 2,
+    lines: ["你好", "世界"]
+  });
+});
+
+test("measureText measures multiline CJK and emoji by display width", () => {
+  assert.deepEqual(measureText("中\n🙂"), {
+    width: 2,
+    height: 2
+  });
+});
+
+test("layoutText truncate modes handle pure CJK boundaries", () => {
+  assert.deepEqual(layoutText("中中中", { width: 3, wrap: "truncate-start" }), {
+    width: 3,
+    height: 1,
+    lines: ["…中"]
+  });
+  assert.deepEqual(layoutText("中中中", { width: 5, wrap: "truncate-middle" }), {
+    width: 5,
+    height: 1,
+    lines: ["中…中"]
+  });
+  assert.deepEqual(layoutText("中中中中", { width: 5, wrap: "truncate-middle" }), {
+    width: 5,
+    height: 1,
+    lines: ["中…中"]
+  });
+});
+
+test("segmentText never reports display widths above 2", () => {
+  for (const segment of segmentText("中🙂A")) {
+    assert.ok(segment.width >= 0 && segment.width <= 2);
+  }
+});
+
+test("segmentText falls back when Intl.Segmenter is unavailable", () => {
+  const segmenter = (Intl as unknown as { Segmenter?: unknown }).Segmenter;
+
+  try {
+    Reflect.deleteProperty(Intl as object, "Segmenter");
+    assert.deepEqual(segmentText("AB"), [
+      { text: "A", width: 1 },
+      { text: "B", width: 1 }
+    ]);
+  } finally {
+    if (segmenter) {
+      (Intl as unknown as { Segmenter?: unknown }).Segmenter = segmenter;
+    }
+  }
+});
+
+test("segmentText records ZWJ emoji sequences using string-width", () => {
+  const sequence = "👨‍👩‍👧";
+  const segments = segmentText(sequence);
+
+  assert.equal(segments.length, 1);
+  assert.equal(segments[0]?.text, sequence);
+  assert.equal(segments[0]?.width, 2);
+});
+
+test("layoutText wrap none preserves multiline CJK height", () => {
+  assert.deepEqual(layoutText("中\n🙂", { wrap: "none" }), {
+    width: 2,
+    height: 2,
+    lines: ["中", "🙂"]
+  });
+});
+
+test("layoutText truncate modes handle emoji width boundaries", () => {
+  assert.deepEqual(layoutText("🙂🙂", { width: 1, wrap: "truncate-end" }), {
+    width: 1,
+    height: 1,
+    lines: ["…"]
+  });
+  assert.deepEqual(layoutText("🙂A", { width: 2, wrap: "truncate-end" }), {
+    width: 1,
+    height: 1,
+    lines: ["…"]
+  });
+  assert.deepEqual(layoutText("AB🙂", { width: 3, wrap: "truncate-start" }), {
+    width: 3,
+    height: 1,
+    lines: ["…🙂"]
+  });
 });

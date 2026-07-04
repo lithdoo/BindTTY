@@ -974,6 +974,182 @@ test("tsx app renders a Yoga dashboard and handles scroll toggle and resize", as
   app.dispose();
 });
 
+test("tsx app scrolls ScrollView with wrapped CJK lines", async () => {
+  const stdout = createFakeStdout(12, 5);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <ScrollView
+      height={2}
+      offset={offset}
+      onOffsetChange={(nextOffset) => {
+        offset.set(nextOffset);
+      }}
+    >
+      <text value="甲" />
+      <text value="乙" />
+      <text value="丙" />
+      <text value="丁" />
+    </ScrollView>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.equal(offset.get(), 0);
+  assert.match(visibleText(stdout.writes.join("")), /甲/);
+  assert.match(visibleText(stdout.writes.join("")), /乙/);
+
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 1);
+  assert.match(visibleText(stdout.writes.join("")), /丙/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /甲/);
+
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 2);
+  assert.match(visibleText(stdout.writes.join("")), /丁/);
+
+  app.dispose();
+});
+
+test("tsx app applies focus inverse to wide text without breaking layout", async () => {
+  const stdout = createFakeStdout(12, 4);
+  const stdin = createFakeStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <hstack>
+      <text
+        value="中"
+        onKey={(event) => {
+          if (event.name === "return") {
+            return true;
+          }
+          return false;
+        }}
+      />
+      <text
+        value="B"
+        onKey={(event) => {
+          if (event.name === "return") {
+            return true;
+          }
+          return false;
+        }}
+      />
+    </hstack>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /中/);
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7m中/);
+
+  stdin.emitKey(undefined, { name: "tab" });
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /B/);
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7mB/);
+  assert.doesNotMatch(stdout.writes.at(-1) ?? "", /\x1b\[7m中/);
+
+  assert.equal(app.render(), "");
+  assert.match(visibleText(stdout.writes.at(-1)), /B/);
+
+  app.dispose();
+});
+
+test("tsx app renders updates and resizes wide text through fake terminal", async () => {
+  const stdout = createFakeStdout(20, 8);
+  const stdin = createFakeStdin();
+  const title = createSignal("A中🙂e\u0301");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <screen gap={1}>
+      <text value={title} />
+      <box width={4} height={2} overflow="clip">
+        <text value="中中🙂" wrap="hard" />
+      </box>
+    </screen>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /A中🙂e\u0301/);
+
+  title.set("AB");
+  await nextMicrotask();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /B/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /🙂/);
+
+  stdout.columns = 4;
+  stdout.rows = 8;
+  stdout.emitResize();
+
+  assert.match(visibleText(stdout.writes.at(-1)), /中/);
+  assert.match(visibleText(stdout.writes.join("")), /🙂/);
+
+  app.dispose();
+});
+
+test("tsx app types CJK into TextInput through fake terminal", async () => {
+  const stdout = createFakeStdout(20, 6);
+  const stdin = createFakeStdin();
+  const value = createSignal("");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <TextInput
+      value={value}
+      placeholder="名称"
+      onChange={(nextValue) => {
+        value.set(nextValue);
+      }}
+    />,
+    { terminal }
+  );
+
+  app.start();
+
+  stdin.emitKey("中");
+  await nextMicrotask();
+
+  assert.equal(value.get(), "中");
+  assert.match(visibleText(stdout.writes.join("")), /中/);
+
+  stdin.emitKey(undefined, { name: "backspace" });
+  await nextMicrotask();
+
+  assert.equal(value.get(), "");
+
+  app.dispose();
+});
+
 test("tsx app edits TextInput with backspace arrows shift tab placeholder and empty submit", async () => {
   const stdout = createFakeStdout(40, 16);
   const stdin = createFakeStdin();
@@ -1062,6 +1238,101 @@ test("tsx app edits TextInput with backspace arrows shift tab placeholder and em
 
   assert.equal(firstAction.get(), "pressed");
   assert.equal(secondAction.get(), "idle");
+
+  app.dispose();
+});
+
+test("tsx app renders wide-text example content through fake terminal", async () => {
+  const stdout = createFakeStdout(40, 24);
+  const stdin = createFakeStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <screen gap={1}>
+      <box padding={1} border>
+        <vstack gap={1}>
+          <text value="Wide Text" bold color="brightCyan" />
+          <text value="CJK: A中B renders with 中 occupying two terminal columns." />
+          <text value="Emoji: status 🙂 ready 🚀" />
+          <text value={"Combining: cafe\u0301 keeps the accent with e."} />
+        </vstack>
+      </box>
+
+      <box width={12} padding={1} border>
+        <vstack gap={1}>
+          <text value="Hard wrap" color="yellow" />
+          <text value="中中中🙂🙂ABC" wrap="hard" />
+        </vstack>
+      </box>
+
+      <box padding={1} border>
+        <text
+          value="Resize the terminal: layout uses display columns, renderer stores wide placeholders, and ANSI output skips placeholders."
+          wrap="wrap"
+          color="gray"
+        />
+      </box>
+    </screen>,
+    { terminal }
+  );
+
+  app.start();
+
+  const output = visibleText(stdout.writes.join(""));
+  assert.match(output, /Wide Text/);
+  assert.match(output, /A中B/);
+  assert.match(output, /🙂/);
+  assert.match(output, /🚀/);
+  assert.match(output, /cafe\u0301/);
+  assert.match(output, /Hard wra/);
+  assert.match(output, /中/);
+  assert.match(output, /Resize the terminal/);
+
+  app.dispose();
+});
+
+test("tsx app types emoji into TextInput through fake terminal", async () => {
+  const stdout = createFakeStdout(20, 6);
+  const stdin = createFakeStdin();
+  const value = createSignal("");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <TextInput
+      value={value}
+      placeholder="emoji"
+      onChange={(nextValue) => {
+        value.set(nextValue);
+      }}
+    />,
+    { terminal }
+  );
+
+  app.start();
+
+  stdin.emitKey("🙂");
+  await nextMicrotask();
+
+  assert.equal(value.get(), "🙂");
+  assert.match(visibleText(stdout.writes.join("")), /🙂/);
+
+  stdin.emitKey(undefined, { name: "backspace" });
+  await nextMicrotask();
+
+  assert.equal(value.get(), "\uD83D");
+
+  stdin.emitKey(undefined, { name: "backspace" });
+  await nextMicrotask();
+
+  assert.equal(value.get(), "");
 
   app.dispose();
 });

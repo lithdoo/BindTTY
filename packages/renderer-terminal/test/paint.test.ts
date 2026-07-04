@@ -71,12 +71,14 @@ function layout(
   mounted: MountedNode,
   nodeRect: LayoutRect,
   children: LayoutNode[] = [],
-  contentRect: LayoutRect = nodeRect
+  contentRect: LayoutRect = nodeRect,
+  extra: Partial<Omit<LayoutNode, "mounted" | "rect" | "contentRect" | "children">> = {}
 ): LayoutNode {
   return {
     mounted,
     rect: nodeRect,
     contentRect,
+    ...extra,
     children
   };
 }
@@ -186,6 +188,88 @@ test("paintLayout clips wide text by whole grapheme", () => {
   const frame = paintLayout(root, { viewport: { width: 1, height: 1 } });
 
   assert.deepEqual(frameToLines(frame), [" "]);
+});
+
+test("paintLayout clips trailing wide grapheme when one column remains", () => {
+  const root = layout(
+    element("text", { value: "A中" }),
+    rect(0, 0, 2, 1)
+  );
+  const frame = paintLayout(root, { viewport: { width: 2, height: 1 } });
+
+  assert.deepEqual(frameToLines(frame), ["A "]);
+  assert.deepEqual(frameToDebugLines(frame), ["A "]);
+});
+
+test("paintLayout skips leading wide grapheme when it starts after the clip edge", () => {
+  const child = layout(element("text", { value: "中" }), rect(1, 0, 1, 1));
+  const root = layout(
+    element("box", {}, [child.mounted]),
+    rect(0, 0, 2, 1),
+    [child],
+    rect(0, 0, 2, 1),
+    {
+      clip: rect(1, 0, 1, 1)
+    }
+  );
+  const frame = paintLayout(root, { viewport: { width: 2, height: 1 } });
+
+  assert.deepEqual(frameToLines(frame), ["  "]);
+});
+
+test("paintLayout paints emoji and combining marks as single graphemes", () => {
+  const emoji = layout(element("text", { value: "🙂" }), rect(0, 0, 2, 1));
+  const combining = layout(
+    element("text", { value: "e\u0301" }),
+    rect(0, 1, 1, 1)
+  );
+  const root = layout(
+    element("vstack"),
+    rect(0, 0, 2, 2),
+    [emoji, combining]
+  );
+  const frame = paintLayout(root, { viewport: { width: 2, height: 2 } });
+
+  assert.deepEqual(frameToLines(frame), ["🙂", "e\u0301 "]);
+  assert.deepEqual(frameToDebugLines(frame), ["🙂·", "e\u0301 "]);
+  assert.deepEqual(getCell(frame, 0, 0), {
+    char: "🙂",
+    style: {},
+    width: 2
+  });
+  assert.deepEqual(getCell(frame, 0, 1), {
+    char: "e\u0301",
+    style: {},
+    width: 1
+  });
+});
+
+test("paintLayout keeps wide placeholder cells when background fills unrelated columns", () => {
+  const text = layout(element("text", { value: "中" }), rect(0, 0, 2, 1));
+  const bg = layout(element("box", { background: "blue" }), rect(2, 0, 1, 1));
+  const root = layout(element("screen"), rect(0, 0, 3, 1), [text, bg]);
+  const frame = paintLayout(root, { viewport: { width: 3, height: 1 } });
+
+  assert.deepEqual(frameToLines(frame), ["中 "]);
+  assert.deepEqual(frameToDebugLines(frame), ["中· "]);
+  assertFrameInvariant(frame);
+  assert.deepEqual(getCell(frame, 0, 0), {
+    char: "中",
+    style: {},
+    width: 2
+  });
+  assert.deepEqual(getCell(frame, 1, 0), {
+    char: "",
+    style: {},
+    width: 0
+  });
+  assert.deepEqual(getCell(frame, 2, 0), {
+    char: " ",
+    style: {
+      background: "blue"
+    },
+    width: 1
+  });
 });
 
 test("paintLayout clears wide text when background covers its placeholder", () => {

@@ -60,7 +60,7 @@ export function encodeAnsiPatch(patch: FramePatch): string {
     output += change.cell.char;
   }
 
-  return output + RESET;
+  return output.length === 0 ? "" : output + RESET;
 }
 
 function moveCursor(x: number, y: number): string {

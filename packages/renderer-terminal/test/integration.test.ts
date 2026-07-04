@@ -110,3 +110,52 @@ test("runtime + layout + renderer paints for keyed reorders", async () => {
 
   assert.deepEqual(frames, [["B     ", "A     ", "C     "]]);
 });
+
+test("runtime + layout + renderer clears wide text when updating to ASCII", async () => {
+  const title = createSignal("中");
+  const wideViewport = {
+    width: 2,
+    height: 1
+  };
+  const runtime = createRuntimeRoot(
+    elementTemplate("text", {
+      value: title
+    })
+  );
+  const renderer = createTerminalRenderer();
+
+  renderer.render(layoutRoot(runtime.root, { viewport: wideViewport }), {
+    viewport: wideViewport
+  });
+
+  const patches: string[] = [];
+  runtime.onFlush(({ root }) => {
+    const layout = layoutRoot(root, { viewport: wideViewport });
+    patches.push(renderer.render(layout, { viewport: wideViewport }));
+    runtime.clearDirty();
+  });
+
+  title.set("A");
+  await Promise.resolve();
+
+  assert.deepEqual(patches, ["\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[0m"]);
+});
+
+test("runtime + layout + renderer returns empty patch when wide text is unchanged", () => {
+  const title = createSignal("中");
+  const wideViewport = {
+    width: 2,
+    height: 1
+  };
+  const runtime = createRuntimeRoot(
+    elementTemplate("text", {
+      value: title
+    })
+  );
+  const renderer = createTerminalRenderer();
+  const layout = layoutRoot(runtime.root, { viewport: wideViewport });
+
+  renderer.render(layout, { viewport: wideViewport });
+
+  assert.equal(renderer.render(layout, { viewport: wideViewport }), "");
+});

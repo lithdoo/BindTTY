@@ -353,6 +353,94 @@ test("real PTY: Yoga dashboard renders scrolls and toggles sidebar", { concurren
   }
 });
 
+test("real PTY: wide text renders CJK emoji and scrolls ScrollView", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("wide-text");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("wide-text-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 80,
+    rows: 24
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await marker.waitFor("TITLE:宽字符标题🙂", { timeoutMs: 8_000 });
+    await delay(300);
+
+    session.write("\x1b[B");
+    await delay(100);
+    session.write("\x1b[B");
+
+    await marker.waitFor("OFFSET:2", { timeoutMs: 8_000 });
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(result.markers.includes("PASS"));
+    assert.ok(result.markers.includes("OFFSET:2"));
+    assert.match(result.visibleOutput, /宽字符标题/);
+    assert.match(result.visibleOutput, /🙂/);
+    assert.match(result.visibleOutput, /丙/);
+  } finally {
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
+test("real PTY: wide text rewraps after terminal resize", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("wide-text-resize");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("wide-text-resize-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 40,
+    rows: 12
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await delay(300);
+    assert.ok(
+      marker.readLines().some((line) => line.startsWith("HEIGHT:")),
+      `Expected initial HEIGHT marker, got: ${marker.readLines().join(", ")}`
+    );
+
+    session.resize(8, 12);
+    await delay(500);
+
+    await marker.waitFor("REWARP", { timeoutMs: 8_000 });
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(result.markers.includes("PASS"));
+    assert.ok(result.markers.includes("REWARP"));
+    const heights = result.markers
+      .filter((line) => line.startsWith("HEIGHT:"))
+      .map((line) => Number(line.slice("HEIGHT:".length)));
+    assert.ok(heights.length >= 2);
+    assert.notEqual(heights[0], heights[1]);
+    assert.match(result.visibleOutput, /中/);
+    assert.match(result.visibleOutput, /🙂/);
+  } finally {
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
 test("host kind is recorded for the current runner", () => {
   const kind = detectHostKind();
   assert.ok(kind.length > 0);

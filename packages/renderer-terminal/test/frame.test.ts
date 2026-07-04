@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  createBlankCell,
   createFrame,
+  frameToDebugLines,
   frameToLines,
   getCell,
   setCell,
@@ -227,4 +229,28 @@ test("setCell clears an old wide character when writing over its leading cell", 
     style: {},
     width: 1
   });
+});
+
+test("createBlankCell always uses single-column width", () => {
+  assert.deepEqual(createBlankCell(), {
+    char: " ",
+    style: {},
+    width: 1
+  });
+  assert.deepEqual(createBlankCell({ background: "blue" }), {
+    char: " ",
+    style: {
+      background: "blue"
+    },
+    width: 1
+  });
+});
+
+test("frameToDebugLines visualizes wide placeholders separately from frameToLines", () => {
+  const frame = createFrame(4, 1);
+
+  writeText(frame, 0, 0, "A中B");
+
+  assert.deepEqual(frameToLines(frame), ["A中B"]);
+  assert.deepEqual(frameToDebugLines(frame), ["A中·B"]);
 });

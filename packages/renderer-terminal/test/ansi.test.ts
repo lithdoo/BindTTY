@@ -192,3 +192,96 @@ test("encodeAnsiPatch skips wide placeholder cells", () => {
 
   assert.equal(encodeAnsiPatch(patch), "\x1b[1;1H\x1b[0m中\x1b[0m");
 });
+
+test("encodeAnsiPatch emits blank cells that clear old wide text", () => {
+  const patch: FramePatch = {
+    width: 2,
+    height: 1,
+    changes: [
+      {
+        x: 0,
+        y: 0,
+        cell: {
+          char: " ",
+          style: {},
+          width: 1
+        }
+      },
+      {
+        x: 1,
+        y: 0,
+        cell: {
+          char: " ",
+          style: {},
+          width: 1
+        }
+      }
+    ]
+  };
+
+  assert.equal(
+    encodeAnsiPatch(patch),
+    "\x1b[1;1H\x1b[0m \x1b[1;2H\x1b[0m \x1b[0m"
+  );
+});
+
+test("encodeAnsiPatch sorts mixed wide changes and still skips placeholders", () => {
+  const patch: FramePatch = {
+    width: 3,
+    height: 1,
+    changes: [
+      {
+        x: 2,
+        y: 0,
+        cell: {
+          char: "B",
+          style: {},
+          width: 1
+        }
+      },
+      {
+        x: 1,
+        y: 0,
+        cell: {
+          char: "",
+          style: {},
+          width: 0
+        }
+      },
+      {
+        x: 0,
+        y: 0,
+        cell: {
+          char: "中",
+          style: {},
+          width: 2
+        }
+      }
+    ]
+  };
+
+  assert.equal(
+    encodeAnsiPatch(patch),
+    "\x1b[1;1H\x1b[0m中\x1b[1;3H\x1b[0mB\x1b[0m"
+  );
+});
+
+test("encodeAnsiPatch ignores placeholder-only changes without moving the cursor", () => {
+  const patch: FramePatch = {
+    width: 2,
+    height: 1,
+    changes: [
+      {
+        x: 1,
+        y: 0,
+        cell: {
+          char: "",
+          style: {},
+          width: 0
+        }
+      }
+    ]
+  };
+
+  assert.equal(encodeAnsiPatch(patch), "");
+});
