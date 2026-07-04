@@ -2,6 +2,8 @@
 
 Plain terminal text measurement and wrapping utilities for BindTTY.
 
+**现行规范**：[doc/specs/DISPLAY_WIDTH.md](../../doc/specs/DISPLAY_WIDTH.md)
+
 MVP scope:
 
 - Plain text only.

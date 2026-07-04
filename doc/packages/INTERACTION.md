@@ -8,7 +8,7 @@
 - [APP.md](./APP.md) — createApp 组合 runtime / layout / renderer / terminal
 - [RUNTIME.md](./RUNTIME.md) — MountedNode、dirty、scheduler
 - [VNODE.md](./VNODE.md) — Template / MountedNode 数据结构
-- [E2E_TESTING.md](./E2E_TESTING.md) — 端到端测试策略
+- [E2E_TESTING.md](../testing/E2E.md) — 端到端测试策略
 
 ## 1. 背景
 

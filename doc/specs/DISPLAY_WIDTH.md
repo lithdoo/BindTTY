@@ -2,14 +2,19 @@
 
 BindTTY 在 **text → layout → renderer → ANSI** 全链路使用 **terminal display column** 语义，支持 CJK、常见 emoji、combining mark 与 grapheme cluster。
 
-> **状态（2026-07）**：`@bindtty/text`、`@bindtty/layout`、`@bindtty/renderer-terminal`、app/E2E 已落地。  
-> 历史实施计划见 [archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md](./archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md)。
+> **类型**：spec  
+> **范围**：@bindtty/text · @bindtty/layout · @bindtty/renderer-terminal  
+> **状态**：implemented  
+> **最后核对**：2026-07  
+> **代码入口**：packages/text/src/ · packages/renderer-terminal/src/frame.ts  
+> **相关**：[RENDERER.md](../packages/RENDERER.md) · [TODO.md](../../TODO.md)  
+> 历史计划：[archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md](../archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md)
 
 相关文档：
 
-- [RENDERER.md](./RENDERER.md) — Frame / Cell / paint / diff / ANSI 细节
-- [YOGA_LAYOUT.md](./YOGA_LAYOUT.md) — Yoga measure 与 `layoutText()` 集成
-- [LAYOUT.md](./LAYOUT.md) — LayoutNode / contentSize
+- [RENDERER.md](../packages/RENDERER.md) — Frame / Cell / paint / diff / ANSI 细节
+- [YOGA_AND_TEXT.md](./YOGA_AND_TEXT.md) — Yoga measure 与 `layoutText()` 集成
+- [LAYOUT.md](../packages/LAYOUT.md) — LayoutNode / contentSize
 - [TEXT_INPUT.md](./TEXT_INPUT.md) — TextInput 控件（**编辑语义见已知限制**）
 - [../packages/e2e/README.md](../packages/e2e/README.md) — 宽字符 E2E harness
 - [../TODO.md](../TODO.md) — 已知代码缺口与后续工作
@@ -122,7 +127,7 @@ sliceTextByWidth(text: string, startColumn: number, endColumn: number): string;
 
 ## 5. Frame / Cell
 
-public `Cell`（详见 [RENDERER.md](./RENDERER.md)）：
+public `Cell`（详见 [RENDERER.md](../packages/RENDERER.md)）：
 
 ```ts
 interface Cell {
@@ -177,7 +182,7 @@ interface Cell {
 - `contentSize.height` 按 wrapped 行数计算；CJK / emoji 与 renderer 行数一致。
 - **ScrollView**：垂直滚动无需 wide 特殊逻辑；水平 clip 依赖 renderer whole-grapheme clipping。
 - **Resize rewrap**：viewport 变窄时 flex 子节点宽度变化 → `layoutText` 重新换行（Yoga + mock/real E2E 已覆盖）。
-- **Windows TTY**：`stdout` 的 `resize` 事件可能缺失；`createNodeTerminal` 在 win32 对 TTY stdout 轮询 viewport（见 [TERMINAL.md](./TERMINAL.md)）。
+- **Windows TTY**：`stdout` 的 `resize` 事件可能缺失；`createNodeTerminal` 在 win32 对 TTY stdout 轮询 viewport（见 [TERMINAL.md](../packages/TERMINAL.md)）。
 
 ---
 
@@ -237,5 +242,5 @@ npm run start --workspace @bindtty/example-wide-text
 
 ## 12. 文档迁移说明
 
-原 `doc/WIDE_TEXT_FRAME.md`（落地计划 + Ink 参考 + 分阶段 PR）已归档为 [archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md](./archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md)。  
+原 `doc/WIDE_TEXT_FRAME.md`（落地计划 + Ink 参考 + 分阶段 PR）已归档为 [archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md](../archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md)。  
 日常开发与 code review 以 **本文档 + RENDERER.md** 为准。

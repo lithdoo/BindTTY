@@ -114,7 +114,7 @@ bindtty:                    createApp（stdout + terminal 双模式）、re-expo
 | M6 | TextInput 双向绑定 | ✅ |
 | M7 | scroll / list / viewport | ✅ |
 
-详见 [TUI_IMPLEMENTATION_PLAN.md](./doc/TUI_IMPLEMENTATION_PLAN.md) 与 [M7_SCROLL_VIEWPORT.md](./doc/M7_SCROLL_VIEWPORT.md)。
+详见 [architecture/ROADMAP.md](./doc/architecture/ROADMAP.md) 与 [specs/SCROLL_VIEWPORT.md](./doc/specs/SCROLL_VIEWPORT.md)。
 
 ## 快速开始
 
@@ -143,7 +143,7 @@ const app = createApp(<App vm={new CounterVM()} />, {
 app.start();
 ```
 
-tsconfig 需设置 `jsx: "react-jsx"`、`jsxImportSource: "bindtty"`。真实终端使用 `createNodeTerminal` + `createApp(view, { terminal })`，见 [APP.md](./doc/APP.md)。
+tsconfig 需设置 `jsx: "react-jsx"`、`jsxImportSource: "bindtty"`。真实终端使用 `createNodeTerminal` + `createApp(view, { terminal })`，见 [APP.md](./doc/packages/APP.md)。
 
 真实 PTY E2E（`node-pty`，`packages/e2e/real/`）见 [packages/e2e/README.md](./packages/e2e/README.md)：
 
@@ -154,26 +154,11 @@ npm run test:e2e:real:wsl   # 需 WSL Ubuntu + Node.js
 
 示例应用见 [examples/README.md](./examples/README.md)，其中 `@bindtty/example-yoga-dashboard` 展示 Yoga `gap` / `flexGrow` / `flexShrink` / `flexWrap` 与真实 runtime stats。
 
-## 文档索引
+## 文档
 
-| 文档 | 内容 |
-| --- | --- |
-| [VNODE.md](./doc/VNODE.md) | @bindtty/vnode 包设计（Template + MountedNode） |
-| [JSX_RUNTIME.md](./doc/JSX_RUNTIME.md) | @bindtty/jsx-runtime 落地设计（TSX → ViewTemplate） |
-| [RUNTIME.md](./doc/RUNTIME.md) | @bindtty/runtime 落地设计（Template → MountedNode） |
-| [LAYOUT.md](./doc/LAYOUT.md) | @bindtty/layout 落地设计（MountedNode → LayoutNode） |
-| [RENDERER.md](./doc/RENDERER.md) | @bindtty/renderer-terminal 落地设计（LayoutNode → Frame → ANSI Patch） |
-| [APP.md](./doc/APP.md) | bindtty createApp 落地设计（runtime + layout + renderer + terminal + interaction） |
-| [TERMINAL.md](./doc/TERMINAL.md) | @bindtty/terminal 落地设计（terminal lifecycle + input + resize） |
-| [INTERACTION.md](./doc/INTERACTION.md) | @bindtty/interaction 落地设计（keyboard focus + onKey dispatch） |
-| [WIDGETS.md](./doc/WIDGETS.md) | @bindtty/widgets 落地设计（Button / TextInput 等高层控件） |
-| [TEXT_INPUT.md](./doc/TEXT_INPUT.md) | TextInput 控件详细设计（拆分光标渲染方案） |
-| [DISPLAY_WIDTH.md](./doc/DISPLAY_WIDTH.md) | Terminal display-width / 宽字符 / grapheme 支持 |
-| [E2E_TESTING.md](./doc/E2E_TESTING.md) | E2E 测试计划（TSX → App → Terminal 闭环验证） |
-| [TODO.md](./TODO.md) | 已知代码缺口与后续改进 |
-| [DESIGN.md](./doc/DESIGN.md) | 视图树总体设计、四层结构、BindingValue、control node |
-| [TUI_IMPLEMENTATION_PLAN.md](./doc/TUI_IMPLEMENTATION_PLAN.md) | 实现计划、里程碑、优先级 |
-| [archive/](./doc/archive/) | 已合并前的原始分拆文档备份 |
+完整索引见 **[doc/README.md](./doc/README.md)**（含 packages / specs / testing / archive 分类）。
+
+开放改进项：[TODO.md](./TODO.md)。
 
 ## 用户写法约定
 

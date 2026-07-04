@@ -344,7 +344,7 @@ TextInput 是第二个落地控件，在 Button 之后实现。
 8. width / 固定宽度 / 横向滚动（等待 layout width 支持）。
 ```
 
-详细设计见 [TEXT_INPUT.md](./TEXT_INPUT.md)。
+详细设计见 [TEXT_INPUT.md](../specs/TEXT_INPUT.md)。
 
 ### 7.3 Checkbox / Select
 
@@ -627,28 +627,4 @@ Button、TextInput、ScrollView 和 List 跑通后，下一步建议：
 
 Checkbox 尚未实现，可用于进一步验证 `onChange` 与 dynamic style。
 
-## M7 当前实现：ScrollView / List
-
-已实现：
-
-```tsx
-<ScrollView height={10} offset={vm.offset} onOffsetChange={vm.setOffset}>
-  <text value="row" />
-</ScrollView>
-
-<List
-  height={10}
-  offset={vm.offset}
-  onOffsetChange={vm.setOffset}
-  items={vm.logs}
-  getKey={(log) => log.id}
-  render={(log) => <text value={log.message} />}
-/>
-```
-
-实现边界：
-
-1. `ScrollView` 是受控组件，offset 由外部 signal 持有。
-2. 键盘滚动调用 `onOffsetChange(nextOffset)`，layout 负责 clamp。
-3. `List` 是 `ScrollView + forTemplate` 语法糖，不做虚拟化。
-4. `ScrollView` / `List` 已从 `@bindtty/widgets` 和 `bindtty` 顶层入口导出。
+ScrollView / List API 与行为见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §4.3–§4.4；TextInput 见 [TEXT_INPUT.md](../specs/TEXT_INPUT.md)。

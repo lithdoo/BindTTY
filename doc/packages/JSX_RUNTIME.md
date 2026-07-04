@@ -5,8 +5,8 @@
 相关文档：
 
 - [VNODE.md](./VNODE.md) — Template / BindingValue / MountedNode 类型设计
-- [DESIGN.md](./DESIGN.md) — 视图树总体设计
-- [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) — 实现计划与里程碑
+- [DESIGN.md](../architecture/DESIGN.md) — 视图树总体设计
+- [TUI_IMPLEMENTATION_PLAN.md](../architecture/ROADMAP.md) — 实现计划与里程碑
 
 ## 1. 目标
 
@@ -589,14 +589,4 @@ ViewTemplate
 
 下一步再进入 `@bindtty/runtime` 的 `Template -> MountedNode`。
 
-## M7 当前实现：box TSX props
-
-`box` 的 TSX 类型已支持 M7 layout props：
-
-```tsx
-<box height={3} width={20} overflow="clip" scrollY={offset}>
-  <text value="row" />
-</box>
-```
-
-用户优先使用 `@bindtty/widgets` 的 `ScrollView` / `List`；这些组件内部仍生成普通 `box` Template。
+`box` layout/scroll TSX props 见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §4.2；用户优先使用 `ScrollView` / `List`。

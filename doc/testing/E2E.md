@@ -1,8 +1,14 @@
-# E2E 测试计划
+# E2E 测试规范
 
-本文档描述 BindTTY 的端到端测试边界、分层策略与当前第一版落地方式。
+> **类型**：testing  
+> **状态**：implemented  
+> **最后核对**：2026-07  
+> **代码入口**：packages/e2e/mock/ · packages/e2e/real/  
+> **相关**：[APP.md](../packages/APP.md) · [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) · [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md)
 
-## 目标
+相关文档：[packages/e2e/README.md](../../packages/e2e/README.md) · [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §8 · [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) §9
+
+## 1. 目标与范围
 
 E2E 测试验证公开包组合后的真实使用链路，而不是重复各包内部单元测试。
 
@@ -122,7 +128,7 @@ Real PTY（`packages/e2e/real/harness/`）：
 - `wide-text-app.tsx` — CJK + emoji 标题、ScrollView 滚动
 - `wide-text-resize-app.tsx` — 终端列宽变化后 hard wrap 高度变化
 
-详见 [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md) §9 与 [../packages/e2e/README.md](../packages/e2e/README.md)。
+详见 [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) §9 与 [../packages/e2e/README.md](../packages/e2e/README.md)。
 
 ## 后续阶段
 
@@ -182,7 +188,7 @@ E2E 负责：
 - TSX 用户写法是否真实可用。
 - 多包组合是否能稳定渲染、更新、停止、释放。
 
-## M7 当前覆盖
+## 5. Scroll / Viewport 场景
 
 mock E2E 已覆盖：
 

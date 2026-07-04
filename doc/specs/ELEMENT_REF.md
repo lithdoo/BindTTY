@@ -1,27 +1,24 @@
-# Element Ref 设计与落地计划
+# Element Ref 规范（Element Ref）
 
-本文档描述 BindTTY 的元素级 `ref` 能力。它的目标是在不引入完整 hooks / component instance 机制的前提下，让高阶 widget 和业务扩展可以拿到一个稳定、受控的 mounted element 外部接口，并通过该接口设置 mounted、layout、unmount 等生命周期回调。
+> **类型**：spec  
+> **范围**：@bindtty/runtime · @bindtty/vnode · bindtty createApp  
+> **状态**：implemented  
+> **最后核对**：2026-07  
+> **代码入口**：packages/runtime/src/ · packages/jsx-runtime/src/jsx-runtime.ts  
+> **相关**：[VNODE.md](../packages/VNODE.md) · [SCROLL_VIEWPORT.md](./SCROLL_VIEWPORT.md)
+
+本文档描述 BindTTY 的元素级 `ref` 能力：在不引入完整 hooks 的前提下，通过 `ref(api)` 访问 `MountedElementApi` 与 layout 生命周期回调。
 
 相关文档：
 
-- [VNODE.md](./VNODE.md) — Template / MountedNode 类型设计
-- [RUNTIME.md](./RUNTIME.md) — mount、binding、dirty、dispose
-- [APP.md](./APP.md) — createApp 主链路
-- [LAYOUT.md](./LAYOUT.md) — LayoutNode 与 scroll clamp
-- [INTERACTION.md](./INTERACTION.md) — focus 与 onKey
-- [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md) — ScrollView / List 设计
+- [VNODE.md](../packages/VNODE.md) — Template / MountedNode
+- [RUNTIME.md](../packages/RUNTIME.md) — mount、binding、dirty
+- [APP.md](../packages/APP.md) — createApp 主链路
+- [SCROLL_VIEWPORT.md](./SCROLL_VIEWPORT.md) — ScrollView 与 `api.onLayout`
 
-当前状态：**核心能力已落地**。
+**核心能力已落地**（`ref(api)`、`onMounted` / `onLayout` / `onUnmount`、ScrollView 基于 applied layout state）。
 
-已完成：
-
-1. intrinsic element 支持静态 `ref(api)`。
-2. runtime 提供稳定 `MountedElementApi`、`onMounted`、`onLayout`、`onUnmount`。
-3. app 在 layout/render 后派发 layout result 到 element api。
-4. `ScrollView` 已迁移为基于 applied layout state 计算下一次滚动意图。
-5. 旧的 `scroll-sync` 反写 signal 方案已从 app 主链路移除；残留未使用文件可后续清理。
-
-暂未纳入 MVP：
+**暂未纳入**：
 
 1. focus / blur / onFocusChange 的 api 扩展。
 2. component-level lifecycle。
@@ -855,10 +852,10 @@ state -> layout -> state
 
 任务：
 
-- [x] 更新 [VNODE.md](./VNODE.md) 的 common props。
+- [x] 更新 [VNODE.md](../packages/VNODE.md) 的 common props。
 - [x] 更新 [RUNTIME.md](./RUNTIME.md) 的 mount / dispose 语义。
-- [x] 更新 [APP.md](./APP.md) 的 layout dispatch。
-- [x] 更新 [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md) 的 scroll 数据流。
+- [x] 更新 [APP.md](../packages/APP.md) 的 layout dispatch。
+- [x] 更新 [M7_SCROLL_VIEWPORT.md](./SCROLL_VIEWPORT.md) 的 scroll 数据流。
 - [x] 新增一个 ref 示例。
 
 验收：

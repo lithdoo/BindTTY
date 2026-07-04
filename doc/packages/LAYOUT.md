@@ -7,8 +7,8 @@
 - [VNODE.md](./VNODE.md) — Template / MountedNode 类型设计
 - [RUNTIME.md](./RUNTIME.md) — Template → MountedNode、binding、dirty、scheduler
 - [RENDERER.md](./RENDERER.md) — LayoutNode → Frame → ANSI Patch
-- [DESIGN.md](./DESIGN.md) — 视图树总体设计
-- [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) — 实现计划与里程碑
+- [DESIGN.md](../architecture/DESIGN.md) — 视图树总体设计
+- [TUI_IMPLEMENTATION_PLAN.md](../architecture/ROADMAP.md) — 实现计划与里程碑
 
 ## 1. 目标
 
@@ -471,64 +471,49 @@ screen  是否占满 viewport
   定义高层控件语义，例如 button / input
 ```
 
-## 8. 第一版支持范围
+## 8. 当前支持范围
 
-第一版支持：
+**MountedNode**：element、fragment、show、for。
 
-```text
-MountedNode:
-  element
-  fragment
-  show
-  for
+**Element tag**：screen、vstack、hstack、box、text、spacer。
 
-Element tag:
-  screen
-  vstack
-  hstack
-  box
-  text
-  spacer
-```
-
-第一版暂不支持：
+**已支持能力**：
 
 ```text
-1. button / input 的交互语义
-2. flex grow / shrink
-3. percentage size
-4. absolute position
-5. alignment
-6. overflow clipping
-7. text wrapping
-8. unicode display width 精确测量（已完成，见 [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md)）
-9. scroll
+text.wrap + @bindtty/text layoutText()（display-width）
+overflow clip、scrollX/scrollY、contentSize（见 specs/SCROLL_VIEWPORT.md）
+YogaLayoutEngine 默认；第一批 flex props（gap、flexGrow 等，见 specs/YOGA_AND_TEXT.md）
+unicode display width（见 specs/DISPLAY_WIDTH.md）
 ```
 
-`button` / `input` 可以后续在 widget 和 paint 设计明确后加入。第一版不建议把它们伪装成完整控件，避免误导 API 语义。
+**layout 层仍不支持**：percentage size、absolute position；intrinsic `button` / `input` layout（Unsupported）。
 
-## 9. 盒模型与 Flexbox 预留
+**由 @bindtty/widgets 提供**：Button、TextInput、ScrollView、List 交互语义。
 
-BindTTY 长期希望支持 Yoga / Flexbox，因此 layout props 的设计应尽量贴近 Yoga 能力。但 MVP 不需要一次实现完整 Flexbox。
+## 9. 盒模型与 Flexbox（当前 vs 预留）
 
-第一版实际实现：
+BindTTY 长期希望支持 Yoga / Flexbox。当前 **YogaLayoutEngine** 已开放第一批 flex props；**BasicLayoutEngine** legacy 不消费 Yoga-only props。
+
+当前 Yoga 已支持：
 
 ```text
-content
-padding
-border
-width / height 可后置
+gap、flexGrow、flexShrink、flexWrap
+alignItems、justifyContent
 ```
 
-第一版不实现：
+BasicLayoutEngine 仍支持：
+
+```text
+content、padding、border
+box height/width、overflow、scrollY（clip/scroll metadata）
+```
+
+尚未支持：
 
 ```text
 margin
-gap
-flexGrow / flexShrink
-alignItems
-justifyContent
 percentage size
+absolute position
 ```
 
 但类型和文档应给这些能力留位置：
@@ -914,7 +899,7 @@ function layoutRoot(root, options) {
 ```text
 width / height 由 layoutText() / measureText() 按 display column 计算。
 单行文本 height 默认为 layout 结果行数；未指定 wrap 时单行 height = 1。
-CJK、emoji、combining mark 的宽度与换行见 DISPLAY_WIDTH.md。
+CJK、emoji、combining mark 的宽度与换行见 ../specs/DISPLAY_WIDTH.md。
 ```
 
 实现：`@bindtty/layout` 调用 `@bindtty/text` 的 `layoutText()`，不直接使用 `String.length`。
@@ -1309,29 +1294,8 @@ LayoutNode
 
 下一阶段由 `@bindtty/renderer-terminal` 实现 paint / frame / ANSI diff。
 
-## M7 当前实现：Clip / Scroll Metadata
+## 18. 当前结论
 
-M7 已在 `BasicLayoutEngine` 中补齐滚动窗口所需的最小 layout props：
-
-```text
-box:
-  height / width        fixed number size
-  overflow="clip"      输出 LayoutNode.clip
-  scrollX / scrollY    输出 LayoutNode.scrollOffset
-```
-
-`LayoutNode` 当前额外包含：
-
-```ts
-clip?: LayoutRect;
-scrollOffset?: { x: number; y: number };
-contentSize?: { width: number; height: number };
-```
-
-规则：
-
-1. `height` / `width` 第一版只支持固定数值。
-2. `overflow="clip"` 使用 `contentRect` 作为 clip。
-3. children 仍按自然尺寸排列，可以超出 parent。
-4. `scrollY` 在 layout 阶段按 `contentSize.height - clip.height` clamp。
-5. renderer 负责真正裁剪与应用 scroll offset。
+- **默认 engine**：`YogaLayoutEngine`；`createBasicLayoutEngine()` 为 legacy fallback。
+- **Scroll/clip**：`LayoutNode.clip` / `scrollOffset` / `contentSize` 见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md)。
+- **Text/Yoga**：见 [YOGA_AND_TEXT.md](../specs/YOGA_AND_TEXT.md) 与 [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md)。

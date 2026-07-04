@@ -1,4 +1,9 @@
-# BindTTY TUI Implementation Plan
+# BindTTY 路线图
+
+> **类型**：architecture  
+> **状态**：implemented（M1–M7）  
+> **最后核对**：2026-07  
+> **相关**：[DESIGN.md](./DESIGN.md) · [../specs/SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) · [../README.md](../README.md)
 
 ## 当前结论
 
@@ -22,7 +27,7 @@ Frame
 ANSI Patch
 ~~~
 
-文档索引见 [README.md](./README.md)。
+文档索引见 [README.md](../README.md)。
 
 ## 总体目标
 
@@ -77,7 +82,7 @@ packages/
 
 ### 当前修订：包边界已拆细
 
-上面的 7 包模型是早期计划。当前实现与设计已经调整为更清晰的 10 包模型，详见 [README.md](./README.md)：
+上面的 7 包模型是早期计划。当前实现与设计已经调整为更清晰的 10 包模型，详见 [README.md](../README.md)：
 
 ~~~text
 @bindtty/signal
@@ -248,7 +253,7 @@ LayoutNode 保存布局结果
 Frame 保存终端输出
 ~~~
 
-详细说明见 [DESIGN.md](./DESIGN.md) 和 [VNODE.md](./VNODE.md)。
+详细说明见 [DESIGN.md](./DESIGN.md) 和 [VNODE.md](../packages/VNODE.md)。
 
 ### 3. @bindtty/jsx-runtime：TSX 到 ViewTemplate
 
@@ -343,7 +348,7 @@ layout / paint / frame diff
 
 第一版 dirty 可以粗一些，只要能区分 structure / layout / paint 级别即可。
 
-MountedNode 设计见 [VNODE.md](./VNODE.md) Part II。
+MountedNode 设计见 [VNODE.md](../packages/VNODE.md) Part II。
 
 ### 5. @bindtty/layout 与 @bindtty/renderer-terminal
 
@@ -609,7 +614,7 @@ MountedNode -> LayoutNode -> Frame (Cell[]) -> ANSI Patch
 
 ### Milestone 7：scroll / list / viewport ✅ 已完成
 
-详见 **[M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md)**（计划、分层设计、稳定接口契约、分阶段开发计划与验收标准）。
+详见 **[SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md)**（分层设计、稳定接口契约与测试索引）。历史分阶段计划见 [archive/plans/M7_SCROLL_VIEWPORT_PLAN.md](../archive/plans/M7_SCROLL_VIEWPORT_PLAN.md)。
 
 ~~~tsx
 <ScrollView height={10} offset={vm.offset} onOffsetChange={vm.setOffset}>

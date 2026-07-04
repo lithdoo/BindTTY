@@ -1,6 +1,6 @@
 # BindTTY MountedNode 设计思路
 
-> **备份文档**：已合并至 [../VNODE.md](../VNODE.md)，本文件仅作历史参考。
+> **备份文档**：已合并至 [../VNODE.md](../packages/VNODE.md)，本文件仅作历史参考。
 
 本文档描述 BindTTY 视图系统中的 MountedNode 层设计。包结构与文档索引见 [../README.md](../README.md)。
 

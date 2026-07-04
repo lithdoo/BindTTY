@@ -1,4 +1,10 @@
-# TextInput 落地设计
+# TextInput 规范（TextInput）
+
+> **类型**：widget  
+> **状态**：partial（display-column 输入窗口未实现）  
+> **最后核对**：2026-07  
+> **代码入口**：packages/widgets/src/text-input.ts  
+> **相关**：[WIDGETS.md](../packages/WIDGETS.md) · [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md)
 
 本文档描述 `@bindtty/widgets` 中 TextInput 控件的设计。它建立在 Button MVP 已验证的组件模型之上：
 
@@ -10,12 +16,12 @@ widget props → intrinsic element (box + text + hstack)
 
 相关文档：
 
-- [WIDGETS.md](./WIDGETS.md) — widgets 总体设计、包边界、Button 参考实现
+- [WIDGETS.md](../packages/WIDGETS.md) — widgets 总体设计、包边界、Button 参考实现
 - [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md) — terminal display-width / 宽字符（TextInput 编辑限制见 §8）
-- [INTERACTION.md](./INTERACTION.md) — keyboard focus、`onKey` dispatch、focused state
-- [APP.md](./APP.md) — createApp 组合 runtime / layout / renderer / terminal
-- [VNODE.md](./VNODE.md) — Template / MountedNode 数据结构
-- [JSX_RUNTIME.md](./JSX_RUNTIME.md) — TSX → ViewTemplate
+- [INTERACTION.md](../packages/INTERACTION.md) — keyboard focus、`onKey` dispatch、focused state
+- [APP.md](../packages/APP.md) — createApp 组合 runtime / layout / renderer / terminal
+- [VNODE.md](../packages/VNODE.md) — Template / MountedNode 数据结构
+- [JSX_RUNTIME.md](../packages/JSX_RUNTIME.md) — TSX → ViewTemplate
 
 ## 1. 目标
 

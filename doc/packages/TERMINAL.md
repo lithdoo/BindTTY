@@ -1,6 +1,13 @@
 # @bindtty/terminal 落地设计
 
-本文档描述 BindTTY 的 Terminal Host 设计。它不是 renderer，也不是 widget 系统；它位于 `bindtty` app 与真实 `process.stdout` / `process.stdin` 之间，负责终端会话生命周期和输入事件。
+> **类型**：package  
+> **范围**：@bindtty/terminal  
+> **状态**：implemented  
+> **最后核对**：2026-07  
+> **代码入口**：packages/terminal/src/host.ts  
+> **相关**：[APP.md](./APP.md) · [RENDERER.md](./RENDERER.md)
+
+本文档描述 BindTTY 的 Terminal Host 设计。
 
 相关文档：
 
@@ -176,6 +183,7 @@ Terminal Host 不应该强绑定 `process.stdout` / `process.stdin` 的完整 No
 
 ```ts
 export interface TerminalStdout {
+  isTTY?: boolean;
   columns?: number;
   rows?: number;
   write(chunk: string): unknown;
@@ -223,6 +231,8 @@ export interface CreateNodeTerminalOptions {
   hideCursor?: boolean;
   rawMode?: boolean;
   exitOnCtrlC?: boolean;
+  /** Win32 TTY：stdout resize 不可靠时轮询 columns/rows；默认 win32 50ms，0 关闭 */
+  resizePollIntervalMs?: number;
 }
 
 export interface TerminalHost {
@@ -249,6 +259,7 @@ useAltScreen = false
 hideCursor = false
 rawMode = false
 exitOnCtrlC = true
+resizePollIntervalMs = win32 且 stdout.isTTY 时为 50，否则 0（不轮询）
 ```
 
 默认不进入 alternate screen / raw mode，是为了保持当前 APP MVP 的温和行为。真实 CLI 可以显式打开。

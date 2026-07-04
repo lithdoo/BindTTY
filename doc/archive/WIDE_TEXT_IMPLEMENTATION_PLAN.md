@@ -1,21 +1,21 @@
 # Wide Text Frame 与 Grapheme 渲染落地计划（归档）
 
-> **归档说明**：功能已于 2026-07 落地。现行规范见 [../DISPLAY_WIDTH.md](../DISPLAY_WIDTH.md)。  
+> **归档说明**：功能已于 2026-07 落地。现行规范见 [../DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md)。  
 > 本文档保留分阶段任务、Ink 参考、PR 拆分等历史记录，供追溯用。
 
 本文档描述 BindTTY 支持宽字符、grapheme cluster 和真实 terminal display width 的设计与落地计划。
 
-本文档是 [YOGA_LAYOUT.md](./YOGA_LAYOUT.md) 的后续补充。`YOGA_LAYOUT.md` 中的 `@bindtty/text` 当前按 ASCII-first / plain text MVP 推进，暂不承诺 CJK、emoji、combining mark、grapheme cluster 的真实终端显示语义。本文档的目标是补齐这部分能力。
+本文档是 [YOGA_LAYOUT.md](plans/YOGA_LAYOUT_PLAN.md) 的后续补充。`YOGA_LAYOUT.md` 中的 `@bindtty/text` 当前按 ASCII-first / plain text MVP 推进，暂不承诺 CJK、emoji、combining mark、grapheme cluster 的真实终端显示语义。本文档的目标是补齐这部分能力。
 
 相关文档：
 
 - [VNODE.md](./VNODE.md) — Template / MountedNode 类型设计
 - [RUNTIME.md](./RUNTIME.md) — Template → MountedNode、binding、dirty、scheduler
-- [LAYOUT.md](./LAYOUT.md) — MountedNode → LayoutNode
+- [LAYOUT.md](../../packages/LAYOUT.md) — MountedNode → LayoutNode
 - [RENDERER.md](./RENDERER.md) — LayoutNode → Frame → ANSI Patch
-- [YOGA_LAYOUT.md](./YOGA_LAYOUT.md) — Text Measurement 与 Yoga Layout
-- [NODE_SETUP.md](./NODE_SETUP.md) — Element Ref / Layout Callback
-- [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md) — ScrollView / List viewport 与 scroll 数据流
+- [YOGA_LAYOUT.md](plans/YOGA_LAYOUT_PLAN.md) — Text Measurement 与 Yoga Layout
+- [NODE_SETUP.md](../specs/ELEMENT_REF.md) — Element Ref / Layout Callback
+- [M7_SCROLL_VIEWPORT_PLAN.md](plans/M7_SCROLL_VIEWPORT_PLAN.md) — ScrollView（现行 [../specs/SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md)）
 
 当前落地状态（2026-07-04）：
 
@@ -1406,7 +1406,7 @@ doc/WIDE_TEXT_FRAME.md
 更新：
 
 ```text
-doc/YOGA_LAYOUT.md
+doc/specs/YOGA_AND_TEXT.md
 doc/RENDERER.md
 
 ```
@@ -1556,7 +1556,7 @@ doc/RENDERER.md
 任务：
 
 - [x] 更新 `doc/RENDERER.md` 的 Frame/Cell 说明。
-- [x] 更新 `doc/YOGA_LAYOUT.md` 中 ASCII-first 的限制。
+- [x] 更新 `doc/specs/YOGA_AND_TEXT.md` 中 ASCII-first 的限制。
 - [x] 新增 `doc/WIDE_TEXT_FRAME.md`。
 - [x] 新增 CJK text 示例。
 - [x] 新增 emoji text 示例。

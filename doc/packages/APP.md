@@ -11,7 +11,7 @@
 - [RENDERER.md](./RENDERER.md) — LayoutNode → Frame → ANSI Patch
 - [TERMINAL.md](./TERMINAL.md) — TerminalHost 生命周期、viewport、keypress
 - [INTERACTION.md](./INTERACTION.md) — keyboard focus、onKey dispatch
-- [DESIGN.md](./DESIGN.md) — 视图树总体设计
+- [DESIGN.md](../architecture/DESIGN.md) — 视图树总体设计
 
 ## 1. 当前基础
 
@@ -871,7 +871,7 @@ signal.set()
   ↓ stdout.write / terminal.write
 ```
 
-已完成的 M7 scroll / list / viewport 能力见 [M7_SCROLL_VIEWPORT.md](./M7_SCROLL_VIEWPORT.md)。后续待推进：
+已完成的 scroll / list / viewport 能力见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md)。后续待推进：
 
 ```text
 高级 layout props

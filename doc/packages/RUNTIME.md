@@ -6,8 +6,8 @@
 
 - [VNODE.md](./VNODE.md) — Template / MountedNode 类型设计
 - [JSX_RUNTIME.md](./JSX_RUNTIME.md) — TSX → ViewTemplate
-- [DESIGN.md](./DESIGN.md) — 视图树总体设计
-- [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) — 实现计划与里程碑
+- [DESIGN.md](../architecture/DESIGN.md) — 视图树总体设计
+- [TUI_IMPLEMENTATION_PLAN.md](../architecture/ROADMAP.md) — 实现计划与里程碑
 
 ## 1. 阅读路径
 

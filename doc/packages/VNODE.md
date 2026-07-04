@@ -2,8 +2,8 @@
 
 本文档是 @bindtty/vnode 包的实现依据，合并 Template 声明层与 MountedNode 运行时层设计。
 
-- 总体架构见 [DESIGN.md](./DESIGN.md)
-- 实现计划见 [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md)
+- 总体架构见 [DESIGN.md](../architecture/DESIGN.md)
+- 实现计划见 [TUI_IMPLEMENTATION_PLAN.md](../architecture/ROADMAP.md)
 - 原始分拆文档备份见 [archive/VIEW_TEMPLATE.md](./archive/VIEW_TEMPLATE.md)、[archive/MOUNTED_NODE.md](./archive/MOUNTED_NODE.md)
 
 BindTTY 是一个面向 **MVVM + signal-driven TUI** 的 TypeScript/TSX 框架。
@@ -1299,19 +1299,7 @@ mounted node dirty
 layout / paint / frame patch
 ```
 
-## M7 当前实现：box layout props
-
-`box` schema 已增加 M7 所需 layout props：
-
-```text
-height   layout dirty
-width    layout dirty
-overflow layout dirty
-scrollX  layout dirty
-scrollY  layout dirty
-```
-
-这些 props 不新增 intrinsic tag；`ScrollView` / `List` 在 `@bindtty/widgets` 中组合为普通 `box` + metadata props。
+`box` scroll/clip props 见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §4.2。
 
 为了实现这个模型，运行时必须有一棵“活的视图树”。
 

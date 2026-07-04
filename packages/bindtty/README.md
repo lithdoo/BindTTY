@@ -61,5 +61,5 @@ app.start();
 
 ## 文档
 
-- [doc/APP.md](../../doc/APP.md) — createApp 设计
+- [doc/APP.md](../../doc/packages/APP.md) — createApp 设计
 - [doc/README.md](../../doc/README.md) — 文档索引

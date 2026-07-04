@@ -1,62 +1,32 @@
-# Milestone 7：Scroll / Viewport / List 计划与设计
+# Scroll / Viewport / List 规范（Scroll Viewport）
 
-本文档汇总 BindTTY **Milestone 7** 的目标、分层设计、稳定接口契约、实现阶段与验收标准。M1–M7 主链路已完成；M7 是「从可运行 demo 到可承载真实长内容 UI」的关键一步。
+> **类型**：spec
+> **范围**：@bindtty/layout · @bindtty/renderer-terminal · @bindtty/widgets · @bindtty/interaction
+> **状态**：implemented
+> **最后核对**：2026-07
+> **代码入口**：packages/layout/src/ · packages/widgets/src/scroll-view.ts
+> **相关**：[LAYOUT.md](../packages/LAYOUT.md) · [RENDERER.md](../packages/RENDERER.md) · [WIDGETS.md](../packages/WIDGETS.md)
 
-当前状态：**已落地**。实现包括 `box` clip/scroll layout props、renderer clip stack、`ScrollView`、`List`、mock E2E 覆盖；虚拟化、scrollbar、stickToBottom 仍为后续增强。
-
-相关文档：
-
-- [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) — 全项目里程碑与优先级
-- [DESIGN.md](./DESIGN.md) — 视图树与 binding 模型
-- [LAYOUT.md](./LAYOUT.md) — LayoutNode、overflow 预留
-- [RENDERER.md](./RENDERER.md) — Frame、viewport 裁剪、paint 规则
-- [VNODE.md](./VNODE.md) — intrinsic tag 扩展点
-- [INTERACTION.md](./INTERACTION.md) — focus 与 key dispatch
-- [WIDGETS.md](./WIDGETS.md) — 高层控件边界
-- [APP.md](./APP.md) — createApp 编排链
-- [E2E_TESTING.md](./E2E_TESTING.md) — 测试策略
+相关文档： [ROADMAP.md](../architecture/ROADMAP.md) · [E2E.md](../testing/E2E.md) · [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md)
 
 ---
 
-## 1. 背景与目标
+## 1. 范围
 
-### 1.1 为什么需要 M7
+### 1.1 已支持
 
-当前框架已支持：
+- box clip/scroll layout props
+- LayoutNode clip / scrollOffset / contentSize
+- renderer clip stack 与 scroll offset
+- ScrollView / List（受控 offset）
+- 键盘滚动与 TextInput focus 优先级
 
-- TSX 声明、signal 驱动增量更新
-- 终端 lifecycle、focus、Button、TextInput
-- 单层 viewport（终端宽高）内的 layout + ANSI diff
+### 1.2 不在范围内
 
-尚不支持：
-
-- **内容高度超过可见区域**时的裁剪与滚动
-- **长列表 / 日志流**的稳定渲染与更新
-- **键盘滚动**与 focus 的协同
-
-没有这些能力，BindTTY 只能做表单、计数器等小界面，难以承载日志面板、菜单列表、聊天记录等典型 TUI 场景。
-
-### 1.2 M7 目标（第一版）
-
-| 目标 | 说明 |
-| --- | --- |
-| **Clip** | 子内容超出容器时，只绘制可见区域 |
-| **Scroll offset** | 用 signal 驱动垂直（优先）滚动偏移 |
-| **Scroll 控件** | 用户可声明 `ScrollView` widget |
-| **List 场景** | 动态 `items` + `ScrollView` 的组合用法 |
-| **键盘滚动** | ↑/↓（及可选 PgUp/PgDn）改变 offset |
-| **测试** | 每层单测 + mock E2E；real PTY 保持 smoke |
-
-### 1.3 非目标（M7 不做）
-
-- 虚拟列表 / 窗口化 mount（留 M7+ 或 M8）
-- 水平滚动（可预留 API，实现可后置）
-- 鼠标滚轮、触摸
-- margin / gap / flex grow 等高级 layout（见 [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) 后续项）
-- Unicode 宽字符 / emoji display-width 测量（已由 [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md) 在 text/layout/renderer 落地；ScrollView 垂直滚动无额外 wide 逻辑）
-- scrollback buffer / 终端历史回滚（与 alternate screen 策略不同）
+- 虚拟列表、水平滚动、scrollbar、stickToBottom
 
 ---
+
 
 ## 2. 术语
 
@@ -110,7 +80,7 @@ bindtty createApp
   无结构性变更；仍 layoutRoot → render → write
 ```
 
-原则（与 [RENDERER.md](./RENDERER.md) §7 一致）：
+原则（与 [RENDERER.md](../packages/RENDERER.md) §7 一致）：
 
 - **layout 可产生超出 parent 的 rect**；**renderer 负责最终裁剪**
 - **Terminal viewport 仍是 Frame 全屏尺寸来源**；scroll 是 layout 树内的子窗口
@@ -436,14 +406,14 @@ YogaLayoutEngine 默认语义：
 - 默认 YogaLayoutEngine 已支持第一批 flex props；BasicLayoutEngine 作为 legacy fallback 仍不消费 Yoga-only props
 - 不实现 `maxHeight`，避免与未来 min/max layout props 混在一起
 - 不改变 `screen` 占满 terminal viewport 的语义
-- 参考 [LAYOUT.md](./LAYOUT.md) §10.4：children 可超出 parent，overflow 由 renderer/scroll 处理
+- 参考 [LAYOUT.md](../packages/LAYOUT.md) §10.4：children 可超出 parent，overflow 由 renderer/scroll 处理
 - `contentSize` 可由 arrange 阶段重新 measure children 得出；M7 优先正确性，不先做 measure cache
 
 ---
 
 ## 7. Renderer 设计要点
 
-在 [RENDERER.md](./RENDERER.md) 已有规则上扩展：
+在 [RENDERER.md](../packages/RENDERER.md) 已有规则上扩展：
 
 ### 7.1 绘制顺序
 
@@ -731,7 +701,7 @@ if (event.name === "end") onOffsetChange(maxY)
 | `packages/e2e/mock` | 可见输出断言（strip ANSI 后）、键盘滚动、动态 list |
 | `packages/e2e/real` | 不新增方向键 PTY 用例；可选 smoke「长输出不崩溃」 |
 
-遵循 [E2E_TESTING.md](./E2E_TESTING.md)：**细节在 mock，真实性在 PTY smoke**。
+遵循 [E2E.md](../testing/E2E.md)：**细节在 mock，真实性在 PTY smoke**。
 
 ### 10.1 最小用例清单
 
@@ -795,37 +765,7 @@ const app = createApp(
 
 用于验证 M7 端到端体验，并作为 Quick Start 素材。
 
----
 
-## 12. 风险与对策
+## 10. 历史计划
 
-| 风险 | 对策 |
-| --- | --- |
-| clip + diff 产生大量 ANSI 抖动 | 先正确性后优化；必要时 scroll 区域短时整段重绘 |
-| measure 性能（超长列表） | M7 全量 mount；文档注明行数建议；M8 虚拟化 |
-| offset 与 TextInput 焦点冲突 | 明确 interaction 优先级；E2E 覆盖 |
-| 水平滚动与边框 padding 交互复杂 | M7 仅垂直；水平 API 预留 |
-| `height` props 与未来 layout props 设计冲突 | M7 只实现 fixed number，并在 LAYOUT.md 标注这是通用 layout props 的第一步 |
-| 外部 `offset` 可能越界 | layout 输出 applied offset；ScrollView 键盘处理基于 applied offset 和 max offset 计算下一次意图，不隐式反写用户 signal |
-| raw stdin 不支持箭头键 | mock E2E 覆盖细节；real PTY 只做 smoke |
-
----
-
-## 13. 完成后的文档更新清单
-
-M7 落地时同步更新：
-
-- [x] [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) — M7 勾选子项
-- [x] [LAYOUT.md](./LAYOUT.md) — overflow/scroll 从「后续」改为已实现
-- [x] [RENDERER.md](./RENDERER.md) — clip/scroll paint 规则
-- [x] [WIDGETS.md](./WIDGETS.md) — ScrollView / List API
-- [x] [VNODE.md](./VNODE.md) — box 新 layout props schema
-- [x] [JSX_RUNTIME.md](./JSX_RUNTIME.md) — box TSX props 增量
-- [x] [E2E_TESTING.md](./E2E_TESTING.md) — 新增场景列表
-- [x] 根 [README.md](../README.md) — 当前完成状态
-
----
-
-## 14. 一句话方向
-
-**M7 不是新造一条渲染管线，而是在现有 layout → frame → diff 链上增加 clip、scroll offset 与 ScrollView 语义**，使 binding-level 更新能作用于「可滚动的可见窗口」，从而让 BindTTY 从控件 demo 迈向可用的长内容 TUI 应用。
+见 [archive/plans/M7_SCROLL_VIEWPORT_PLAN.md](../archive/plans/M7_SCROLL_VIEWPORT_PLAN.md)。

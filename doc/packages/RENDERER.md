@@ -8,8 +8,8 @@
 - [RUNTIME.md](./RUNTIME.md) — Template → MountedNode、binding、dirty、scheduler
 - [LAYOUT.md](./LAYOUT.md) — MountedNode → LayoutNode
 - [INTERACTION.md](./INTERACTION.md) — keyboard focus 与 `isFocused` 查询
-- [DESIGN.md](./DESIGN.md) — 视图树总体设计
-- [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) — 实现计划与里程碑
+- [DESIGN.md](../architecture/DESIGN.md) — 视图树总体设计
+- [TUI_IMPLEMENTATION_PLAN.md](../architecture/ROADMAP.md) — 实现计划与里程碑
 
 ## 1. 目标
 
@@ -1200,21 +1200,4 @@ renderer.reset()
 
 先保证完整 frame 与 cell diff 正确，再逐步优化 dirty rect、line diff、ANSI run 合并。
 
-## M7 当前实现：Clip Stack 与 Scroll Offset
-
-renderer 已支持 `LayoutNode.clip` 与 `LayoutNode.scrollOffset`：
-
-```text
-paint root with terminal viewport clip
-  node.clip 与父 clip 求交集
-  当前节点 background / border 使用父 clip 绘制
-  children 使用交集 clip 绘制
-  children 坐标应用 -scrollOffset
-```
-
-当前行为：
-
-1. text / background / border / focused inverse 都走同一套 clipped cell write。
-2. scroll offset 只移动 children，不移动当前 box 的 border/background。
-3. offset 变化仍走普通 frame diff，不引入特殊 scroll patch。
-4. mock E2E 已覆盖静态 clip、signal offset、ScrollView 键盘滚动和动态 List。
+Clip stack 与 scroll offset 绘制见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §6。

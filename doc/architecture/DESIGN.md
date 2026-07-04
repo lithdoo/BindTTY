@@ -1,6 +1,6 @@
 # BindTTY 视图树设计
 
-本文档描述 BindTTY 的视图树设计。包结构与文档索引见 [README.md](./README.md)。
+本文档描述 BindTTY 的视图树设计。包结构与文档索引见 [README.md](../README.md)。
 
 BindTTY 的目标是构建一个面向 **MVVM + signal-driven TUI** 的 TypeScript/TSX 框架。它不是 React VDOM 的简单复刻，而是一个以 **ViewModel binding** 为核心的终端 UI 声明系统。
 
@@ -1073,7 +1073,7 @@ scheduler 放在 runtime 包，不单独拆包。
 
 当前未落地 ElementDefinition 层。layout / renderer 直接消费 MountedNode / LayoutNode；Button、TextInput、ScrollView、List 由 `@bindtty/widgets` 组合 intrinsic element 与 `onKey` 实现。
 
-实现计划与里程碑见 [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md)，文档索引见 [README.md](./README.md)。
+实现计划与里程碑见 [TUI_IMPLEMENTATION_PLAN.md](./ROADMAP.md)，文档索引见 [README.md](../README.md)。
 
 ---
 

@@ -1,6 +1,6 @@
 # BindTTY TODO
 
-**开放改进项。** 已实现能力与 display-width 规范见 [doc/DISPLAY_WIDTH.md](doc/DISPLAY_WIDTH.md)。
+**开放改进项。** 已实现能力与 display-width 规范见 [doc/specs/DISPLAY_WIDTH.md](doc/specs/DISPLAY_WIDTH.md)。
 
 ---
 
@@ -20,17 +20,17 @@
 
 **渲染现状**：仍用 before / cursor / after 三段 `<text>`，无独立 display-column 光标列。
 
-**参考**： [doc/TEXT_INPUT.md](doc/TEXT_INPUT.md)、[doc/DISPLAY_WIDTH.md](doc/DISPLAY_WIDTH.md) §8
+**参考**： [doc/specs/TEXT_INPUT.md](doc/specs/TEXT_INPUT.md)、[doc/specs/DISPLAY_WIDTH.md](doc/specs/DISPLAY_WIDTH.md) §8
 
 ---
 
 ## 暂缓（单独 spec，不与此批次混做）
 
-以下项已在 [doc/DISPLAY_WIDTH.md](doc/DISPLAY_WIDTH.md) §1.2 / §11 说明，**不要**在无 spec 变更时直接改代码：
+以下项已在 [doc/specs/DISPLAY_WIDTH.md](doc/specs/DISPLAY_WIDTH.md) §1.2 / §11 说明，**不要**在无 spec 变更时直接改代码：
 
 - RichText / TextSpan（text value 内嵌 ANSI）
 - Frame `width > 2` / placeholder 链扩展
-- IME / 多行 / 选区（见 [doc/TEXT_INPUT.md](doc/TEXT_INPUT.md) 非目标）
+- IME / 多行 / 选区（见 [doc/specs/TEXT_INPUT.md](doc/specs/TEXT_INPUT.md) 非目标）
 
 ---
 

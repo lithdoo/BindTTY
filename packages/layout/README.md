@@ -20,8 +20,10 @@ const layoutTree = layoutRoot(runtime.root, {
 
 intrinsic `button` / `input` 在 schema 有定义，但 layout 会抛 `Unsupported layout element`；交互控件请使用 `@bindtty/widgets` 的组合实现。
 
-高级 layout props（width、height、gap、flex 等）尚未实现。
+高级 layout props（width、height、gap、flex、clip/scroll）见 [doc/specs/YOGA_AND_TEXT.md](../../doc/specs/YOGA_AND_TEXT.md) 与 [doc/packages/LAYOUT.md](../../doc/packages/LAYOUT.md)。默认 engine 为 `YogaLayoutEngine`。
 
 ## 文档
 
-- [doc/LAYOUT.md](../../doc/LAYOUT.md) — 落地设计
+- [doc/packages/LAYOUT.md](../../doc/packages/LAYOUT.md) — 包落地设计
+- [doc/specs/YOGA_AND_TEXT.md](../../doc/specs/YOGA_AND_TEXT.md) — text + Yoga 摘要
+- [doc/specs/SCROLL_VIEWPORT.md](../../doc/specs/SCROLL_VIEWPORT.md) — clip / scroll

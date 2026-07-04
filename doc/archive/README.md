@@ -1,9 +1,13 @@
 # 文档备份
 
-本目录保存已合并前的原始分拆文档，仅供参考。当前实现依据请使用 [../VNODE.md](../VNODE.md)。
+本目录保存已合并前的原始分拆文档与 **历史计划**，仅供参考。活跃规范见 [../README.md](../README.md)。
 
 | 文件 | 说明 |
 | --- | --- |
 | [VIEW_TEMPLATE.md](./VIEW_TEMPLATE.md) | 原 Template 声明层设计 |
 | [MOUNTED_NODE.md](./MOUNTED_NODE.md) | 原 MountedNode 运行时设计 |
-| [WIDE_TEXT_IMPLEMENTATION_PLAN.md](./WIDE_TEXT_IMPLEMENTATION_PLAN.md) | 原宽字符分阶段落地计划（现行规范见 [../DISPLAY_WIDTH.md](../DISPLAY_WIDTH.md)） |
+| [WIDE_TEXT_IMPLEMENTATION_PLAN.md](./WIDE_TEXT_IMPLEMENTATION_PLAN.md) | 宽字符落地计划 → [../specs/DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) |
+| [plans/M7_SCROLL_VIEWPORT_PLAN.md](./plans/M7_SCROLL_VIEWPORT_PLAN.md) | M7 计划 → [../specs/SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) |
+| [plans/YOGA_LAYOUT_PLAN.md](./plans/YOGA_LAYOUT_PLAN.md) | Yoga/text 计划 → [../specs/YOGA_AND_TEXT.md](../specs/YOGA_AND_TEXT.md) |
+
+旧文件名 stub 见 [../redirects/](../redirects/)。

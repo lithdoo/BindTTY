@@ -2,4 +2,4 @@
 
 Terminal lifecycle and input host package for BindTTY.
 
-See [../../doc/TERMINAL.md](../../doc/TERMINAL.md) for the design.
+See [../../doc/packages/TERMINAL.md](../../doc/packages/TERMINAL.md)（§8 resize / win32 轮询）。
