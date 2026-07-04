@@ -354,8 +354,19 @@ function readContentSize(layout: LayoutNode): LayoutSize {
   let height = layout.contentRect.height;
 
   for (const child of layout.children) {
-    width = Math.max(width, child.rect.x + child.rect.width - layout.contentRect.x);
-    height = Math.max(height, child.rect.y + child.rect.height - layout.contentRect.y);
+    const margin =
+      child.mounted.kind === "element"
+        ? resolveMargin(child.mounted.props)
+        : { top: 0, right: 0, bottom: 0, left: 0 };
+
+    width = Math.max(
+      width,
+      child.rect.x + child.rect.width + margin.right - layout.contentRect.x
+    );
+    height = Math.max(
+      height,
+      child.rect.y + child.rect.height + margin.bottom - layout.contentRect.y
+    );
   }
 
   return {

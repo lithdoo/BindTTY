@@ -69,6 +69,18 @@ export const layoutPropsView = (
   </hstack>
 );
 
+export const layoutPropsExtendedView = (
+  <vstack marginTop={1}>
+    <box padding={1} padding-left={2} paddingTop={0} maxHeight={4}>
+      <text value="A" marginBottom={1} min-width={2} />
+    </box>
+    <hstack>
+      <spacer size={1} minWidth={3} />
+      <text value="C" margin-left={1} />
+    </hstack>
+  </vstack>
+);
+
 export const customButtonView = (
   <CustomButton
     id="submit"

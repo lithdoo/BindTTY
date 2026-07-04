@@ -7,6 +7,7 @@ import {
   appView,
   customButtonView,
   interactionView,
+  layoutPropsExtendedView,
   layoutPropsView,
   loading,
   textView,
@@ -67,6 +68,57 @@ test("compiled TSX preserves Yoga layout props and kebab-case aliases", () => {
   assert.equal(root.props["justify-content"], "space-between");
   assert.equal(root.children[0]?.props["flex-grow"], 1);
   assert.equal(root.children[0]?.props.flexShrink, 1);
+});
+
+test("compiled TSX preserves min/max margin and edge padding props with kebab-case aliases", () => {
+  const root = layoutPropsExtendedView as {
+    kind: "element";
+    tag: string;
+    props: Record<string, unknown>;
+    children: Array<{
+      kind: "element";
+      tag: string;
+      props: Record<string, unknown>;
+      children: unknown[];
+    }>;
+  };
+
+  assert.equal(root.tag, "vstack");
+  assert.equal(root.props.marginTop, 1);
+
+  const box = root.children[0];
+  assert.equal(box?.tag, "box");
+  assert.equal(box?.props.padding, 1);
+  assert.equal(box?.props["padding-left"], 2);
+  assert.equal(box?.props.paddingTop, 0);
+  assert.equal(box?.props.maxHeight, 4);
+
+  const textInBox = box?.children[0] as {
+    kind: "element";
+    tag: string;
+    props: Record<string, unknown>;
+  };
+  assert.equal(textInBox.tag, "text");
+  assert.equal(textInBox.props.marginBottom, 1);
+  assert.equal(textInBox.props["min-width"], 2);
+
+  const hstack = root.children[1];
+  assert.equal(hstack?.tag, "hstack");
+  const spacer = hstack?.children[0] as {
+    kind: "element";
+    tag: string;
+    props: Record<string, unknown>;
+  };
+  const textInRow = hstack?.children[1] as {
+    kind: "element";
+    tag: string;
+    props: Record<string, unknown>;
+  };
+  assert.equal(spacer.tag, "spacer");
+  assert.equal(spacer.props.size, 1);
+  assert.equal(spacer.props.minWidth, 3);
+  assert.equal(textInRow.tag, "text");
+  assert.equal(textInRow.props["margin-left"], 1);
 });
 
 test("compiled TSX keeps custom component props on the component boundary", () => {

@@ -2050,6 +2050,21 @@ test("layoutRoot rejects min/max size props on screen", () => {
     () => layoutRoot(createMountedElement("screen", { maxHeight: 10 }), { viewport }),
     /Unsupported layout prop: maxHeight/
   );
+  assert.throws(
+    () => layoutRoot(createMountedElement("screen", { minWidth: 10 }), { viewport }),
+    /Unsupported layout prop: minWidth/
+  );
+});
+
+test("layoutRoot rejects margin props on screen", () => {
+  assert.throws(
+    () => layoutRoot(createMountedElement("screen", { marginTop: 1 }), { viewport }),
+    /Unsupported layout prop: marginTop/
+  );
+  assert.throws(
+    () => layoutRoot(createMountedElement("screen", { "margin-left": 2 }), { viewport }),
+    /Unsupported layout prop: marginLeft/
+  );
 });
 
 test("resolvePadding applies edge over axis over uniform shorthand", () => {
@@ -2252,6 +2267,51 @@ test("YogaLayoutEngine keeps box contentRect independent of margin", () => {
   assert.equal(contentRect.y, rect.y + 1);
   assert.equal(contentRect.width, rect.width - 2);
   assert.equal(contentRect.height, rect.height - 2);
+});
+
+test("YogaLayoutEngine includes trailing child margin in clipped box contentSize", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      height: 2,
+      overflow: "clip",
+      scrollY: 99
+    },
+    [createMountedElement("text", { value: "A", marginBottom: 3 })]
+  );
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.contentSize, {
+    width: 1,
+    height: 4
+  });
+  assert.deepEqual(layout?.scrollOffset, {
+    x: 0,
+    y: 2
+  });
+});
+
+test("YogaLayoutEngine includes trailing child marginRight in clipped box contentSize", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      width: 2,
+      height: 1,
+      overflow: "clip",
+      scrollX: 99
+    },
+    [createMountedElement("text", { value: "A", marginRight: 3 })]
+  );
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.contentSize, {
+    width: 3,
+    height: 1
+  });
+  assert.deepEqual(layout?.scrollOffset, {
+    x: 1,
+    y: 0
+  });
 });
 
 test("BasicLayoutEngine rejects margin props", () => {

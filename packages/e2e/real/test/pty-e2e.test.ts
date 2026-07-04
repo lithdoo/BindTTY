@@ -441,6 +441,42 @@ test("real PTY: wide text rewraps after terminal resize", { concurrency: false }
   }
 });
 
+test("real PTY: Yoga layout props apply margin padding and minWidth", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("layout-props");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("layout-props-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 80,
+    rows: 24
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await marker.waitFor("MARGIN_Y:3", { timeoutMs: 8_000 });
+    await marker.waitFor("PADDING_X:3", { timeoutMs: 8_000 });
+    await marker.waitFor("MINWIDTH_X:5", { timeoutMs: 8_000 });
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(result.markers.includes("PASS"));
+    assert.match(result.visibleOutput, /A/);
+    assert.match(result.visibleOutput, /B/);
+    assert.match(result.visibleOutput, /P/);
+    assert.match(result.visibleOutput, /S/);
+  } finally {
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
 test("host kind is recorded for the current runner", () => {
   const kind = detectHostKind();
   assert.ok(kind.length > 0);

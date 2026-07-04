@@ -3,6 +3,7 @@ import test from "node:test";
 import { stripVTControlCharacters } from "node:util";
 
 import { Button, List, ScrollView, TextInput, createApp } from "bindtty";
+import type { LayoutNode } from "@bindtty/layout";
 import { createSignal } from "@bindtty/signal";
 import { ANSI, createNodeTerminal } from "@bindtty/terminal";
 import type {
@@ -11,7 +12,7 @@ import type {
   TerminalStdin,
   TerminalStdout
 } from "@bindtty/terminal";
-import type { ReadableSignal, Template } from "@bindtty/vnode";
+import type { MountedElementApi, ReadableSignal, Template } from "@bindtty/vnode";
 
 interface FakeStdout extends TerminalStdout {
   writes: string[];
@@ -104,6 +105,22 @@ async function nextMicrotask(): Promise<void> {
 
 function visibleText(output: string | undefined): string {
   return stripVTControlCharacters(output ?? "");
+}
+
+function lastFrameText(stdout: FakeStdout): string {
+  return visibleText(stdout.writes.at(-1));
+}
+
+function columnIndexOf(text: string, needle: string): number {
+  for (const line of text.split("\n")) {
+    const index = line.indexOf(needle);
+
+    if (index !== -1) {
+      return index;
+    }
+  }
+
+  return -1;
 }
 
 function Title(props: { value: ReadableSignal<string> }): Template {
@@ -1328,6 +1345,130 @@ test("tsx app types emoji into TextInput through fake terminal", async () => {
   await nextMicrotask();
 
   assert.equal(value.get(), "");
+
+  app.dispose();
+});
+
+test("tsx app applies marginBottom spacing through Yoga layout", async () => {
+  const stdout = createFakeStdout(12, 8);
+  const stdin = createFakeStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  let bRect: LayoutNode["rect"] | null = null;
+  const app = createApp(
+    <vstack>
+      <text value="A" marginBottom={2} />
+      <text
+        value="B"
+        ref={(api: MountedElementApi) => {
+          api.onLayout = (layout: unknown) => {
+            bRect = (layout as LayoutNode).rect;
+          };
+        }}
+      />
+    </vstack>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.deepEqual(bRect, {
+    x: 0,
+    y: 3,
+    width: 1,
+    height: 1
+  });
+  assert.match(lastFrameText(stdout), /A/);
+  assert.match(lastFrameText(stdout), /B/);
+
+  app.dispose();
+});
+
+test("tsx app applies paddingLeft through Yoga layout", async () => {
+  const stdout = createFakeStdout(12, 6);
+  const stdin = createFakeStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <box paddingLeft={3}>
+      <text value="P" />
+    </box>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.equal(columnIndexOf(lastFrameText(stdout), "P"), 3);
+
+  app.dispose();
+});
+
+test("tsx app wraps text using maxWidth through Yoga layout", async () => {
+  const stdout = createFakeStdout(12, 6);
+  const stdin = createFakeStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  let textRect: LayoutNode["rect"] | null = null;
+  const app = createApp(
+    <text
+      value="abcd"
+      wrap="wrap"
+      maxWidth={2}
+      ref={(api: MountedElementApi) => {
+        api.onLayout = (layout: unknown) => {
+          textRect = (layout as LayoutNode).rect;
+        };
+      }}
+    />,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.deepEqual(textRect, {
+    x: 0,
+    y: 0,
+    width: 2,
+    height: 2
+  });
+  assert.match(lastFrameText(stdout), /ab/);
+  assert.match(lastFrameText(stdout), /cd/);
+
+  app.dispose();
+});
+
+test("tsx app applies minWidth on spacer through Yoga layout", async () => {
+  const stdout = createFakeStdout(12, 4);
+  const stdin = createFakeStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <hstack>
+      <spacer size={1} minWidth={5} />
+      <text value="S" />
+    </hstack>,
+    { terminal }
+  );
+
+  app.start();
+
+  assert.ok(columnIndexOf(lastFrameText(stdout), "S") >= 5);
 
   app.dispose();
 });
