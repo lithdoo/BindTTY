@@ -55,6 +55,7 @@
 | 文档 | 内容 |
 | --- | --- |
 | [E2E.md](./testing/E2E.md) | mock + real PTY E2E |
+| [../.github/workflows/ci.yml](../.github/workflows/ci.yml) | GitHub Actions CI（build / test / examples） |
 | [../packages/e2e/README.md](../packages/e2e/README.md) | E2E 包说明 |
 
 ## 其它

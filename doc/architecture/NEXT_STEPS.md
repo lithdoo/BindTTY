@@ -46,32 +46,20 @@ TSX → ViewTemplate → MountedNode → LayoutNode → Frame → ANSI Patch
 
 ## 3. 当前主要缺口
 
-### 3.1 CI 缺失
+### 3.1 CI
 
-仓库尚无 `.github/workflows/`。建议 workflow：
+主 CI：GitHub Actions [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)（`ubuntu-latest`、Node 22）
 
 ```yaml
-name: CI
-on:
-  push:
-    branches: [main]
-  pull_request:
-jobs:
-  build-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-      - run: npm test
-      - run: npm run build:examples
+npm ci
+npm run build
+npm test
+npm run build:examples
 ```
 
-real PTY 测试建议：手动触发 / nightly / Windows 专用 job，不阻塞主 CI。
+push / PR 到 `main` 自动触发。`npm test` 含 workspace 单测与 `@bindtty/e2e`（mock + real PTY；Linux 上 node-pty 可用）。
+
+real PTY 专项 job（Windows / WSL）可后续单独添加，不阻塞主 CI。
 
 ### 3.2 npm 发布待执行
 
@@ -126,7 +114,7 @@ import {
 
 ### Phase A：发布与基础设施（P0）
 
-1. GitHub Actions CI
+1. ~~GitHub Actions CI~~（已完成）
 2. `npm run publish:packages`
 3. 冻结 `bindtty` 顶层导出并更新 quick start（已完成）
 4. 文档统一为 11 包模型（ROADMAP 已完成；见 [archive/plans/PACKAGE_MODEL_HISTORY.md](../archive/plans/PACKAGE_MODEL_HISTORY.md)）
@@ -240,7 +228,7 @@ API freeze → CI / release → layout prop matrix → Scroll/List → widgets e
 
 | Issue | 内容 | 状态 |
 | --- | --- | --- |
-| 1 | GitHub Actions CI | ⏳ open |
+| 1 | GitHub Actions CI | ✅ done |
 | 2 | 文档统一为 11 包模型 | 🔶 partial（ROADMAP 包模型已统一；其余 doc 漂移待清理） |
 | 3 | `bindtty` 顶层 API 冻结 | ✅ done |
 | 4 | npm 发布元数据 | ✅ done |
