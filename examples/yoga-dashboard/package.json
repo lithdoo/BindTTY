@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@bindtty/terminal": "0.1.0-alpha.1",
-    "bindtty": "0.1.0-alpha.1"
+    "@bindtty/widgets": "0.1.0-alpha.2",
+    "bindtty": "0.1.0-alpha.2"
   },
   "devDependencies": {
     "@bindtty/jsx-runtime": "0.1.0-alpha.1",

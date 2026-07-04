@@ -1,6 +1,7 @@
 import os from "node:os";
 
-import { Button, List, computed, createApp, createSignal } from "bindtty";
+import { computed, createApp, createSignal } from "bindtty";
+import { Button, List } from "@bindtty/widgets";
 import { createNodeTerminal } from "@bindtty/terminal";
 
 interface RuntimeStats {

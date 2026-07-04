@@ -12,10 +12,11 @@
 - npm 发布工程配置：`0.1.0-alpha.1`、LICENSE、`scripts/publish-packages.mjs`（commit `8b03b27`）
 - `bindtty` JSX runtime 转发（`jsxImportSource: "bindtty"`）
 - ROADMAP 历史 7 包 / 10 包模型移入 [doc/archive/plans/PACKAGE_MODEL_HISTORY.md](doc/archive/plans/PACKAGE_MODEL_HISTORY.md)
-- `bindtty` 顶层公共 API 冻结：`createApp`、`createSignal` / `computed` / `effect`、widgets、JSX 转发
+- `bindtty` 顶层公共 API 冻结：`createApp`、`createSignal` / `computed` / `effect`、JSX 转发（widgets 见 `@bindtty/widgets`）
 - GitHub Actions CI（`.github/workflows/ci.yml`：`npm ci` / `build` / `test` / `build:examples`）
 - npm 发布：`0.1.0-alpha.1` 已发布至 npm（11 包，tag `alpha`）
 - `ScrollView` → `VScrollView` + 新增 `HScrollView`（breaking rename）
+- `bindtty` 与 `@bindtty/widgets` 解耦（alpha.2）：bindtty 不再 re-export / 依赖 widgets
 
 ---
 

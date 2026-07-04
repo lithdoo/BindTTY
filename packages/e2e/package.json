@@ -21,7 +21,8 @@
     "@bindtty/signal": "0.1.0-alpha.1",
     "@bindtty/text": "0.1.0-alpha.1",
     "@bindtty/terminal": "0.1.0-alpha.1",
-    "bindtty": "0.1.0-alpha.1"
+    "@bindtty/widgets": "0.1.0-alpha.2",
+    "bindtty": "0.1.0-alpha.2"
   },
   "optionalDependencies": {
     "node-pty": "^1.0.0"

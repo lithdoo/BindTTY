@@ -74,19 +74,11 @@ npm install bindtty@alpha
 
 ### 3.3 顶层 API（alpha 冻结）
 
-`bindtty` 导出：
+`bindtty` 导出框架入口（**不含 widgets**）：
 
 ```ts
-import {
-  Button,
-  List,
-  ScrollView,
-  TextInput,
-  computed,
-  createApp,
-  createSignal,
-  effect
-} from "bindtty";
+import { computed, createApp, createSignal, effect } from "bindtty";
+import { Button, List, TextInput } from "@bindtty/widgets";
 ```
 
 真实终端另引 `@bindtty/terminal` 的 `createNodeTerminal`。不导出 `runtime` / `vnode` / `layout` / `renderer-terminal`。

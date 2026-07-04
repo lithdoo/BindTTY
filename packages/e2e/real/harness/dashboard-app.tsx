@@ -1,6 +1,7 @@
 import fs from "node:fs";
 
-import { Button, List, createApp } from "bindtty";
+import { createApp } from "bindtty";
+import { Button, List } from "@bindtty/widgets";
 import { createSignal } from "@bindtty/signal";
 import { createNodeTerminal } from "@bindtty/terminal";
 

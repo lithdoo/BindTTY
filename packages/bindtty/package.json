@@ -1,6 +1,6 @@
 {
   "name": "bindtty",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "type": "module",
   "description": "MVVM signal-driven TUI framework for TypeScript/TSX.",
   "main": "./dist/index.js",
@@ -36,8 +36,7 @@
     "@bindtty/runtime": "0.1.0-alpha.1",
     "@bindtty/signal": "0.1.0-alpha.1",
     "@bindtty/terminal": "0.1.0-alpha.1",
-    "@bindtty/vnode": "0.1.0-alpha.1",
-    "@bindtty/widgets": "0.1.0-alpha.1"
+    "@bindtty/vnode": "0.1.0-alpha.1"
   },
   "peerDependencies": {
     "@bindtty/signal": "0.1.0-alpha.1"
@@ -48,6 +47,7 @@
     }
   },
   "devDependencies": {
+    "@bindtty/widgets": "0.1.0-alpha.2",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },

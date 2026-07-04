@@ -2,6 +2,21 @@
 
 高层 TUI 控件：`Button`、`Checkbox`、`Select`、`ProgressBar`、`TextInput`、`ScrollView`、`VScrollView`、`HScrollView`、`List`。
 
+## 安装
+
+与 `bindtty` **分开安装**，版本号应对齐（如均为 `0.1.0-alpha.2`）：
+
+```bash
+npm install bindtty @bindtty/widgets
+```
+
+Signal 请从 `bindtty` 导入，widgets 从本包导入：
+
+```tsx
+import { createApp, createSignal } from "bindtty";
+import { Button, VScrollView } from "@bindtty/widgets";
+```
+
 ## 导出
 
 - `Button` / `Checkbox` / `Select` / `TextInput`
@@ -21,7 +36,7 @@
 
 ```tsx
 import { createSignal } from "bindtty";
-import { ScrollView, VScrollView, HScrollView } from "bindtty";
+import { ScrollView } from "@bindtty/widgets";
 
 const scrollX = createSignal(0);
 const scrollY = createSignal(0);
@@ -47,7 +62,22 @@ const scrollY = createSignal(0);
 
 ## Migration（alpha.2 breaking）
 
-原单轴 `ScrollView` 已重命名为 `VScrollView`（无别名）。横向单轴使用 `HScrollView`；**双轴**使用新恢复的 `ScrollView`。
+### Widgets 与 bindtty 解耦
+
+`bindtty` 不再 re-export 本包。须显式安装并从 `@bindtty/widgets` 导入所有控件。
+
+```tsx
+// before (alpha.1)
+import { createApp, Button } from "bindtty";
+
+// after (alpha.2)
+import { createApp } from "bindtty";
+import { Button } from "@bindtty/widgets";
+```
+
+### ScrollView 重命名
+
+原单轴 `ScrollView` 已重命名为 `VScrollView`（无别名）。横向单轴使用 `HScrollView`；**双轴**使用 `ScrollView`。
 
 ```tsx
 // before (alpha.1)
@@ -55,11 +85,11 @@ import { ScrollView } from "bindtty";
 <ScrollView height={10} offset={y} onOffsetChange={y.set} />
 
 // after — 垂直-only
-import { VScrollView } from "bindtty";
+import { VScrollView } from "@bindtty/widgets";
 <VScrollView height={10} offset={y} onOffsetChange={y.set} />
 
 // after — 双轴
-import { ScrollView } from "bindtty";
+import { ScrollView } from "@bindtty/widgets";
 <ScrollView width={80} height={20} offsetX={x} offsetY={y}
   onOffsetXChange={x.set} onOffsetYChange={y.set} />
 ```

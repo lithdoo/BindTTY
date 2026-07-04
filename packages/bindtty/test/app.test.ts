@@ -3,15 +3,6 @@ import test from "node:test";
 import { stripVTControlCharacters } from "node:util";
 
 import {
-  Button,
-  Checkbox,
-  List,
-  VScrollView,
-  HScrollView,
-  ScrollView,
-  ProgressBar,
-  Select,
-  TextInput,
   computed,
   createApp,
   createSignal,
@@ -19,6 +10,17 @@ import {
   type AppStdout,
   type CreateAppOptions
 } from "bindtty";
+import {
+  Button,
+  Checkbox,
+  HScrollView,
+  List,
+  ProgressBar,
+  ScrollView,
+  Select,
+  TextInput,
+  VScrollView
+} from "@bindtty/widgets";
 import {
   createYogaLayoutEngine,
   type LayoutEngine,
@@ -218,33 +220,6 @@ test("bindtty exports signal primitives", () => {
   assert.equal(typeof createSignal, "function");
   assert.equal(typeof computed, "function");
   assert.equal(typeof effect, "function");
-});
-
-test("bindtty exports the Button widget", () => {
-  assert.equal(typeof Button, "function");
-});
-
-test("bindtty exports the Checkbox widget", () => {
-  assert.equal(typeof Checkbox, "function");
-});
-
-test("bindtty exports the Select widget", () => {
-  assert.equal(typeof Select, "function");
-});
-
-test("bindtty exports the ProgressBar widget", () => {
-  assert.equal(typeof ProgressBar, "function");
-});
-
-test("bindtty exports the TextInput widget", () => {
-  assert.equal(typeof TextInput, "function");
-});
-
-test("bindtty exports ScrollView, VScrollView, HScrollView and List widgets", () => {
-  assert.equal(typeof ScrollView, "function");
-  assert.equal(typeof VScrollView, "function");
-  assert.equal(typeof HScrollView, "function");
-  assert.equal(typeof List, "function");
 });
 
 test("createApp returns lifecycle methods without rendering by default", () => {

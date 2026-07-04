@@ -1,7 +1,7 @@
 # ProgressBar 规范（Progress Bar）
 
 > **类型**：widget
-> **范围**：@bindtty/widgets · bindtty re-export
+> **范围**：@bindtty/widgets
 > **状态**：implemented
 > **最后核对**：2026-07
 > **代码入口**：packages/widgets/src/display/progress-bar.ts
@@ -54,7 +54,7 @@
 
 ```tsx
 import { createSignal } from "bindtty";
-import { ProgressBar } from "bindtty";
+import { ProgressBar } from "@bindtty/widgets";
 
 const progress = createSignal(42);
 

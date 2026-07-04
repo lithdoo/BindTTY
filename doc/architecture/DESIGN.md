@@ -1062,7 +1062,7 @@ frame diff
 | `@bindtty/terminal` | 真实终端 lifecycle、viewport、stdin key event |
 | `@bindtty/interaction` | keyboard focus、onKey 派发 |
 | `@bindtty/widgets` | Button / TextInput / ScrollView / List 等高层控件 |
-| `bindtty` | 统一入口 |
+| `bindtty` | 框架入口：`createApp`、signal re-export、JSX 转发 |
 
 合并原则：
 

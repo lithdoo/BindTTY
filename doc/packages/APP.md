@@ -181,9 +181,9 @@ stdout / viewport adapter 类型
 
 ```text
 export createApp
-export { Button, TextInput, ScrollView, List } from @bindtty/widgets
+export { createSignal, computed, effect } from @bindtty/signal
 export type { AppStdout, AppStdin, AppViewport, BindTTYApp, CreateAppStdoutOptions, CreateAppTerminalOptions, CreateAppOptions }
-export type { ButtonProps, ButtonStyleProps, TextInputProps, TextInputStyleProps, ScrollViewProps, ScrollViewStyleProps, ListProps }
+export type { Dispose, ReadableSignal, Signal, ... } from @bindtty/signal
 ```
 
 `package.json` 运行时依赖：
@@ -196,8 +196,9 @@ export type { ButtonProps, ButtonStyleProps, TextInputProps, TextInputStyleProps
 @bindtty/vnode
 @bindtty/interaction
 @bindtty/terminal
-@bindtty/widgets
 ```
+
+控件由应用单独安装 `@bindtty/widgets`（`bindtty` 不依赖、不 re-export）。
 
 dev 依赖：
 
@@ -847,7 +848,8 @@ dispose:
 用户可写：
 
 ```ts
-import { createApp, Button, TextInput, ScrollView, List } from "bindtty";
+import { createApp } from "bindtty";
+import { Button, TextInput, ScrollView, List } from "@bindtty/widgets";
 import { createNodeTerminal } from "@bindtty/terminal";
 
 // stdout 模式（测试 / 非 TTY）

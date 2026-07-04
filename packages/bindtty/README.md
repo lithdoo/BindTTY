@@ -1,11 +1,19 @@
 # bindtty
 
-BindTTY 的用户入口包。组合 runtime、layout、renderer、terminal、interaction，提供 **alpha 冻结的公共 API**：`createApp`、signal 原语、widgets re-export 与 JSX runtime 转发。
+BindTTY 的用户入口包。组合 runtime、layout、renderer、terminal、interaction，提供 **alpha 冻结的公共 API**：`createApp`、signal 原语与 JSX runtime 转发。
+
+高层控件（Button、TextInput、Select 等）请单独安装 [`@bindtty/widgets`](../widgets/README.md)。
 
 ## 安装
 
 ```bash
 npm install bindtty
+```
+
+使用官方 widgets 时：
+
+```bash
+npm install bindtty @bindtty/widgets
 ```
 
 真实终端应用另需 `@bindtty/terminal`（`createNodeTerminal`）。JSX runtime 随 `bindtty` 依赖一并安装。
@@ -31,17 +39,11 @@ npm install bindtty
 | --- | --- |
 | 应用 | `createApp` |
 | Signal | `createSignal`、`computed`、`effect` |
-| Widgets | `Button`、`Checkbox`、`Select`、`ProgressBar`、`TextInput`、`ScrollView`、`VScrollView`、`HScrollView`、`List` |
-| 类型 | `CreateAppOptions`、`BindTTYApp`、`ButtonProps`、`CheckboxProps`、`SelectProps`、`TextInputProps`、… |
+| 类型 | `CreateAppOptions`、`BindTTYApp`、`ReadableSignal`、`Signal`、… |
 
 ```ts
-import {
-  Button,
-  computed,
-  createApp,
-  createSignal,
-  TextInput
-} from "bindtty";
+import { computed, createApp, createSignal } from "bindtty";
+import { Button, TextInput } from "@bindtty/widgets";
 ```
 
 ### 子路径
@@ -55,17 +57,18 @@ import {
 
 | 包 | 典型用途 |
 | --- | --- |
+| `@bindtty/widgets` | Button、TextInput、Select、ScrollView、List 等控件 |
 | `@bindtty/terminal` | `createNodeTerminal`、真实 TTY lifecycle |
 | `@bindtty/signal` | 与 `bindtty` 相同 API；可独立用于无 TUI 的 signal 逻辑 |
 | `@bindtty/runtime`、`@bindtty/vnode`、`@bindtty/layout` 等 | 高级扩展、测试、框架内部 |
 
-**不**从 `bindtty` 导出 `runtime` / `vnode` / `layout` / `renderer-terminal`，避免公共面过大。
+**不**从 `bindtty` 导出 `runtime` / `vnode` / `layout` / `renderer-terminal` / widgets，避免公共面过大。
 
 ### Peer dependencies
 
 `@bindtty/signal` 为 **peer dependency**（同时保留在 `dependencies` 中，以便 `npm install bindtty` 自动安装）。全应用应只有**一份** `@bindtty/signal` 实例——应用与 widgets 内部 `createSignal` / `computed` 须解析到同一模块，否则可能出现 computed 不更新、订阅链断裂。
 
-推荐统一从 `bindtty` 导入 signal，勿单独安装另一版本的 `@bindtty/signal`。
+推荐统一从 `bindtty` 导入 signal，勿单独安装另一版本的 `@bindtty/signal`。使用 widgets 时，`bindtty` 与 `@bindtty/widgets` 请保持**同版本号**发布（如均为 `0.1.0-alpha.2`）。
 
 **排障：**
 
@@ -76,13 +79,31 @@ import {
   1. 只从 bindtty 导入 createSignal / computed / effect
   2. npm uninstall @bindtty/signal（若单独装了冲突版本）
   3. npm dedupe && npm install
-  4. 应用 package.json overrides: { "@bindtty/signal": "0.1.0-alpha.1" }
+  4. 应用 package.json overrides: { "@bindtty/signal": "0.1.0-alpha.2" }
+```
+
+## Breaking change（alpha.1 → alpha.2）
+
+`bindtty` **不再** re-export `@bindtty/widgets`。控件须显式安装并从 `@bindtty/widgets` 导入：
+
+```ts
+// Before (alpha.1)
+import { createApp, Button } from "bindtty";
+
+// After (alpha.2)
+import { createApp } from "bindtty";
+import { Button } from "@bindtty/widgets";
+```
+
+```bash
+npm install bindtty @bindtty/widgets
 ```
 
 ## 快速开始
 
 ```ts
-import { Button, computed, createApp, createSignal } from "bindtty";
+import { computed, createApp, createSignal } from "bindtty";
+import { Button } from "@bindtty/widgets";
 
 const count = createSignal(0);
 const label = computed(() => `Count: ${count.get()}`);
@@ -129,3 +150,4 @@ app.start();
 
 - [doc/APP.md](../../doc/packages/APP.md) — createApp 设计
 - [doc/README.md](../../doc/README.md) — 文档索引
+- [@bindtty/widgets README](../widgets/README.md) — 控件 API

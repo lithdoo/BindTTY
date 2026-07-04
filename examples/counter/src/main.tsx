@@ -1,4 +1,5 @@
-import { Button, computed, createApp, createSignal } from "bindtty";
+import { computed, createApp, createSignal } from "bindtty";
+import { Button } from "@bindtty/widgets";
 import { createNodeTerminal } from "@bindtty/terminal";
 
 const count = createSignal(0);

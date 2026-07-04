@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { stripVTControlCharacters } from "node:util";
 
-import { Button, Checkbox, HScrollView, List, ProgressBar, ScrollView, Select, VScrollView, TextInput, createApp } from "bindtty";
+import { Button, Checkbox, HScrollView, List, ProgressBar, ScrollView, Select, VScrollView, TextInput } from "@bindtty/widgets";
+import { createApp } from "bindtty";
 import type { LayoutNode } from "@bindtty/layout";
 import { createSignal } from "@bindtty/signal";
 import { ANSI, createNodeTerminal } from "@bindtty/terminal";

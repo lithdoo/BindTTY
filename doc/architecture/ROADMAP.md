@@ -73,7 +73,7 @@ app.start();
 | `@bindtty/terminal` | Terminal lifecycle、viewport、resize、input event adapter |
 | `@bindtty/interaction` | keyboard focus、`onKey` dispatch、focused state |
 | `@bindtty/widgets` | 高层 interactive widget 与复合控件 |
-| `bindtty` | 用户侧统一入口（`createApp`、widgets re-export、JSX runtime 转发） |
+| `bindtty` | 框架入口（`createApp`、signal re-export、JSX runtime 转发；不含 widgets） |
 
 包边界：
 

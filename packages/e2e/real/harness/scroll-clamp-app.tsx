@@ -1,6 +1,7 @@
 import fs from "node:fs";
 
-import { VScrollView, createApp } from "bindtty";
+import { createApp } from "bindtty";
+import { VScrollView } from "@bindtty/widgets";
 import { createSignal } from "@bindtty/signal";
 import { createNodeTerminal } from "@bindtty/terminal";
 

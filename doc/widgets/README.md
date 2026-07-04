@@ -14,7 +14,6 @@
 导入：
 
 ```tsx
+import { createApp } from "bindtty";
 import { Button, VScrollView } from "@bindtty/widgets";
-// 或
-import { createApp, Button } from "bindtty";
 ```

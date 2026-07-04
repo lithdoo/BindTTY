@@ -1,4 +1,5 @@
-import { List, computed, createApp, createSignal } from "bindtty";
+import { computed, createApp, createSignal } from "bindtty";
+import { List } from "@bindtty/widgets";
 import { createNodeTerminal } from "@bindtty/terminal";
 
 interface LogLine {

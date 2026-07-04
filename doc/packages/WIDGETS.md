@@ -316,21 +316,16 @@ ButtonProps / TextInputProps 等类型定义直接内联在各组件文件中（
 
 ## 10. JSX 与导出方式
 
-用户导入：
+**Canonical 导入**：控件与类型一律从 `@bindtty/widgets` 导入；`bindtty` **不** re-export widgets（自 alpha.2 起）。
 
 ```tsx
+import { createApp, createSignal } from "bindtty";
 import { Button } from "@bindtty/widgets";
 
 <Button label="Save" onPress={save} />
 ```
 
-顶层 `bindtty` 可以 re-export：
-
-```tsx
-import { createApp, Button } from "bindtty";
-```
-
-建议先支持直接从 `@bindtty/widgets` 导入。等 Button 稳定后，再从 `bindtty` 统一入口 re-export。
+应用 `package.json` 须同时依赖 `bindtty` 与 `@bindtty/widgets`（版本号对齐，如均为 `0.1.0-alpha.2`）。
 
 ## 11. 测试计划
 
@@ -416,8 +411,8 @@ npm test --workspace @bindtty/widgets
 状态：已完成。
 
 ```text
-1. bindtty package 添加 @bindtty/widgets 依赖。
-2. 可选从 bindtty re-export Button。
+1. bindtty 集成测试通过 devDependency 引用 @bindtty/widgets（alpha.2 起 runtime 不依赖 widgets）。
+2. 应用从 @bindtty/widgets 直接导入（alpha.2 起 bindtty 不再 re-export）。
 3. 补 bindtty app integration tests。
 ```
 
@@ -499,7 +494,7 @@ npm test
 13. TextInput 键盘编辑：字符插入、Backspace、Delete、方向键、Home、End。
 14. TextInput placeholder / disabled / focus 生命周期。
 15. TextInput 单元测试 + App 集成 + E2E 全覆盖。
-16. bindtty 顶层 re-export Button、TextInput、ScrollView、VScrollView、HScrollView 和 List。
+16. 应用显式安装 @bindtty/widgets 并从该包导入（alpha.2 解耦；历史阶段曾由 bindtty re-export）。
 17. VScrollView 受控 offset、clip、键盘滚动已覆盖。
 18. List 作为 VScrollView + forTemplate 语法糖已覆盖。
 19. VScrollView `stickToBottom` 与 `showScrollbar`、HScrollView、ScrollView 双轴已覆盖（见 [SCROLL.md](../widgets/SCROLL.md)）。

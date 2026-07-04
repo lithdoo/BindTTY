@@ -1,4 +1,5 @@
-import { Checkbox, Select, TextInput, createApp, createSignal } from "bindtty";
+import { createApp, createSignal } from "bindtty";
+import { Checkbox, Select, TextInput } from "@bindtty/widgets";
 import { createNodeTerminal } from "@bindtty/terminal";
 
 const value = createSignal("");
