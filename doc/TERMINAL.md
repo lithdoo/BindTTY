@@ -410,6 +410,8 @@ stdout.on?.("resize", handleResize);
 stdout.off?.("resize", handleResize);
 ```
 
+在 **Windows TTY** 上，`stdout` 的 `resize` 事件可能不可靠。`createNodeTerminal` 会在 `win32` 且 `stdout.isTTY === true` 时额外轮询 `columns` / `rows`（默认 50ms，可用 `resizePollIntervalMs: 0` 关闭）。
+
 `handleResize` 调用所有 `onResize` listeners。
 
 Terminal Host 不直接调用 `app.resize()`。它只发事件，由 app 决定如何响应。

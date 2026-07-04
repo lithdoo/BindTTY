@@ -43,13 +43,6 @@ const terminal = createNodeTerminal({
 
 const boxWidth = createSignal(terminal.viewport.width);
 
-function syncViewport(): void {
-  const width = terminal.viewport.width;
-  boxWidth.set(width);
-  mark(`VIEWPORT:${width}`);
-  app.resize();
-}
-
 const app = createApp(
   <vstack gap={1}>
     <box width={boxWidth} padding={1} border>
@@ -76,7 +69,6 @@ const app = createApp(
             mark(`HEIGHT:${height}`);
             mark(`LAYOUT:${node.rect.width}x${height}`);
             mark("REWARP");
-            clearInterval(pollViewport);
             setTimeout(() => {
               app.dispose();
               mark("PASS");
@@ -93,21 +85,9 @@ const app = createApp(
 app.start();
 
 terminal.onResize(() => {
-  syncViewport();
+  boxWidth.set(terminal.viewport.width);
+  mark(`VIEWPORT:${terminal.viewport.width}`);
 });
-
-let lastViewportWidth = terminal.viewport.width;
-
-const pollViewport = setInterval(() => {
-  const width = terminal.viewport.width;
-
-  if (width === lastViewportWidth) {
-    return;
-  }
-
-  lastViewportWidth = width;
-  syncViewport();
-}, 50);
 
 setTimeout(() => {
   mark("READY");
@@ -115,6 +95,5 @@ setTimeout(() => {
 }, 300);
 
 setTimeout(() => {
-  clearInterval(pollViewport);
   fail("TIMEOUT");
 }, 12_000);

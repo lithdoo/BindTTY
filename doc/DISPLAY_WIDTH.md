@@ -37,6 +37,9 @@ BindTTY 在 **text → layout → renderer → ANSI** 全链路使用 **terminal
 app / E2E / examples/wide-text
   首屏渲染、更新、resize、ScrollView、focus inverse
 
+@bindtty/terminal
+  Windows TTY：win32 下轮询 stdout columns/rows（默认 50ms，`resizePollIntervalMs: 0` 可关）
+
 @bindtty/widgets TextInput
   cursor / backspace / delete 按 grapheme segment 工作
 ```
@@ -174,20 +177,19 @@ interface Cell {
 - `contentSize.height` 按 wrapped 行数计算；CJK / emoji 与 renderer 行数一致。
 - **ScrollView**：垂直滚动无需 wide 特殊逻辑；水平 clip 依赖 renderer whole-grapheme clipping。
 - **Resize rewrap**：viewport 变窄时 flex 子节点宽度变化 → `layoutText` 重新换行（Yoga + mock/real E2E 已覆盖）。
+- **Windows TTY**：`stdout` 的 `resize` 事件可能缺失；`createNodeTerminal` 在 win32 对 TTY stdout 轮询 viewport（见 [TERMINAL.md](./TERMINAL.md)）。
 
 ---
 
 ## 8. 已知限制
 
-| 区域 | 现状 | 说明 |
-| --- | --- | --- |
-| **TextInput display-column window** | 未实现 | 光标编辑按 grapheme index；尚未支持固定宽度输入窗口、水平滚动或按 display column 定位 |
-| **ANSI in value** | 不支持 | `\x1b[31m` 等按 plain char 处理；颜色应用 CellStyle |
-| **复杂 ZWJ** | measure/segment 有基础支持 | 编辑控件与极端 sequence 未 hardening |
-| **Terminal 字体** | 不保证一致 | 以 string-width 为 oracle |
-| **Real PTY resize** | Windows 可能缺 `resize` 事件 | E2E harness 用 viewport 轮询 + `app.resize()` 补偿 |
-
-Widget 层改进项见 [../TODO.md](../TODO.md)。
+| 区域 | 说明 |
+| --- | --- |
+| **TextInput 输入窗口** | 编辑按 grapheme index；尚无固定宽度视口、水平滚动、display-column 光标定位（见 [TODO.md](../TODO.md)） |
+| **ANSI in value** | 不支持；颜色走 `CellStyle` / props |
+| **复杂 ZWJ** | measure/segment 有基础测试；极端 terminal 字体未 hardening |
+| **Terminal 字体** | 以 string-width 为 oracle，不保证与所有字体一致 |
+| **width > 2** | segment 层 clamp 到 2；Frame 未扩展 placeholder 链 |
 
 ---
 
@@ -222,11 +224,13 @@ npm run start --workspace @bindtty/example-wide-text
 
 ## 11. 未来方向
 
+需单独 spec 的项（详见 [TODO.md](../TODO.md)「暂缓」）：
+
 ```text
-1. TextInput：display-column 输入窗口、水平滚动、光标列定位
-2. RichText / TextSpan：ANSI 或 inline style span
-3. width > 2：扩展 placeholder 链与 diff expansion
-4. IME / 选区 / 多行编辑（见 TEXT_INPUT.md 非目标）
+1. TextInput：display-column 输入窗口、水平滚动
+2. RichText / TextSpan
+3. width > 2：placeholder 链与 diff expansion
+4. IME / 选区 / 多行（TEXT_INPUT.md 非目标）
 ```
 
 ---

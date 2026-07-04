@@ -484,6 +484,58 @@ test("resize listeners can unsubscribe while resize is being dispatched", () => 
   assert.equal(resizeCount, 1);
 });
 
+test("win32 polls TTY stdout viewport when columns change without resize event", async (t) => {
+  if (process.platform !== "win32") {
+    t.skip("win32-only resize polling");
+    return;
+  }
+
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const terminal = createNodeTerminal({ stdout, resizePollIntervalMs: 20 });
+  let resizeCount = 0;
+
+  terminal.onResize(() => {
+    resizeCount += 1;
+  });
+
+  terminal.start();
+  assert.equal(resizeCount, 0);
+
+  stdout.columns = 20;
+  await new Promise((resolve) => {
+    setTimeout(resolve, 80);
+  });
+
+  assert.equal(resizeCount, 1);
+  terminal.stop();
+});
+
+test("win32 resize polling is disabled when resizePollIntervalMs is 0", async (t) => {
+  if (process.platform !== "win32") {
+    t.skip("win32-only resize polling");
+    return;
+  }
+
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const terminal = createNodeTerminal({ stdout, resizePollIntervalMs: 0 });
+  let resizeCount = 0;
+
+  terminal.onResize(() => {
+    resizeCount += 1;
+  });
+
+  terminal.start();
+  stdout.columns = 20;
+  await new Promise((resolve) => {
+    setTimeout(resolve, 80);
+  });
+
+  assert.equal(resizeCount, 0);
+  terminal.stop();
+});
+
 test("stop removes stdout resize listener and restart registers it again", () => {
   const stdout = createMockStdout();
   const terminal = createNodeTerminal({ stdout });

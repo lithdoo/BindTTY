@@ -17,6 +17,7 @@ export type KeypressListener = (
 ) => void;
 
 export interface TerminalStdout {
+  isTTY?: boolean;
   columns?: number;
   rows?: number;
   write(chunk: string): unknown;
@@ -77,6 +78,11 @@ export interface CreateNodeTerminalOptions {
   exitOnCtrlC?: boolean;
   platformAdapter?: PlatformTerminalAdapter;
   stdinInputAdapter?: StdinInputAdapter;
+  /**
+   * On Windows, poll stdout columns/rows when the resize event is unreliable.
+   * Defaults to 50ms on win32 TTY stdout; set 0 to disable.
+   */
+  resizePollIntervalMs?: number;
 }
 
 export interface TerminalHost {

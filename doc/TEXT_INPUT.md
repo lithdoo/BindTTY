@@ -61,9 +61,9 @@ TextInput 的 **value 仍是普通 JS string**，但编辑语义按 `@bindtty/te
 
 - **CJK / emoji / combining mark**：光标不会停在 surrogate 或 combining sequence 中间；backspace / delete 删除完整 grapheme。
 - **终端绘制**：TextInput 输出的 `<text>` 仍经 layout/renderer 按 display width 绘制；宽字符在框内占列可能与 cursor index 语义不一致。
-- **固定宽度输入窗口**：当前仍没有 horizontal scroll / display-column cursor placement；这是后续能力。
+- **固定宽度输入窗口**：尚无 horizontal scroll / display-column 视口；见 [TODO.md](../TODO.md)。
 
-后续输入窗口、IME、多行等计划见项目根目录 [TODO.md](../TODO.md)。
+后续输入窗口 spec 见 [TODO.md](../TODO.md)；IME、多行等仍为非目标（上文列表）。
 
 ## 2. Props 设计
 
