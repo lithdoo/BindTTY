@@ -1,6 +1,11 @@
 import { layoutText, readTextWrapMode } from "@bindtty/text";
 import type { MountedElementNode, MountedNode } from "@bindtty/vnode";
 import type { LayoutFlow } from "./intrinsic.js";
+import {
+  basicSupportedPropsByTag,
+  readOverflow,
+  validateElementProps
+} from "./layout-props.js";
 import { clampNonNegative, toNonNegativeNumber } from "./measure.js";
 import type {
   LayoutEngine,
@@ -20,88 +25,6 @@ interface LayoutConstraint {
   height: number;
   flow: LayoutFlow;
 }
-
-const supportedPropsByTag: Record<MountedElementNode["tag"], Set<string>> = {
-  screen: new Set(),
-  vstack: new Set(),
-  hstack: new Set(),
-  box: new Set([
-    "padding",
-    "border",
-    "height",
-    "width",
-    "overflow",
-    "scrollX",
-    "scrollY"
-  ]),
-  text: new Set(["value", "wrap", "color", "bold"]),
-  spacer: new Set(["size"]),
-  button: new Set(["value", "disabled"]),
-  input: new Set(["value", "placeholder"])
-};
-
-const futureLayoutProps = new Set<string>([
-  "width",
-  "height",
-  "minWidth",
-  "minHeight",
-  "maxWidth",
-  "maxHeight",
-  "paddingX",
-  "paddingY",
-  "paddingTop",
-  "paddingRight",
-  "paddingBottom",
-  "paddingLeft",
-  "margin",
-  "marginX",
-  "marginY",
-  "marginTop",
-  "marginRight",
-  "marginBottom",
-  "marginLeft",
-  "gap",
-  "flexDirection",
-  "flexWrap",
-  "justifyContent",
-  "alignItems",
-  "flexGrow",
-  "flexShrink"
-]);
-
-type LayoutOverflow = "visible" | "clip";
-
-const layoutPropAliases = new Map<string, string>([
-  ["padding-top", "paddingTop"],
-  ["padding-right", "paddingRight"],
-  ["padding-bottom", "paddingBottom"],
-  ["padding-left", "paddingLeft"],
-  ["padding-x", "paddingX"],
-  ["padding-y", "paddingY"],
-  ["margin-top", "marginTop"],
-  ["margin-right", "marginRight"],
-  ["margin-bottom", "marginBottom"],
-  ["margin-left", "marginLeft"],
-  ["margin-x", "marginX"],
-  ["margin-y", "marginY"],
-  ["flex-direction", "flexDirection"],
-  ["flex-wrap", "flexWrap"],
-  ["justify-content", "justifyContent"],
-  ["align-items", "alignItems"],
-  ["flex-grow", "flexGrow"],
-  ["flex-shrink", "flexShrink"],
-  ["min-width", "minWidth"],
-  ["min-height", "minHeight"],
-  ["max-width", "maxWidth"],
-  ["max-height", "maxHeight"]
-]);
-
-const nonLayoutProps = new Set<string>([
-  "id",
-  "focusStyle",
-  "onKey",
-  "onFocusChange"
-]);
 
 export function createBasicLayoutEngine(): LayoutEngine {
   return {
@@ -139,7 +62,7 @@ function measureElement(
   node: MountedElementNode,
   constraint: LayoutConstraint
 ): LayoutSize {
-  validateElementProps(node);
+  validateElementProps(node, basicSupportedPropsByTag[node.tag]);
 
   switch (node.tag) {
     case "screen":
@@ -288,7 +211,7 @@ function arrangeElement(
   rect: LayoutRect,
   constraint: LayoutConstraint
 ): LayoutNode {
-  validateElementProps(node);
+  validateElementProps(node, basicSupportedPropsByTag[node.tag]);
 
   switch (node.tag) {
     case "screen":
@@ -487,63 +410,12 @@ function getStructureChildren(node: MountedNode): MountedNode[] {
   }
 }
 
-function validateElementProps(node: MountedElementNode): void {
-  const supportedProps = supportedPropsByTag[node.tag];
-  const seenCanonicalProps = new Map<string, string>();
-  const canonicalProps: string[] = [];
-
-  for (const propName of Object.keys(node.props)) {
-    if (nonLayoutProps.has(propName)) {
-      continue;
-    }
-
-    const canonicalName = layoutPropAliases.get(propName) ?? propName;
-    const previousName = seenCanonicalProps.get(canonicalName);
-
-    if (previousName && previousName !== propName) {
-      throw new Error(`Duplicate layout prop: ${canonicalName} / ${propName}`);
-    }
-
-    seenCanonicalProps.set(canonicalName, propName);
-    canonicalProps.push(canonicalName);
-  }
-
-  for (const canonicalName of canonicalProps) {
-    if (
-      !supportedProps.has(canonicalName) &&
-      futureLayoutProps.has(canonicalName)
-    ) {
-      throw new Error(`Unsupported layout prop: ${canonicalName}`);
-    }
-  }
-
-  if (node.tag === "box") {
-    readOverflow(node.props.overflow);
-  }
-
-  if (node.tag === "text") {
-    readTextWrapMode(node.props.wrap);
-  }
-}
-
 function readOptionalSize(value: unknown): number | undefined {
   if (value === null || value === undefined) {
     return undefined;
   }
 
   return toNonNegativeNumber(value);
-}
-
-function readOverflow(value: unknown): LayoutOverflow {
-  if (value === null || value === undefined) {
-    return "visible";
-  }
-
-  if (value === "visible" || value === "clip") {
-    return value;
-  }
-
-  throw new Error(`Unsupported overflow value: ${String(value)}`);
 }
 
 function readScrollOffset(value: unknown): number {

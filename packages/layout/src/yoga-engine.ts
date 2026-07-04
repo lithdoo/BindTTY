@@ -2,6 +2,14 @@ import Yoga from "yoga-layout";
 import { layoutText, readTextWrapMode } from "@bindtty/text";
 import type { MountedElementNode, MountedNode } from "@bindtty/vnode";
 import type { LayoutFlow } from "./intrinsic.js";
+import {
+  readLayoutProp,
+  readOverflow,
+  resolveMargin,
+  resolvePadding,
+  validateElementProps,
+  yogaSupportedPropsByTag
+} from "./layout-props.js";
 import { clampNonNegative, toNonNegativeNumber } from "./measure.js";
 import type {
   LayoutEngine,
@@ -26,115 +34,6 @@ interface YogaLayoutEntry {
   yogaNode: YogaNode;
   children: YogaLayoutEntry[];
 }
-
-type LayoutOverflow = "visible" | "clip";
-
-const supportedPropsByTag: Record<MountedElementNode["tag"], Set<string>> = {
-  screen: new Set([
-    "gap",
-    "flexWrap",
-    "justifyContent",
-    "alignItems",
-    "flexGrow",
-    "flexShrink"
-  ]),
-  vstack: new Set([
-    "gap",
-    "flexWrap",
-    "justifyContent",
-    "alignItems",
-    "flexGrow",
-    "flexShrink"
-  ]),
-  hstack: new Set([
-    "gap",
-    "flexWrap",
-    "justifyContent",
-    "alignItems",
-    "flexGrow",
-    "flexShrink"
-  ]),
-  box: new Set([
-    "padding",
-    "border",
-    "height",
-    "width",
-    "overflow",
-    "scrollX",
-    "scrollY",
-    "gap",
-    "flexWrap",
-    "justifyContent",
-    "alignItems",
-    "flexGrow",
-    "flexShrink"
-  ]),
-  text: new Set(["value", "wrap", "color", "bold", "flexGrow", "flexShrink"]),
-  spacer: new Set(["size", "flexGrow", "flexShrink"]),
-  button: new Set(["value", "disabled", "flexGrow", "flexShrink"]),
-  input: new Set(["value", "placeholder", "flexGrow", "flexShrink"])
-};
-
-const futureLayoutProps = new Set<string>([
-  "width",
-  "height",
-  "minWidth",
-  "minHeight",
-  "maxWidth",
-  "maxHeight",
-  "paddingX",
-  "paddingY",
-  "paddingTop",
-  "paddingRight",
-  "paddingBottom",
-  "paddingLeft",
-  "margin",
-  "marginX",
-  "marginY",
-  "marginTop",
-  "marginRight",
-  "marginBottom",
-  "marginLeft",
-  "gap",
-  "flexDirection",
-  "flexWrap",
-  "justifyContent",
-  "alignItems",
-  "flexGrow",
-  "flexShrink"
-]);
-
-const layoutPropAliases = new Map<string, string>([
-  ["padding-top", "paddingTop"],
-  ["padding-right", "paddingRight"],
-  ["padding-bottom", "paddingBottom"],
-  ["padding-left", "paddingLeft"],
-  ["padding-x", "paddingX"],
-  ["padding-y", "paddingY"],
-  ["margin-top", "marginTop"],
-  ["margin-right", "marginRight"],
-  ["margin-bottom", "marginBottom"],
-  ["margin-left", "marginLeft"],
-  ["margin-x", "marginX"],
-  ["margin-y", "marginY"],
-  ["flex-direction", "flexDirection"],
-  ["flex-wrap", "flexWrap"],
-  ["justify-content", "justifyContent"],
-  ["align-items", "alignItems"],
-  ["flex-grow", "flexGrow"],
-  ["flex-shrink", "flexShrink"],
-  ["min-width", "minWidth"],
-  ["min-height", "minHeight"],
-  ["max-width", "maxWidth"],
-  ["max-height", "maxHeight"]
-]);
-
-const nonLayoutProps = new Set<string>([
-  "id",
-  "focusStyle",
-  "onKey",
-  "onFocusChange"
-]);
 
 const defaultYogaAdapter: YogaAdapter = {
   createNode() {
@@ -231,8 +130,10 @@ function configureYogaElement(
   inheritedFlow: LayoutFlow,
   options: LayoutEngineOptions
 ): void {
-  validateElementProps(node);
+  validateElementProps(node, yogaSupportedPropsByTag[node.tag]);
   applyYogaItemProps(node, yogaNode);
+  applyYogaSizeProps(node, yogaNode);
+  applyYogaMarginProps(node, yogaNode);
 
   switch (node.tag) {
     case "screen":
@@ -266,7 +167,6 @@ function configureYogaElement(
 
 function configureYogaBox(node: MountedElementNode, yogaNode: YogaNode): void {
   const border = node.props.border ? 1 : 0;
-  const padding = toNonNegativeNumber(node.props.padding);
   const width = readOptionalSize(node.props.width);
   const height = readOptionalSize(node.props.height);
   const overflow = readOverflow(node.props.overflow);
@@ -286,12 +186,30 @@ function configureYogaBox(node: MountedElementNode, yogaNode: YogaNode): void {
     yogaNode.setBorder(Yoga.EDGE_ALL, border);
   }
 
-  if (padding > 0) {
-    yogaNode.setPadding(Yoga.EDGE_ALL, padding);
-  }
+  applyYogaBoxPadding(node, yogaNode);
 
   if (overflow === "clip" || hasOwn(node.props, "scrollX") || hasOwn(node.props, "scrollY")) {
     yogaNode.setOverflow(Yoga.OVERFLOW_HIDDEN);
+  }
+}
+
+function applyYogaBoxPadding(node: MountedElementNode, yogaNode: YogaNode): void {
+  const padding = resolvePadding(node.props);
+
+  if (padding.top > 0) {
+    yogaNode.setPadding(Yoga.EDGE_TOP, padding.top);
+  }
+
+  if (padding.right > 0) {
+    yogaNode.setPadding(Yoga.EDGE_RIGHT, padding.right);
+  }
+
+  if (padding.bottom > 0) {
+    yogaNode.setPadding(Yoga.EDGE_BOTTOM, padding.bottom);
+  }
+
+  if (padding.left > 0) {
+    yogaNode.setPadding(Yoga.EDGE_LEFT, padding.left);
   }
 }
 
@@ -394,13 +312,14 @@ function readContentRect(entry: YogaLayoutEntry, rect: LayoutRect): LayoutRect {
     return rect;
   }
 
-  const inset = getBoxInset(entry.mounted);
+  const borderSize = entry.mounted.props.border ? 1 : 0;
+  const padding = resolvePadding(entry.mounted.props);
 
   return {
-    x: rect.x + inset,
-    y: rect.y + inset,
-    width: clampNonNegative(rect.width - inset * 2),
-    height: clampNonNegative(rect.height - inset * 2)
+    x: rect.x + borderSize + padding.left,
+    y: rect.y + borderSize + padding.top,
+    width: clampNonNegative(rect.width - borderSize * 2 - padding.left - padding.right),
+    height: clampNonNegative(rect.height - borderSize * 2 - padding.top - padding.bottom)
   };
 }
 
@@ -474,45 +393,6 @@ function getStructureChildren(node: MountedNode): MountedNode[] {
   }
 }
 
-function validateElementProps(node: MountedElementNode): void {
-  const supportedProps = supportedPropsByTag[node.tag];
-  const seenCanonicalProps = new Map<string, string>();
-  const canonicalProps: string[] = [];
-
-  for (const propName of Object.keys(node.props)) {
-    if (nonLayoutProps.has(propName)) {
-      continue;
-    }
-
-    const canonicalName = layoutPropAliases.get(propName) ?? propName;
-    const previousName = seenCanonicalProps.get(canonicalName);
-
-    if (previousName && previousName !== propName) {
-      throw new Error(`Duplicate layout prop: ${canonicalName} / ${propName}`);
-    }
-
-    seenCanonicalProps.set(canonicalName, propName);
-    canonicalProps.push(canonicalName);
-  }
-
-  for (const canonicalName of canonicalProps) {
-    if (
-      !supportedProps.has(canonicalName) &&
-      futureLayoutProps.has(canonicalName)
-    ) {
-      throw new Error(`Unsupported layout prop: ${canonicalName}`);
-    }
-  }
-
-  if (node.tag === "box") {
-    readOverflow(node.props.overflow);
-  }
-
-  if (node.tag === "text") {
-    readTextWrapMode(node.props.wrap);
-  }
-}
-
 function getMeasureWidth(
   width: number,
   widthMode: YogaMeasureMode,
@@ -557,6 +437,49 @@ function applyYogaItemProps(node: MountedElementNode, yogaNode: YogaNode): void 
 
   if (flexShrink !== undefined) {
     yogaNode.setFlexShrink(flexShrink);
+  }
+}
+
+function applyYogaSizeProps(node: MountedElementNode, yogaNode: YogaNode): void {
+  const minWidth = readOptionalSize(readLayoutProp(node.props, "minWidth"));
+  const minHeight = readOptionalSize(readLayoutProp(node.props, "minHeight"));
+  const maxWidth = readOptionalSize(readLayoutProp(node.props, "maxWidth"));
+  const maxHeight = readOptionalSize(readLayoutProp(node.props, "maxHeight"));
+
+  if (minWidth !== undefined) {
+    yogaNode.setMinWidth(minWidth);
+  }
+
+  if (minHeight !== undefined) {
+    yogaNode.setMinHeight(minHeight);
+  }
+
+  if (maxWidth !== undefined) {
+    yogaNode.setMaxWidth(maxWidth);
+  }
+
+  if (maxHeight !== undefined) {
+    yogaNode.setMaxHeight(maxHeight);
+  }
+}
+
+function applyYogaMarginProps(node: MountedElementNode, yogaNode: YogaNode): void {
+  const margin = resolveMargin(node.props);
+
+  if (margin.top > 0) {
+    yogaNode.setMargin(Yoga.EDGE_TOP, margin.top);
+  }
+
+  if (margin.right > 0) {
+    yogaNode.setMargin(Yoga.EDGE_RIGHT, margin.right);
+  }
+
+  if (margin.bottom > 0) {
+    yogaNode.setMargin(Yoga.EDGE_BOTTOM, margin.bottom);
+  }
+
+  if (margin.left > 0) {
+    yogaNode.setMargin(Yoga.EDGE_LEFT, margin.left);
   }
 }
 
@@ -635,45 +558,12 @@ function readYogaJustifyContent(value: unknown): number {
   }
 }
 
-function readLayoutProp(
-  props: Record<string, unknown>,
-  canonicalName: string
-): unknown {
-  if (hasOwn(props, canonicalName)) {
-    return props[canonicalName];
-  }
-
-  for (const [alias, canonical] of layoutPropAliases) {
-    if (canonical === canonicalName && hasOwn(props, alias)) {
-      return props[alias];
-    }
-  }
-
-  return undefined;
-}
-
-function getBoxInset(node: MountedElementNode): number {
-  return (node.props.border ? 1 : 0) + toNonNegativeNumber(node.props.padding);
-}
-
 function readOptionalSize(value: unknown): number | undefined {
   if (value === null || value === undefined) {
     return undefined;
   }
 
   return toNonNegativeNumber(value);
-}
-
-function readOverflow(value: unknown): LayoutOverflow {
-  if (value === null || value === undefined) {
-    return "visible";
-  }
-
-  if (value === "visible" || value === "clip") {
-    return value;
-  }
-
-  throw new Error(`Unsupported overflow value: ${String(value)}`);
 }
 
 function readScrollOffset(value: unknown): number {

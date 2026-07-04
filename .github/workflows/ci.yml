@@ -29,6 +29,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Check layout prop matrix docs
+        run: npm run check:layout-props
+
       - name: Test
         run: npm test
 

@@ -11,6 +11,7 @@
 | 宽字符 / display width | [specs/DISPLAY_WIDTH.md](./specs/DISPLAY_WIDTH.md) |
 | 滚动 / ScrollView / List | [specs/SCROLL_VIEWPORT.md](./specs/SCROLL_VIEWPORT.md) |
 | Text + Yoga layout | [specs/YOGA_AND_TEXT.md](./specs/YOGA_AND_TEXT.md) |
+| Layout prop 支持矩阵 | [specs/LAYOUT_PROPS.md](./specs/LAYOUT_PROPS.md) |
 | Element Ref | [specs/ELEMENT_REF.md](./specs/ELEMENT_REF.md) |
 | TextInput | [specs/TEXT_INPUT.md](./specs/TEXT_INPUT.md) |
 | E2E 测试 | [testing/E2E.md](./testing/E2E.md) |
@@ -47,6 +48,7 @@
 | [DISPLAY_WIDTH.md](./specs/DISPLAY_WIDTH.md) | Terminal display-width / grapheme |
 | [SCROLL_VIEWPORT.md](./specs/SCROLL_VIEWPORT.md) | Clip / scroll / ScrollView / List |
 | [YOGA_AND_TEXT.md](./specs/YOGA_AND_TEXT.md) | @bindtty/text + Yoga 默认 engine |
+| [LAYOUT_PROPS.md](./specs/LAYOUT_PROPS.md) | intrinsic layout prop 支持矩阵 |
 | [ELEMENT_REF.md](./specs/ELEMENT_REF.md) | `ref(api)` / MountedElementApi |
 | [TEXT_INPUT.md](./specs/TEXT_INPUT.md) | TextInput 控件 |
 

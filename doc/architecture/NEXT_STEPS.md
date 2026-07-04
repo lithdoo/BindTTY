@@ -91,17 +91,15 @@ import {
 
 真实终端另引 `@bindtty/terminal` 的 `createNodeTerminal`。不导出 `runtime` / `vnode` / `layout` / `renderer-terminal`。
 
-### 3.4 Layout prop matrix 待补齐
+### 3.4 Layout prop matrix
 
-`packages/layout/src/yoga-engine.ts` 中 `futureLayoutProps` 仍对以下 prop 抛 `Unsupported layout prop`：
+**支持矩阵文档**：[LAYOUT_PROPS.md](../specs/LAYOUT_PROPS.md)（§2–§3 由 `npm run gen:layout-props` 从 `packages/layout/src/layout-props.ts` 生成；CI 运行 `check:layout-props`）。
 
-**P1：** `minWidth`、`minHeight`、`maxWidth`、`maxHeight`
+**已落地（Phase 1–3）：** min/max size、edge `padding*`、margin shorthand。
 
-**P2：** `paddingX`、`paddingY`、`paddingTop`、`paddingRight`、`paddingBottom`、`paddingLeft`
+**仍保留在 `futureLayoutProps`（会抛 `Unsupported layout prop`）：** 主要为 `flexDirection`，以及 BasicLayoutEngine 未实现的 Yoga props（`gap`、`flexGrow` 等）。完整列表见 [LAYOUT_PROPS.md](../specs/LAYOUT_PROPS.md) §3.1。
 
-**P3：** `margin`、`marginX`、`marginY`、`marginTop`、`marginRight`、`marginBottom`、`marginLeft`
-
-每个 prop 须同时补：vnode schema、JSX intrinsic 类型、Yoga engine、layout tests、文档、alias 测试。
+新增 layout prop 须同步：vnode schema、JSX 类型、`layout-props.ts`、Yoga engine、layout 测试，然后 `npm run gen:layout-props`。
 
 ### 3.5 文档漂移
 
@@ -121,10 +119,10 @@ import {
 
 ### Phase B：Layout 与 Scroll（P1）
 
-1. min/max layout props
-2. edge padding / margin props
+1. ~~min/max layout props~~（Phase 1 已完成）
+2. ~~edge padding / margin props~~（Phase 2–3 已完成）
 3. ScrollView `stickToBottom`
-4. layout 支持矩阵文档
+4. ~~layout 支持矩阵文档 + CI 同步~~（Phase 4 已完成）
 
 ### Phase C：组件生态（P2）
 
@@ -185,7 +183,7 @@ import {
 
 ### 0.1.0-beta.0
 
-- layout prop matrix 稳定（min/max、margin、edge padding）
+- layout prop matrix 稳定（min/max、margin、edge padding）；文档 CI 同步（`check:layout-props`）
 - ScrollView `stickToBottom`
 - Checkbox widget
 - changelog、稳定发布流程

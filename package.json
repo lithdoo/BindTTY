@@ -15,7 +15,9 @@
     "test:e2e:real": "npm test --workspace @bindtty/e2e",
     "test:e2e:real:env": "npm run env:real --workspace @bindtty/e2e",
     "test:e2e:real:win": "npm run run:real:win --workspace @bindtty/e2e",
-    "test:e2e:real:wsl": "npm run run:real:wsl --workspace @bindtty/e2e"
+    "test:e2e:real:wsl": "npm run run:real:wsl --workspace @bindtty/e2e",
+    "gen:layout-props": "npm run build --workspace @bindtty/layout && node scripts/gen-layout-props-matrix.mjs",
+    "check:layout-props": "npm run gen:layout-props && git diff --exit-code -- doc/specs/LAYOUT_PROPS.md"
   },
   "engines": {
     "node": ">=18"

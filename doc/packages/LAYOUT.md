@@ -698,7 +698,11 @@ align-items -> alignItems
 
 ### 10.1 Props 使用范围
 
-MVP 只从 `MountedElementNode.props` 读取以下字段：
+**canonical 支持矩阵**见 [LAYOUT_PROPS.md](../specs/LAYOUT_PROPS.md)。代码单一真相来源为 `packages/layout/src/layout-props.ts`（`yogaSupportedPropsByTag` / `basicSupportedPropsByTag` / `futureLayoutProps`）。
+
+默认 `YogaLayoutEngine` 已支持容器 flex props（`gap`、`flexWrap`、`alignItems`、`justifyContent`）与 item flex props（`flexGrow`、`flexShrink`），见 spec §2.2。
+
+`BasicLayoutEngine` legacy 仅从 props 读取：
 
 | tag | props used by BasicLayoutEngine |
 | --- | --- |
@@ -706,7 +710,7 @@ MVP 只从 `MountedElementNode.props` 读取以下字段：
 | `vstack` | none |
 | `hstack` | none |
 | `box` | `padding`, `border`, `height`, `width`, `overflow`, `scrollX`, `scrollY` |
-| `text` | `value` |
+| `text` | `value`, `wrap`, `color`, `bold` |
 | `spacer` | `size` |
 
 `LayoutStyle` 是未来 Yoga / Flexbox 的内部归一化目标，不等于当前公开 props。
@@ -744,7 +748,7 @@ box 节点：
 
 ```text
 borderSize = border ? 1 : 0
-paddingTop = paddingRight = paddingBottom = paddingLeft = padding ?? 0
+padding edges resolved via resolvePadding() — edge > axis > padding shorthand
 
 contentRect.x = rect.x + borderSize + paddingLeft
 contentRect.y = rect.y + borderSize + paddingTop
@@ -752,7 +756,7 @@ contentRect.width = max(0, rect.width - borderSize*2 - paddingLeft - paddingRigh
 contentRect.height = max(0, rect.height - borderSize*2 - paddingTop - paddingBottom)
 ```
 
-MVP 只实现 `padding` 一个数字。`paddingX` / `paddingY` / 四边 padding 是 future style 预留，不进入当前 vnode schema。
+`YogaLayoutEngine` 支持 `padding` shorthand 与 edge props（见 [LAYOUT_PROPS.md](../specs/LAYOUT_PROPS.md) §5.2）。`BasicLayoutEngine` 仍只读统一 `padding`。
 
 ### 10.3 Flow 规则
 

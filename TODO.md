@@ -20,10 +20,10 @@
 
 ## P1 — 体验与 layout
 
-- [ ] Layout prop matrix：`minWidth` / `minHeight` / `maxWidth` / `maxHeight`（`yoga-engine.ts` 仍为 `futureLayoutProps`）
-- [ ] Layout prop matrix：edge `padding*`、`margin*`
+- [x] Layout prop matrix：`minWidth` / `minHeight` / `maxWidth` / `maxHeight`
+- [x] Layout prop matrix：edge `padding*`、`margin*`
 - [ ] ScrollView `stickToBottom`（log viewer / chat 场景）
-- [ ] Layout 支持矩阵文档与 `yoga-engine.ts` 对齐
+- [x] Layout 支持矩阵文档与 `layout-props.ts` 对齐（[doc/specs/LAYOUT_PROPS.md](doc/specs/LAYOUT_PROPS.md)）
 
 ---
 
@@ -52,4 +52,4 @@
 
 1. TextInput 改动保留 grapheme 单测，并更新 mock E2E。
 2. 勿扩大 Frame `width > 2` 或 placeholder 链，除非先更新 [DISPLAY_WIDTH.md](doc/specs/DISPLAY_WIDTH.md)。
-3. Layout 新 prop 须同时补 vnode schema、JSX 类型、Yoga engine、测试与文档。
+3. Layout 新 prop 须同时补 vnode schema、JSX 类型、Yoga engine、测试，并运行 `npm run gen:layout-props` 更新 [LAYOUT_PROPS.md](doc/specs/LAYOUT_PROPS.md)。

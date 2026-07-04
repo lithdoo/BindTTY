@@ -99,9 +99,48 @@ interface IntrinsicYogaContainerProps {
   "justify-content"?: BindingValue<IntrinsicYogaJustifyContent>;
 }
 
+interface IntrinsicYogaSizeProps {
+  minWidth?: BindingValue<number>;
+  "min-width"?: BindingValue<number>;
+  minHeight?: BindingValue<number>;
+  "min-height"?: BindingValue<number>;
+  maxWidth?: BindingValue<number>;
+  "max-width"?: BindingValue<number>;
+  maxHeight?: BindingValue<number>;
+  "max-height"?: BindingValue<number>;
+}
+
+interface IntrinsicYogaMarginProps {
+  margin?: BindingValue<number>;
+  marginX?: BindingValue<number>;
+  "margin-x"?: BindingValue<number>;
+  marginY?: BindingValue<number>;
+  "margin-y"?: BindingValue<number>;
+  marginTop?: BindingValue<number>;
+  "margin-top"?: BindingValue<number>;
+  marginRight?: BindingValue<number>;
+  "margin-right"?: BindingValue<number>;
+  marginBottom?: BindingValue<number>;
+  "margin-bottom"?: BindingValue<number>;
+  marginLeft?: BindingValue<number>;
+  "margin-left"?: BindingValue<number>;
+}
+
 interface IntrinsicBoxStyleProps {
   border?: BindingValue<boolean | number>;
   padding?: BindingValue<number>;
+  paddingX?: BindingValue<number>;
+  "padding-x"?: BindingValue<number>;
+  paddingY?: BindingValue<number>;
+  "padding-y"?: BindingValue<number>;
+  paddingTop?: BindingValue<number>;
+  "padding-top"?: BindingValue<number>;
+  paddingRight?: BindingValue<number>;
+  "padding-right"?: BindingValue<number>;
+  paddingBottom?: BindingValue<number>;
+  "padding-bottom"?: BindingValue<number>;
+  paddingLeft?: BindingValue<number>;
+  "padding-left"?: BindingValue<number>;
   height?: BindingValue<number>;
   width?: BindingValue<number>;
   overflow?: BindingValue<"visible" | "clip">;
@@ -212,21 +251,35 @@ export namespace JSX {
 
     box: IntrinsicInteractionProps &
       IntrinsicBoxStyleProps &
+      IntrinsicYogaSizeProps &
+      IntrinsicYogaMarginProps &
       IntrinsicPaintProps &
       IntrinsicYogaItemProps &
       IntrinsicYogaContainerProps & {
       children?: TemplateChildren;
     };
 
-    vstack: IntrinsicInteractionProps & IntrinsicYogaItemProps & IntrinsicYogaContainerProps & {
+    vstack: IntrinsicInteractionProps &
+      IntrinsicYogaItemProps &
+      IntrinsicYogaContainerProps &
+      IntrinsicYogaSizeProps &
+      IntrinsicYogaMarginProps & {
       children?: TemplateChildren;
     };
 
-    hstack: IntrinsicInteractionProps & IntrinsicYogaItemProps & IntrinsicYogaContainerProps & {
+    hstack: IntrinsicInteractionProps &
+      IntrinsicYogaItemProps &
+      IntrinsicYogaContainerProps &
+      IntrinsicYogaSizeProps &
+      IntrinsicYogaMarginProps & {
       children?: TemplateChildren;
     };
 
-    text: IntrinsicInteractionProps & IntrinsicPaintProps & IntrinsicYogaItemProps & {
+    text: IntrinsicInteractionProps &
+      IntrinsicPaintProps &
+      IntrinsicYogaItemProps &
+      IntrinsicYogaSizeProps &
+      IntrinsicYogaMarginProps & {
       value: BindingValue<string | number>;
       wrap?: BindingValue<PublicTextWrapMode>;
       children?: never;
@@ -245,7 +298,10 @@ export namespace JSX {
       children?: never;
     };
 
-    spacer: IntrinsicInteractionProps & IntrinsicYogaItemProps & {
+    spacer: IntrinsicInteractionProps &
+      IntrinsicYogaItemProps &
+      IntrinsicYogaSizeProps &
+      IntrinsicYogaMarginProps & {
       size?: BindingValue<number>;
       children?: never;
     };

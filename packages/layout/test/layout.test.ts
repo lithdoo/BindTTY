@@ -6,7 +6,13 @@ import { createSignal } from "@bindtty/signal";
 import {
   createBasicLayoutEngine,
   createYogaLayoutEngine,
+  futureLayoutProps,
+  getLayoutPropMatrixStatus,
   layoutRoot,
+  matrixLayoutProps,
+  resolveMargin,
+  resolvePadding,
+  yogaSupportedPropsByTag,
   type LayoutEngine,
   type LayoutViewport
 } from "@bindtty/layout";
@@ -508,8 +514,8 @@ test("throws for unsupported layout elements", () => {
 
 test("throws for unsupported future layout props and duplicate aliases", () => {
   assert.throws(
-    () => layoutRoot(createMountedElement("box", { paddingTop: 1 }), { viewport }),
-    /Unsupported layout prop: paddingTop/
+    () => layoutRoot(createMountedElement("box", { flexDirection: "row" }), { viewport }),
+    /Unsupported layout prop: flexDirection/
   );
 
   assert.throws(
@@ -1513,11 +1519,11 @@ test("YogaLayoutEngine rejects unsupported layout elements and props", () => {
 
   assert.throws(
     () =>
-      layoutRoot(createMountedElement("box", { margin: 1 }), {
+      layoutRoot(createMountedElement("box", { flexDirection: "row" }), {
         viewport,
         engine: createYogaLayoutEngine()
       }),
-    /Unsupported layout prop: margin/
+    /Unsupported layout prop: flexDirection/
   );
 });
 
@@ -1937,4 +1943,341 @@ test("BasicLayoutEngine rejects Yoga-only flex props", () => {
       layoutRootWithBasic(createMountedElement("hstack", { "flex-wrap": "wrap" })),
     /Unsupported layout prop: flexWrap/
   );
+});
+
+test("YogaLayoutEngine supports maxWidth on wrapped text", () => {
+  const root = createMountedElement("text", {
+    value: "abcdefghij",
+    wrap: "wrap",
+    maxWidth: 4
+  });
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 4,
+    height: 3
+  });
+});
+
+test("YogaLayoutEngine supports minHeight on box", () => {
+  const root = createMountedElement(
+    "box",
+    { minHeight: 5 },
+    [createMountedText("A")]
+  );
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 5
+  });
+});
+
+test("YogaLayoutEngine supports maxHeight with clip overflow", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      maxHeight: 2,
+      overflow: "clip"
+    },
+    [
+      createMountedText("A"),
+      createMountedText("B"),
+      createMountedText("C")
+    ]
+  );
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 2
+  });
+  assert.deepEqual(layout?.clip, {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 2
+  });
+  assert.equal(layout?.contentSize?.height, 3);
+});
+
+test("YogaLayoutEngine supports min/max size props with kebab-case aliases", () => {
+  const root = createMountedElement("text", {
+    value: "abcd",
+    wrap: "wrap",
+    "max-width": 2
+  });
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 2,
+    height: 2
+  });
+});
+
+test("YogaLayoutEngine supports minWidth on spacer in row flow", () => {
+  const root = createMountedElement(
+    "hstack",
+    {},
+    [createMountedElement("spacer", { size: 1, minWidth: 4 })]
+  );
+  const layout = layoutRoot(root, { viewport });
+
+  assert.equal(layout?.children[0]?.rect.width, 4);
+});
+
+test("BasicLayoutEngine rejects min/max size props", () => {
+  assert.throws(
+    () => layoutRootWithBasic(createMountedElement("box", { minHeight: 5 })),
+    /Unsupported layout prop: minHeight/
+  );
+  assert.throws(
+    () => layoutRootWithBasic(createMountedElement("text", { maxWidth: 4 })),
+    /Unsupported layout prop: maxWidth/
+  );
+});
+
+test("layoutRoot rejects min/max size props on screen", () => {
+  assert.throws(
+    () => layoutRoot(createMountedElement("screen", { maxHeight: 10 }), { viewport }),
+    /Unsupported layout prop: maxHeight/
+  );
+});
+
+test("resolvePadding applies edge over axis over uniform shorthand", () => {
+  assert.deepEqual(resolvePadding({ padding: 2, paddingTop: 0 }), {
+    top: 0,
+    right: 2,
+    bottom: 2,
+    left: 2
+  });
+  assert.deepEqual(resolvePadding({ paddingX: 3, paddingY: 1 }), {
+    top: 1,
+    right: 3,
+    bottom: 1,
+    left: 3
+  });
+  assert.deepEqual(resolvePadding({ "padding-left": 4 }), {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 4
+  });
+});
+
+test("YogaLayoutEngine supports asymmetric box padding in contentRect", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      paddingTop: 1,
+      paddingLeft: 2,
+      paddingRight: 3,
+      paddingBottom: 4
+    },
+    [createMountedText("A")]
+  );
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 6,
+    height: 6
+  });
+  assert.deepEqual(layout?.contentRect, {
+    x: 2,
+    y: 1,
+    width: 1,
+    height: 1
+  });
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 2,
+    y: 1,
+    width: 1,
+    height: 1
+  });
+});
+
+test("YogaLayoutEngine supports padding shorthand with edge override", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      padding: 2,
+      paddingTop: 0
+    },
+    [createMountedText("Hi")]
+  );
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.contentRect, {
+    x: 2,
+    y: 0,
+    width: 2,
+    height: 1
+  });
+});
+
+test("YogaLayoutEngine keeps clip metadata with asymmetric padding", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      height: 4,
+      paddingTop: 1,
+      paddingBottom: 2,
+      overflow: "clip"
+    },
+    [
+      createMountedText("A"),
+      createMountedText("B"),
+      createMountedText("C"),
+      createMountedText("D")
+    ]
+  );
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.contentRect, {
+    x: 0,
+    y: 1,
+    width: 1,
+    height: 1
+  });
+  assert.deepEqual(layout?.clip, layout?.contentRect);
+  assert.equal(layout?.contentSize?.height, 4);
+});
+
+test("BasicLayoutEngine rejects edge padding props", () => {
+  assert.throws(
+    () => layoutRootWithBasic(createMountedElement("box", { paddingTop: 1 })),
+    /Unsupported layout prop: paddingTop/
+  );
+  assert.throws(
+    () => layoutRootWithBasic(createMountedElement("box", { paddingX: 1 })),
+    /Unsupported layout prop: paddingX/
+  );
+});
+
+test("resolveMargin applies edge over axis over uniform shorthand", () => {
+  assert.deepEqual(resolveMargin({ margin: 2, marginTop: 0 }), {
+    top: 0,
+    right: 2,
+    bottom: 2,
+    left: 2
+  });
+  assert.deepEqual(resolveMargin({ marginX: 3, marginY: 1 }), {
+    top: 1,
+    right: 3,
+    bottom: 1,
+    left: 3
+  });
+  assert.deepEqual(resolveMargin({ "margin-left": 4 }), {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 4
+  });
+});
+
+test("YogaLayoutEngine applies marginBottom between vstack children", () => {
+  const root = createMountedElement("vstack", {}, [
+    createMountedElement("text", { value: "A", marginBottom: 2 }),
+    createMountedText("B")
+  ]);
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.rect, {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 4
+  });
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1
+  });
+  assert.deepEqual(layout?.children[1]?.rect, {
+    x: 0,
+    y: 3,
+    width: 1,
+    height: 1
+  });
+});
+
+test("YogaLayoutEngine applies marginLeft between hstack children", () => {
+  const root = createMountedElement("hstack", {}, [
+    createMountedText("A"),
+    createMountedElement("text", { value: "B", marginLeft: 2 })
+  ]);
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.children[0]?.rect, {
+    x: 0,
+    y: 0,
+    width: 1,
+    height: 1
+  });
+  assert.deepEqual(layout?.children[1]?.rect, {
+    x: 3,
+    y: 0,
+    width: 1,
+    height: 1
+  });
+});
+
+test("YogaLayoutEngine keeps box contentRect independent of margin", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      margin: 2,
+      padding: 1
+    },
+    [createMountedText("A")]
+  );
+  const layout = layoutRoot(root, { viewport });
+  const rect = layout?.rect;
+  const contentRect = layout?.contentRect;
+
+  assert.ok(rect);
+  assert.ok(contentRect);
+  assert.equal(contentRect.x, rect.x + 1);
+  assert.equal(contentRect.y, rect.y + 1);
+  assert.equal(contentRect.width, rect.width - 2);
+  assert.equal(contentRect.height, rect.height - 2);
+});
+
+test("BasicLayoutEngine rejects margin props", () => {
+  assert.throws(
+    () => layoutRootWithBasic(createMountedElement("text", { marginBottom: 1 })),
+    /Unsupported layout prop: marginBottom/
+  );
+  assert.throws(
+    () => layoutRootWithBasic(createMountedElement("vstack", { marginTop: 1 })),
+    /Unsupported layout prop: marginTop/
+  );
+});
+
+test("layout prop matrix status matches yogaSupportedPropsByTag", () => {
+  for (const prop of matrixLayoutProps) {
+    for (const tag of Object.keys(yogaSupportedPropsByTag) as Array<
+      keyof typeof yogaSupportedPropsByTag
+    >) {
+      const supported = yogaSupportedPropsByTag[tag];
+      const expected = supported.has(prop)
+        ? "supported"
+        : futureLayoutProps.has(prop)
+          ? "future"
+          : "na";
+
+      assert.equal(getLayoutPropMatrixStatus(tag, prop, "yoga"), expected, `${tag}.${prop}`);
+    }
+  }
 });

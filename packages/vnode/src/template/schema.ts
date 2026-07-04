@@ -38,6 +38,33 @@ const commonYogaContainerProps: Record<string, PropSchema> = {
   "justify-content": { dirty: "layout" }
 };
 
+const commonYogaSizeProps: Record<string, PropSchema> = {
+  minWidth: { dirty: "layout" },
+  "min-width": { dirty: "layout" },
+  minHeight: { dirty: "layout" },
+  "min-height": { dirty: "layout" },
+  maxWidth: { dirty: "layout" },
+  "max-width": { dirty: "layout" },
+  maxHeight: { dirty: "layout" },
+  "max-height": { dirty: "layout" }
+};
+
+const commonYogaMarginProps: Record<string, PropSchema> = {
+  margin: { dirty: "layout" },
+  marginX: { dirty: "layout" },
+  "margin-x": { dirty: "layout" },
+  marginY: { dirty: "layout" },
+  "margin-y": { dirty: "layout" },
+  marginTop: { dirty: "layout" },
+  "margin-top": { dirty: "layout" },
+  marginRight: { dirty: "layout" },
+  "margin-right": { dirty: "layout" },
+  marginBottom: { dirty: "layout" },
+  "margin-bottom": { dirty: "layout" },
+  marginLeft: { dirty: "layout" },
+  "margin-left": { dirty: "layout" }
+};
+
 export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
   screen: {
     acceptsChildren: true,
@@ -53,8 +80,22 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
       ...commonElementProps,
       ...commonYogaItemProps,
       ...commonYogaContainerProps,
+      ...commonYogaSizeProps,
+      ...commonYogaMarginProps,
       border: { dirty: "paint" },
       padding: { dirty: "layout" },
+      paddingX: { dirty: "layout" },
+      "padding-x": { dirty: "layout" },
+      paddingY: { dirty: "layout" },
+      "padding-y": { dirty: "layout" },
+      paddingTop: { dirty: "layout" },
+      "padding-top": { dirty: "layout" },
+      paddingRight: { dirty: "layout" },
+      "padding-right": { dirty: "layout" },
+      paddingBottom: { dirty: "layout" },
+      "padding-bottom": { dirty: "layout" },
+      paddingLeft: { dirty: "layout" },
+      "padding-left": { dirty: "layout" },
       height: { dirty: "layout" },
       width: { dirty: "layout" },
       overflow: { dirty: "layout" },
@@ -67,7 +108,9 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
     props: {
       ...commonElementProps,
       ...commonYogaItemProps,
-      ...commonYogaContainerProps
+      ...commonYogaContainerProps,
+      ...commonYogaSizeProps,
+      ...commonYogaMarginProps
     }
   },
   hstack: {
@@ -75,7 +118,9 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
     props: {
       ...commonElementProps,
       ...commonYogaItemProps,
-      ...commonYogaContainerProps
+      ...commonYogaContainerProps,
+      ...commonYogaSizeProps,
+      ...commonYogaMarginProps
     }
   },
   text: {
@@ -86,6 +131,8 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
       ...commonYogaItemProps,
       value: { required: true, dirty: "layout" },
       wrap: { dirty: "layout" },
+      ...commonYogaSizeProps,
+      ...commonYogaMarginProps,
       color: { dirty: "paint" },
       bold: { dirty: "paint" }
     }
@@ -114,7 +161,9 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
     props: {
       ...commonElementProps,
       ...commonYogaItemProps,
-      size: { dirty: "layout" }
+      size: { dirty: "layout" },
+      ...commonYogaSizeProps,
+      ...commonYogaMarginProps
     }
   }
 };
