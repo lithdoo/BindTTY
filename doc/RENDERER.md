@@ -482,6 +482,9 @@ width = 0:
 width = 1 / 2:
   char 必须是单个 grapheme，且 display width 必须等于 cell.width
 
+width = 2:
+  x + width 必须小于等于 frame.width；setCell() 不自动写 placeholder
+
 width 缺省:
   按 width = 1 处理，用于兼容旧 ASCII helper
 ```

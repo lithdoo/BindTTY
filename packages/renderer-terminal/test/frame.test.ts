@@ -59,10 +59,10 @@ test("setCell writes a cloned normalized cell without slicing graphemes", () => 
   const style = { foreground: "red", bold: true };
   const cell = { char: "🙂", style, width: 2 as const };
 
-  assert.equal(setCell(frame, 1, 0, cell), true);
+  assert.equal(setCell(frame, 0, 0, cell), true);
   style.foreground = "blue";
 
-  assert.deepEqual(getCell(frame, 1, 0), {
+  assert.deepEqual(getCell(frame, 0, 0), {
     char: "🙂",
     style: {
       foreground: "red",
@@ -70,7 +70,7 @@ test("setCell writes a cloned normalized cell without slicing graphemes", () => 
     },
     width: 2
   });
-  assert.deepEqual(frameToLines(frame), [" 🙂"]);
+  assert.deepEqual(frameToLines(frame), ["🙂 "]);
 });
 
 test("setCell rejects cells whose char does not match their width", () => {
@@ -91,6 +91,10 @@ test("setCell rejects cells whose char does not match their width", () => {
   assert.throws(
     () => setCell(frame, 0, 0, { char: "A", style: {}, width: 0 }),
     /placeholder cell/
+  );
+  assert.throws(
+    () => setCell(frame, 1, 0, { char: "中", style: {}, width: 2 }),
+    /exceeds frame bounds/
   );
 });
 

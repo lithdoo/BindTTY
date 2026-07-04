@@ -657,6 +657,7 @@ char[0]
 setCell 不负责把任意 string 切成 char。
 setCell 只接受已经规范化过的 Cell。
 setCell 必须拒绝不规范 Cell，而不是静默截断或静默改写。
+setCell 不自动写 placeholder；写入 width=2 leading cell 时，x + width 必须落在 frame 内。
 写入 text 的地方必须先 segmentText()。
 frame.writeText() 当前也是 text 写入入口，必须同步改为 segment-based，或在阶段 4 标记为仅测试/内部 helper 并改用统一 writeTextLineClipped()。
 
@@ -668,8 +669,9 @@ frame.writeText() 当前也是 text 写入入口，必须同步改为 segment-ba
 1. width = 0 时 char 必须为 ""，否则抛错。
 2. width = 1/2 时 char 必须是单个 grapheme。
 3. width = 1/2 时 grapheme display width 必须匹配 cell.width。
-4. width 缺省时按 1 处理，用于兼容旧 ASCII helper。
-5. style shallow clone。
+4. width = 2 时必须完整落在 frame 内，否则抛错。
+5. width 缺省时按 1 处理，用于兼容旧 ASCII helper。
+6. style shallow clone。
 
 ```
 

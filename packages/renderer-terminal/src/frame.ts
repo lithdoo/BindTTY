@@ -31,7 +31,14 @@ export function setCell(frame: Frame, x: number, y: number, cell: Cell): boolean
     return false;
   }
 
-  frame.cells[getCellIndex(frame, x, y)] = cloneCell(cell);
+  const clonedCell = cloneCell(cell);
+  const width = clonedCell.width ?? 1;
+
+  if (width > 1 && x + width > frame.width) {
+    throw new Error("Invalid wide cell: cell width exceeds frame bounds");
+  }
+
+  frame.cells[getCellIndex(frame, x, y)] = clonedCell;
   return true;
 }
 
