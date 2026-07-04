@@ -168,7 +168,9 @@ npm run test:e2e:real:wsl   # 需 WSL Ubuntu + Node.js
 | [INTERACTION.md](./doc/INTERACTION.md) | @bindtty/interaction 落地设计（keyboard focus + onKey dispatch） |
 | [WIDGETS.md](./doc/WIDGETS.md) | @bindtty/widgets 落地设计（Button / TextInput 等高层控件） |
 | [TEXT_INPUT.md](./doc/TEXT_INPUT.md) | TextInput 控件详细设计（拆分光标渲染方案） |
+| [DISPLAY_WIDTH.md](./doc/DISPLAY_WIDTH.md) | Terminal display-width / 宽字符 / grapheme 支持 |
 | [E2E_TESTING.md](./doc/E2E_TESTING.md) | E2E 测试计划（TSX → App → Terminal 闭环验证） |
+| [TODO.md](./TODO.md) | 已知代码缺口与后续改进 |
 | [DESIGN.md](./doc/DESIGN.md) | 视图树总体设计、四层结构、BindingValue、control node |
 | [TUI_IMPLEMENTATION_PLAN.md](./doc/TUI_IMPLEMENTATION_PLAN.md) | 实现计划、里程碑、优先级 |
 | [archive/](./doc/archive/) | 已合并前的原始分拆文档备份 |

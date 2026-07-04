@@ -107,6 +107,23 @@ packages/e2e/
 - `onKey` callback 更新 signal 后能渲染可见结果。
 - `dispose()` 后 fake stdin key 不再触发输出。
 
+### Display-Width / 宽字符（mock + real）
+
+Mock（`app-terminal.test.tsx`）：
+
+- CJK / emoji 首屏与更新、resize rewrap
+- ScrollView 包裹 CJK 行滚动
+- focus inverse 覆盖 wide char
+- TextInput CJK / emoji 输入（记录当前 JS index 语义）
+- `examples/wide-text` 同等 UI  smoke
+
+Real PTY（`packages/e2e/real/harness/`）：
+
+- `wide-text-app.tsx` — CJK + emoji 标题、ScrollView 滚动
+- `wide-text-resize-app.tsx` — 终端列宽变化后 hard wrap 高度变化
+
+详见 [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md) §9 与 [../packages/e2e/README.md](../packages/e2e/README.md)。
+
 ## 后续阶段
 
 ### 阶段 2：更多用户场景

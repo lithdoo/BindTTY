@@ -11,6 +11,7 @@ widget props → intrinsic element (box + text + hstack)
 相关文档：
 
 - [WIDGETS.md](./WIDGETS.md) — widgets 总体设计、包边界、Button 参考实现
+- [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md) — terminal display-width / 宽字符（TextInput 编辑限制见 §8）
 - [INTERACTION.md](./INTERACTION.md) — keyboard focus、`onKey` dispatch、focused state
 - [APP.md](./APP.md) — createApp 组合 runtime / layout / renderer / terminal
 - [VNODE.md](./VNODE.md) — Template / MountedNode 数据结构
@@ -42,7 +43,27 @@ TextInput 提供一个可控的单行文本编辑控件。
 5. 密码遮蔽。
 6. 输入校验 / mask。
 7. Ctrl+U / Ctrl+W 等高级编辑快捷键。
+8. **按 terminal display column / grapheme 移动光标与删除**（见 §1.1）。
 ```
+
+### 1.1 与 display-width 渲染的关系
+
+TextInput 的 **value 仍是普通 JS string**，编辑语义按 **string index**（code unit）工作，**尚未**接入 `@bindtty/text` 的 `segmentText()`：
+
+```text
+光标：left / right / home / end 每次移动 ±1 个 code unit
+插入：在 index 处拼接 event.input
+删除：backspace / delete 每次移除一个 code unit
+显示：beforeCursor / cursorChar / afterCursor 用 slice(index) 拆分
+```
+
+因此：
+
+- **CJK**（单 BMP 码位）通常与 display column 一致，表现正常。
+- **Emoji / surrogate pair**：光标可能停在 surrogate 中间；backspace 需两次才能删完一个 emoji；可能产生孤立 surrogate（测试在 `packages/widgets/test/text-input.test.ts` 中记录当前行为）。
+- **终端绘制**：TextInput 输出的 `<text>` 仍经 layout/renderer 按 display width 绘制；宽字符在框内占列可能与 cursor index 语义不一致。
+
+改进计划见项目根目录 [TODO.md](../TODO.md)。
 
 ## 2. Props 设计
 

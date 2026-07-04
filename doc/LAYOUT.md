@@ -501,7 +501,7 @@ Element tag:
 5. alignment
 6. overflow clipping
 7. text wrapping
-8. unicode display width 精确测量
+8. unicode display width 精确测量（已完成，见 [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md)）
 9. scroll
 ```
 
@@ -906,17 +906,18 @@ function layoutRoot(root, options) {
 
 ```tsx
 <text value="Hello" />
+<text value="中" />
 ```
 
 规则：
 
 ```text
-width = String(value).length
-height = 1
-children = []
+width / height 由 layoutText() / measureText() 按 display column 计算。
+单行文本 height 默认为 layout 结果行数；未指定 wrap 时单行 height = 1。
+CJK、emoji、combining mark 的宽度与换行见 DISPLAY_WIDTH.md。
 ```
 
-第一版使用字符串长度。后续再引入 display width 测量处理宽字符、emoji、ANSI escape 等。
+实现：`@bindtty/layout` 调用 `@bindtty/text` 的 `layoutText()`，不直接使用 `String.length`。
 
 ### 12.2 spacer
 

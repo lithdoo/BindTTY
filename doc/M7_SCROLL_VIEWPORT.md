@@ -53,7 +53,7 @@
 - 水平滚动（可预留 API，实现可后置）
 - 鼠标滚轮、触摸
 - margin / gap / flex grow 等高级 layout（见 [TUI_IMPLEMENTATION_PLAN.md](./TUI_IMPLEMENTATION_PLAN.md) 后续项）
-- Unicode 宽字符 / emoji grapheme 精确测量（单列后续里程碑）
+- Unicode 宽字符 / emoji display-width 测量（已由 [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md) 在 text/layout/renderer 落地；ScrollView 垂直滚动无额外 wide 逻辑）
 - scrollback buffer / 终端历史回滚（与 alternate screen 策略不同）
 
 ---

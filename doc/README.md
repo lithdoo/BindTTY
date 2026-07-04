@@ -17,6 +17,7 @@
 | [NODE_SETUP.md](./NODE_SETUP.md) | 节点级 onSetup 设计（实例访问、layout/focus/lifecycle 扩展入口） |
 | [WIDGETS.md](./WIDGETS.md) | @bindtty/widgets 落地设计（Button / TextInput 等高层控件） |
 | [TEXT_INPUT.md](./TEXT_INPUT.md) | TextInput 控件详细设计（拆分光标渲染方案） |
+| [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md) | Terminal display-width / 宽字符 / grapheme 支持（text → renderer） |
 | [E2E_TESTING.md](./E2E_TESTING.md) | E2E 测试计划（mock + real PTY） |
 | [../packages/e2e/README.md](../packages/e2e/README.md) | E2E 包说明（`mock/` 与 `real/`） |
 | [DESIGN.md](./DESIGN.md) | 视图树总体设计、四层结构、BindingValue、control node |

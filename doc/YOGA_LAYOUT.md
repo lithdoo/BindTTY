@@ -63,7 +63,7 @@ scrollY clamp
 4. hstack 只累加 child width，不支持 flex shrink / grow。
 5. row flow 不支持 wrap。
 6. box / vstack / hstack 不支持 gap、align、justify、min/max 等 flexbox 能力。
-7. 原始 Frame 是一列一个 Cell，不能正确表达 wide char / grapheme cluster；当前已由 [WIDE_TEXT_FRAME.md](./WIDE_TEXT_FRAME.md) 升级为 wide-cell placeholder 模型。
+7. 原始 Frame 是一列一个 Cell，不能正确表达 wide char / grapheme cluster；当前已由 [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md) 升级为 wide-cell placeholder 模型。
 8. 当前 renderer 是 Frame/style 模型，仍不支持 text value 内嵌 ANSI escape。
 ```
 
@@ -151,10 +151,10 @@ YogaLayoutEngine
 7. 不实现 absolute / static / z-index 等复杂定位。
 8. 不完整处理 bidi。
 9. 不支持 rich text nested style span。
-10. 不改变 FramePatch 基础结构；Frame / diff / ansi 已由 [WIDE_TEXT_FRAME.md](./WIDE_TEXT_FRAME.md) 补齐 wide-cell placeholder 语义。
+10. 不改变 FramePatch 基础结构；Frame / diff / ansi 已由 [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md) 补齐 wide-cell placeholder 语义。
 11. 不改变 Element Ref 的生命周期模型。
 12. MVP 不支持 text value 内嵌 ANSI escape。
-13. CJK / common emoji / combining mark 已由 [WIDE_TEXT_FRAME.md](./WIDE_TEXT_FRAME.md) 落地；复杂 ZWJ emoji 与 ANSI text 仍不属于本计划。
+13. CJK / common emoji / combining mark 已由 [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md) 落地；复杂 ZWJ emoji 与 ANSI text 仍不属于本计划。
 
 ## 4. 总体架构
 
@@ -314,7 +314,7 @@ normalizeChar() 会把 char 截成第一个 UTF-16 code unit。
 这种结构无法正确表达 emoji surrogate pair、wide char、combining mark、grapheme cluster。
 ```
 
-当前已在 [WIDE_TEXT_FRAME.md](./WIDE_TEXT_FRAME.md) 中定义并落地 wide-cell / grapheme 表示：
+当前已在 [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md) 中定义并落地 wide-cell / grapheme 表示：
 
 ```text
 Cell.char 存 grapheme。
@@ -635,12 +635,14 @@ cli-truncate
 7. CJK / emoji / combining mark 作为后续 hardening。
 ```
 
-MVP 推荐依赖策略：
+MVP 推荐依赖策略（**历史记录，2026-07 前**）：
 
 ```text
 优先自实现 ASCII-first measure / wrap / truncate。
 不在 @bindtty/text MVP 中引入 string-width / wrap-ansi / slice-ansi / cli-truncate。
 ```
+
+> **现行状态**：上述 ASCII-first 策略已被 display-width 实现取代。`@bindtty/text` 已引入 `string-width` 与 `Intl.Segmenter`；详见 [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md)。
 
 原因：
 
@@ -1817,7 +1819,7 @@ examples/yoga-layout
 阶段 6：已打开第一批 Yoga flex props，包含 camelCase / kebab-case、Yoga 映射与 Basic 明确报错。
 阶段 7：已完成默认 engine 切换，layoutRoot 默认使用 YogaLayoutEngine，BasicLayoutEngine 保留为 legacy fallback。
 阶段 8：尚未决定 BasicLayoutEngine 的长期去留。
-Wide Text：已完成 @bindtty/text display-width、renderer wide-cell Frame、diff/ANSI placeholder、layout/Yoga CJK 回归，见 WIDE_TEXT_FRAME.md。
+Wide Text：已完成 @bindtty/text display-width、renderer wide-cell Frame、diff/ANSI placeholder、layout/Yoga CJK 回归，见 [DISPLAY_WIDTH.md](./DISPLAY_WIDTH.md)。
 ```
 
 ## 阶段 0：Frame wide-cell / ANSI 范围决策
