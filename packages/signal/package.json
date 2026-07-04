@@ -1,7 +1,6 @@
 {
   "name": "@bindtty/signal",
-  "version": "0.1.0-alpha.0",
-  "private": true,
+  "version": "0.1.0-alpha.1",
   "type": "module",
   "description": "Signal primitives for BindTTY.",
   "main": "./dist/index.js",
@@ -18,10 +17,17 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build",
     "test": "npm run build && node --test test/*.test.js"
   },
   "devDependencies": {
     "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "license": "MIT",
   "repository": {

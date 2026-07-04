@@ -1,7 +1,6 @@
 {
   "name": "@bindtty/terminal",
-  "version": "0.1.0-alpha.0",
-  "private": true,
+  "version": "0.1.0-alpha.1",
   "type": "module",
   "description": "Terminal lifecycle and input host for BindTTY.",
   "main": "./dist/index.js",
@@ -18,11 +17,18 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build",
     "test": "npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "license": "MIT",
   "repository": {

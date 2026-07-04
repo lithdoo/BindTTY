@@ -1,19 +1,41 @@
 # bindtty
 
-BindTTY 的用户入口包。组合 runtime、layout、renderer、terminal、interaction，提供 `createApp` 与高层控件 re-export。
+BindTTY 的用户入口包。组合 runtime、layout、renderer、terminal、interaction，提供 `createApp`、JSX runtime 转发与高层控件 re-export。
+
+## 安装
+
+```bash
+npm install bindtty @bindtty/signal
+```
+
+ViewModel 中的 signal 来自 `@bindtty/signal`；`createApp` 与控件来自 `bindtty`。JSX runtime 已作为 `bindtty` 的依赖一并安装，无需单独安装 `@bindtty/jsx-runtime`（除非你想显式引用该包）。
+
+## tsconfig
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "bindtty"
+  }
+}
+```
+
+`bindtty` 通过 `./jsx-runtime` 与 `./jsx-dev-runtime` 子路径转发 `@bindtty/jsx-runtime`。也可直接使用 `jsxImportSource: "@bindtty/jsx-runtime"`。
 
 ## 导出
 
 ```ts
-import { createApp, Button, TextInput } from "bindtty";
+import { createApp, Button, TextInput, ScrollView, List } from "bindtty";
+import { createSignal, computed } from "@bindtty/signal";
 ```
 
 - `createApp(view, options)` — 创建可运行的 TUI 应用
-- `Button` / `TextInput` — 来自 `@bindtty/widgets`
+- `Button` / `TextInput` / `ScrollView` / `List` — 来自 `@bindtty/widgets`
 
 类型：`AppStdout`、`AppViewport`、`BindTTYApp`、`CreateAppOptions`、`ButtonProps`、`TextInputProps` 等。
 
-底层包（`@bindtty/signal`、`@bindtty/runtime` 等）需按需单独引用，顶层包暂不 re-export。
+底层包（`@bindtty/runtime`、`@bindtty/layout` 等）需按需单独引用，顶层包暂不 re-export。
 
 ## 用法
 

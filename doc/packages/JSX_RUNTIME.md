@@ -72,18 +72,23 @@ packages/jsx-runtime/
 {
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@bindtty/jsx-runtime"
+    "jsxImportSource": "bindtty"
   }
 }
 ```
 
-顶层 `bindtty` 包当前只导出用户运行时入口，不转发 JSX runtime 子路径。因此暂不支持：
+推荐 `jsxImportSource: "bindtty"`：`bindtty` 包通过 `./jsx-runtime` 与 `./jsx-dev-runtime` 子路径转发本包的 runtime。
 
-```text
-jsxImportSource: "bindtty"
+也可直接使用：
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@bindtty/jsx-runtime"
+  }
+}
 ```
-
-如果未来希望用户只配置 `jsxImportSource: "bindtty"`，需要在 `packages/bindtty/package.json` 中额外导出 `./jsx-runtime` 与 `./jsx-dev-runtime` 子路径。
 
 ## 4. 必要导出
 

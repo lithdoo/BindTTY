@@ -1,7 +1,6 @@
 {
   "name": "@bindtty/layout",
-  "version": "0.1.0-alpha.0",
-  "private": true,
+  "version": "0.1.0-alpha.1",
   "type": "module",
   "description": "Layout tree generation for BindTTY mounted nodes.",
   "main": "./dist/index.js",
@@ -18,19 +17,26 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build",
     "test": "npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/vnode && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/runtime && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
   },
   "dependencies": {
-    "@bindtty/text": "0.1.0-alpha.0",
-    "@bindtty/vnode": "0.1.0-alpha.0",
+    "@bindtty/text": "0.1.0-alpha.1",
+    "@bindtty/vnode": "0.1.0-alpha.1",
     "yoga-layout": "3.2.1"
   },
   "devDependencies": {
-    "@bindtty/jsx-runtime": "0.1.0-alpha.0",
-    "@bindtty/runtime": "0.1.0-alpha.0",
-    "@bindtty/signal": "0.1.0-alpha.0",
+    "@bindtty/jsx-runtime": "0.1.0-alpha.1",
+    "@bindtty/runtime": "0.1.0-alpha.1",
+    "@bindtty/signal": "0.1.0-alpha.1",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "license": "MIT",
   "repository": {

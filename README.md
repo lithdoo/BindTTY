@@ -119,6 +119,11 @@ bindtty:                    createApp（stdout + terminal 双模式）、re-expo
 ## 快速开始
 
 ```bash
+npm install bindtty @bindtty/signal
+```
+
+```bash
+# 从源码开发
 npm install
 npm run build
 npm test
@@ -143,7 +148,7 @@ const app = createApp(<App vm={new CounterVM()} />, {
 app.start();
 ```
 
-tsconfig 需设置 `jsx: "react-jsx"`、`jsxImportSource: "bindtty"`。真实终端使用 `createNodeTerminal` + `createApp(view, { terminal })`，见 [APP.md](./doc/packages/APP.md)。
+tsconfig 需设置 `jsx: "react-jsx"`、`jsxImportSource: "bindtty"`（`bindtty` 会转发 JSX runtime；也可直接用 `@bindtty/jsx-runtime`）。真实终端使用 `createNodeTerminal` + `createApp(view, { terminal })`，见 [APP.md](./doc/packages/APP.md)。
 
 真实 PTY E2E（`node-pty`，`packages/e2e/real/`）见 [packages/e2e/README.md](./packages/e2e/README.md)：
 

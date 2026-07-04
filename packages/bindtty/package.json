@@ -1,15 +1,22 @@
 {
   "name": "bindtty",
-  "version": "0.1.0-alpha.0",
-  "private": true,
+  "version": "0.1.0-alpha.1",
   "type": "module",
-  "description": "Top-level user-facing package for BindTTY.",
+  "description": "MVVM signal-driven TUI framework for TypeScript/TSX.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./jsx-runtime": {
+      "types": "./dist/jsx-runtime.d.ts",
+      "import": "./dist/jsx-runtime.js"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./dist/jsx-dev-runtime.d.ts",
+      "import": "./dist/jsx-dev-runtime.js"
     }
   },
   "files": [
@@ -18,23 +25,36 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build",
     "test": "npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/terminal && npm run build --workspace @bindtty/interaction && npm run build --workspace @bindtty/widgets && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
   },
   "dependencies": {
-    "@bindtty/interaction": "0.1.0-alpha.0",
-    "@bindtty/layout": "0.1.0-alpha.0",
-    "@bindtty/renderer-terminal": "0.1.0-alpha.0",
-    "@bindtty/runtime": "0.1.0-alpha.0",
-    "@bindtty/signal": "0.1.0-alpha.0",
-    "@bindtty/terminal": "0.1.0-alpha.0",
-    "@bindtty/vnode": "0.1.0-alpha.0",
-    "@bindtty/widgets": "0.1.0-alpha.0"
+    "@bindtty/interaction": "0.1.0-alpha.1",
+    "@bindtty/jsx-runtime": "0.1.0-alpha.1",
+    "@bindtty/layout": "0.1.0-alpha.1",
+    "@bindtty/renderer-terminal": "0.1.0-alpha.1",
+    "@bindtty/runtime": "0.1.0-alpha.1",
+    "@bindtty/signal": "0.1.0-alpha.1",
+    "@bindtty/terminal": "0.1.0-alpha.1",
+    "@bindtty/vnode": "0.1.0-alpha.1",
+    "@bindtty/widgets": "0.1.0-alpha.1"
   },
   "devDependencies": {
-    "@bindtty/jsx-runtime": "0.1.0-alpha.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "tui",
+    "terminal",
+    "tsx",
+    "typescript",
+    "mvvm",
+    "signal",
+    "ansi"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
