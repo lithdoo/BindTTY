@@ -119,6 +119,8 @@ export function createTextCell(
   width: 1 | 2,
   style: CellStyle = {}
 ): Cell {
+  assertValidCell(text, width);
+
   return {
     char: text,
     style: cloneStyle(style),
@@ -144,9 +146,12 @@ export function isWideLeadingCell(cell: Cell): boolean {
 
 function cloneCell(cell: Cell): Cell {
   const width = normalizeWidth(cell);
+  const char = width === 0 ? cell.char : normalizeChar(cell.char);
+
+  assertValidCell(char, width);
 
   return {
-    char: width === 0 ? "" : normalizeChar(cell.char),
+    char: width === 0 ? "" : char,
     style: cloneStyle(cell.style),
     width
   };
@@ -166,6 +171,30 @@ function normalizeWidth(cell: Cell): 0 | 1 | 2 {
   }
 
   return 1;
+}
+
+function assertValidCell(char: string, width: 0 | 1 | 2): void {
+  if (width === 0) {
+    if (char !== "") {
+      throw new Error("Invalid placeholder cell: char must be empty");
+    }
+
+    return;
+  }
+
+  const segments = segmentText(char);
+
+  if (segments.length !== 1) {
+    throw new Error("Invalid text cell: char must be a single grapheme");
+  }
+
+  const [segment] = segments;
+
+  if (!segment || segment.width !== width) {
+    throw new Error(
+      `Invalid text cell: char display width ${segment?.width ?? 0} does not match cell width ${width}`
+    );
+  }
 }
 
 function canDrawWholeSegment(

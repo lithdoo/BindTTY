@@ -57,20 +57,41 @@ test("getCell and setCell clip out-of-bounds coordinates", () => {
 test("setCell writes a cloned normalized cell without slicing graphemes", () => {
   const frame = createFrame(2, 1);
   const style = { foreground: "red", bold: true };
-  const cell = { char: "XYZ", style };
+  const cell = { char: "🙂", style, width: 2 as const };
 
   assert.equal(setCell(frame, 1, 0, cell), true);
   style.foreground = "blue";
 
   assert.deepEqual(getCell(frame, 1, 0), {
-    char: "XYZ",
+    char: "🙂",
     style: {
       foreground: "red",
       bold: true
     },
-    width: 1
+    width: 2
   });
-  assert.deepEqual(frameToLines(frame), [" XYZ"]);
+  assert.deepEqual(frameToLines(frame), [" 🙂"]);
+});
+
+test("setCell rejects cells whose char does not match their width", () => {
+  const frame = createFrame(2, 1);
+
+  assert.throws(
+    () => setCell(frame, 0, 0, { char: "XYZ", style: {} }),
+    /char must be a single grapheme/
+  );
+  assert.throws(
+    () => setCell(frame, 0, 0, { char: "中", style: {}, width: 1 }),
+    /does not match cell width/
+  );
+  assert.throws(
+    () => setCell(frame, 0, 0, { char: "A", style: {}, width: 2 }),
+    /does not match cell width/
+  );
+  assert.throws(
+    () => setCell(frame, 0, 0, { char: "A", style: {}, width: 0 }),
+    /placeholder cell/
+  );
 });
 
 test("writeText writes a single line and clips horizontally", () => {

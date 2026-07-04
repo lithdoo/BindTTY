@@ -473,6 +473,21 @@ export interface CellStyle {
 
 `width` 在 public 类型上保留可选，以兼容旧测试 helper 和手写 `FramePatch`；`createFrame()`、`setCell()`、`diffFrames()` 产出的实际 Frame cell 会归一为 `width: 0 | 1 | 2`。
 
+`setCell()` 不负责切分字符串，但会维护 Frame invariant：
+
+```text
+width = 0:
+  char 必须是 ""
+
+width = 1 / 2:
+  char 必须是单个 grapheme，且 display width 必须等于 cell.width
+
+width 缺省:
+  按 width = 1 处理，用于兼容旧 ASCII helper
+```
+
+不合法的 cell 会抛错，避免一个 width=1 cell 存入多个 grapheme 后破坏 Frame column 语义。
+
 第一版 `cells` 可以是一维数组：
 
 ```text
