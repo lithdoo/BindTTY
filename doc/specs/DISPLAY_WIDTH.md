@@ -47,6 +47,7 @@ app / E2E / examples/wide-text
 
 @bindtty/widgets TextInput
   cursor / backspace / delete 按 grapheme segment 工作
+  监听 layout contentRect.width，通过 overflow: clip + scrollX 实现 display-column 输入窗口
 ```
 
 ### 1.2 不在范围内
@@ -190,7 +191,6 @@ interface Cell {
 
 | 区域 | 说明 |
 | --- | --- |
-| **TextInput 输入窗口** | 编辑按 grapheme index；尚无固定宽度视口、水平滚动、display-column 光标定位（见 [TODO.md](../TODO.md)） |
 | **ANSI in value** | 不支持；颜色走 `CellStyle` / props |
 | **复杂 ZWJ** | measure/segment 有基础测试；极端 terminal 字体未 hardening |
 | **Terminal 字体** | 以 string-width 为 oracle，不保证与所有字体一致 |
@@ -209,7 +209,7 @@ interface Cell {
 | runtime 集成 | `packages/renderer-terminal/test/integration.test.ts` |
 | layout CJK / rewrap | `packages/layout/test/layout.test.ts` |
 | app terminal 模式 | `packages/bindtty/test/app.test.ts` |
-| TextInput CJK / emoji / combining 编辑 | `packages/widgets/test/text-input.test.ts` |
+| TextInput CJK / emoji / combining 编辑与 layout 输入窗口 | `packages/widgets/test/text-input.test.ts` |
 | mock E2E 示例 UI | `packages/e2e/mock/test/app-terminal.test.tsx` |
 | real PTY CJK / scroll | `packages/e2e/real/harness/wide-text-app.tsx` |
 | real PTY resize rewrap | `packages/e2e/real/harness/wide-text-resize-app.tsx` |
@@ -232,10 +232,10 @@ npm run start --workspace @bindtty/example-wide-text
 需单独 spec 的项（详见 [TODO.md](../TODO.md)「暂缓」）：
 
 ```text
-1. TextInput：display-column 输入窗口、水平滚动
-2. RichText / TextSpan
-3. width > 2：placeholder 链与 diff expansion
-4. IME / 选区 / 多行（TEXT_INPUT.md 非目标）
+1. RichText / TextSpan
+2. width > 2：placeholder 链与 diff expansion
+3. IME / 选区 / 多行（TEXT_INPUT.md 非目标）
+4. TextInput selection / 鼠标定位 / 复杂编辑快捷键
 ```
 
 ---

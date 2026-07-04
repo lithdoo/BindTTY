@@ -4,23 +4,12 @@
 
 ---
 
-## TextInput：display-column 输入窗口
+## 已完成的 display-width 收尾
 
-**包**：`@bindtty/widgets` — `packages/widgets/src/text-input.ts`
-
-**已完成**：grapheme-aware 编辑（光标 / backspace / delete 按 `segmentText()` 的 grapheme index）。
-
-**待做**（需先定 spec 再实现）：
-
-| 能力 | 说明 |
-| --- | --- |
-| 固定宽度视口 | 输入框可见列数由 layout 还是 props 决定 |
-| 水平滚动 | 超长内容在视口内 clip + scroll offset |
-| 光标跟随 | 光标移出可见区时 scroll，使当前 grapheme 可见 |
-
-**渲染现状**：仍用 before / cursor / after 三段 `<text>`，无独立 display-column 光标列。
-
-**参考**： [doc/specs/TEXT_INPUT.md](doc/specs/TEXT_INPUT.md)、[doc/specs/DISPLAY_WIDTH.md](doc/specs/DISPLAY_WIDTH.md) §8
+- TextInput grapheme-aware 编辑：光标 / backspace / delete 按 `segmentText()` 的 grapheme index。
+- TextInput display-column 输入窗口：监听自身 layout `contentRect.width`，通过 `overflow: "clip"` + `scrollX` 让光标保持在可视窗口内。
+- Renderer placeholder-only patch：`diffFrames` 过滤不可见 placeholder-only dirty range。
+- `writeText()` public API：保留为 low-level Frame text writer。
 
 ---
 
@@ -31,6 +20,7 @@
 - RichText / TextSpan（text value 内嵌 ANSI）
 - Frame `width > 2` / placeholder 链扩展
 - IME / 多行 / 选区（见 [doc/specs/TEXT_INPUT.md](doc/specs/TEXT_INPUT.md) 非目标）
+- TextInput selection / 鼠标定位 / 复杂编辑快捷键
 
 ---
 

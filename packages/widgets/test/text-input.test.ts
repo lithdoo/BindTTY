@@ -89,6 +89,29 @@ function readParts(template: ElementTemplate): {
   };
 }
 
+function applyTextInputLayoutWidth(
+  template: ElementTemplate,
+  width: number
+): { onUnmount?: () => void; onLayout?: (layout: unknown) => void } {
+  const ref = template.props.ref;
+  assert.equal(typeof ref, "function");
+
+  interface TestApi {
+    onLayout?: (layout: unknown) => void;
+    onUnmount?: () => void;
+  }
+
+  const api: TestApi = {};
+  (ref as (api: TestApi) => void)(api);
+  api.onLayout?.({
+    contentRect: {
+      width
+    }
+  });
+
+  return api;
+}
+
 test("TextInput renders as a focusable box with split cursor text nodes", () => {
   const value = createSignal("Hello");
   const focusChanges: boolean[] = [];
@@ -106,6 +129,7 @@ test("TextInput renders as a focusable box with split cursor text nodes", () => 
   assert.equal(template.tag, "box");
   assert.equal(template.props.id, "name");
   assert.equal(template.props.focusStyle, "none");
+  assert.equal(template.props.overflow, "clip");
   assert.equal(template.props.border, true);
   assert.equal(template.props.padding, 1);
   assert.equal(typeof template.props.onFocusChange, "function");
@@ -551,4 +575,96 @@ test("TextInput treats combining marks as part of the same grapheme", () => {
   assert.equal(callOnKey(onKey, key("", { name: "delete" })), true);
   assert.equal(value.get(), "AB");
   assert.deepEqual(changes, ["AB"]);
+});
+
+test("TextInput windows long text using layout content width", () => {
+  const value = createSignal("abcdef");
+  const template = asElement(
+    TextInput({
+      value
+    })
+  );
+  const onKey = readOnKeyHandler(template);
+  const { before, cursor, after } = readParts(template);
+  const scrollX = template.props.scrollX;
+
+  (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
+    focusEvent(true)
+  );
+  applyTextInputLayoutWidth(template, 4);
+
+  assert.equal(callOnKey(onKey, key("", { name: "end" })), true);
+  assert.equal(resolveSignal<string>(before.props.value), "abcdef");
+  assert.equal(resolveSignal<string>(cursor.props.value), " ");
+  assert.equal(resolveSignal<string>(after.props.value), "");
+  assert.equal(resolveSignal<number>(scrollX), 3);
+
+  assert.equal(callOnKey(onKey, key("", { name: "left" })), true);
+  assert.equal(resolveSignal<string>(before.props.value), "abcde");
+  assert.equal(resolveSignal<string>(cursor.props.value), "f");
+  assert.equal(resolveSignal<string>(after.props.value), "");
+  assert.equal(resolveSignal<number>(scrollX), 2);
+});
+
+test("TextInput recomputes its window when layout width changes", () => {
+  const template = asElement(
+    TextInput({
+      value: "abcdef"
+    })
+  );
+  const onKey = readOnKeyHandler(template);
+  const { before, cursor } = readParts(template);
+  const scrollX = template.props.scrollX;
+  const api = applyTextInputLayoutWidth(template, 4);
+
+  (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
+    focusEvent(true)
+  );
+  assert.equal(callOnKey(onKey, key("", { name: "end" })), true);
+  assert.equal(resolveSignal<string>(before.props.value), "abcdef");
+  assert.equal(resolveSignal<number>(scrollX), 3);
+
+  api.onLayout?.({
+    contentRect: {
+      width: 2
+    }
+  });
+
+  assert.equal(resolveSignal<string>(before.props.value), "abcdef");
+  assert.equal(resolveSignal<string>(cursor.props.value), " ");
+  assert.equal(resolveSignal<number>(scrollX), 5);
+
+  api.onUnmount?.();
+
+  assert.equal(resolveSignal<string>(before.props.value), "abcdef");
+  assert.equal(resolveSignal<string>(cursor.props.value), " ");
+  assert.equal(resolveSignal<number>(scrollX), 0);
+});
+
+test("TextInput layout window uses display columns for wide graphemes", () => {
+  const template = asElement(
+    TextInput({
+      value: "A中🙂B"
+    })
+  );
+  const onKey = readOnKeyHandler(template);
+  const { before, cursor, after } = readParts(template);
+  const scrollX = template.props.scrollX;
+
+  (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
+    focusEvent(true)
+  );
+  applyTextInputLayoutWidth(template, 4);
+
+  assert.equal(callOnKey(onKey, key("", { name: "end" })), true);
+  assert.equal(resolveSignal<string>(before.props.value), "A中🙂B");
+  assert.equal(resolveSignal<string>(cursor.props.value), " ");
+  assert.equal(resolveSignal<string>(after.props.value), "");
+  assert.equal(resolveSignal<number>(scrollX), 3);
+
+  assert.equal(callOnKey(onKey, key("", { name: "left" })), true);
+  assert.equal(resolveSignal<string>(before.props.value), "A中🙂");
+  assert.equal(resolveSignal<string>(cursor.props.value), "B");
+  assert.equal(resolveSignal<string>(after.props.value), "");
+  assert.equal(resolveSignal<number>(scrollX), 2);
 });
