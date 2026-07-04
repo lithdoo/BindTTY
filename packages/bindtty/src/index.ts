@@ -1,6 +1,6 @@
 export { createApp } from "./app.js";
 export { createSignal, computed, effect } from "@bindtty/signal";
-export { Button, HScrollView, List, TextInput, VScrollView } from "@bindtty/widgets";
+export { Button, HScrollView, List, ScrollView, TextInput, VScrollView } from "@bindtty/widgets";
 export type {
   AppStdin,
   AppStdout,
@@ -23,6 +23,9 @@ export type {
   HScrollViewProps,
   HScrollViewStyleProps,
   ListProps,
+  ScrollViewProps,
+  ScrollViewShowScrollbar,
+  ScrollViewStyleProps,
   TextInputProps,
   TextInputStyleProps,
   VScrollViewProps,

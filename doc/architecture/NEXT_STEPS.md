@@ -238,4 +238,5 @@ API freeze → CI / release → layout prop matrix → Scroll/List → widgets e
 | 9 | edge padding / margin props | ⏳ open |
 | 10 | ScrollView stickToBottom | ✅ done |
 | 10b | ScrollView scrollbar | ✅ done |
+| 10c | ScrollView 双轴（X+Y） | ✅ done |
 | 11 | Checkbox widget | ⏳ open |

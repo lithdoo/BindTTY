@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { stripVTControlCharacters } from "node:util";
 
-import { Button, HScrollView, List, VScrollView, TextInput, createApp } from "bindtty";
+import { Button, HScrollView, List, ScrollView, VScrollView, TextInput, createApp } from "bindtty";
 import type { LayoutNode } from "@bindtty/layout";
 import { createSignal } from "@bindtty/signal";
 import { ANSI, createNodeTerminal } from "@bindtty/terminal";
@@ -1067,6 +1067,163 @@ test("tsx app keeps TextInput arrow keys from scrolling HScrollView", async () =
   await nextMicrotask();
 
   assert.equal(offset.get(), 0);
+
+  app.dispose();
+});
+
+test("tsx app scrolls ScrollView on both axes with keyboard focus", async () => {
+  const stdout = createFakeStdout(20, 8);
+  const stdin = createFakeStdin();
+  const scrollX = createSignal(0);
+  const scrollY = createSignal(0);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <ScrollView
+      width={2}
+      height={2}
+      offsetX={scrollX}
+      offsetY={scrollY}
+      onOffsetXChange={(nextOffset) => {
+        scrollX.set(nextOffset);
+      }}
+      onOffsetYChange={(nextOffset) => {
+        scrollY.set(nextOffset);
+      }}
+    >
+      <text value="A" marginRight={5} />
+      <text value="B" />
+      <text value="C" />
+      <text value="D" />
+    </ScrollView>,
+    { terminal }
+  );
+
+  app.start();
+  await nextMicrotask();
+
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+
+  assert.equal(scrollY.get(), 1);
+  assert.equal(scrollX.get(), 0);
+
+  stdin.emitKey(undefined, { name: "right" });
+  await nextMicrotask();
+
+  assert.equal(scrollX.get(), 1);
+  assert.equal(scrollY.get(), 1);
+
+  app.dispose();
+});
+
+test("tsx app ScrollView home and end move both axes", async () => {
+  const stdout = createFakeStdout(20, 8);
+  const stdin = createFakeStdin();
+  const scrollX = createSignal(1);
+  const scrollY = createSignal(1);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <ScrollView
+      width={2}
+      height={2}
+      offsetX={scrollX}
+      offsetY={scrollY}
+      onOffsetXChange={(nextOffset) => {
+        scrollX.set(nextOffset);
+      }}
+      onOffsetYChange={(nextOffset) => {
+        scrollY.set(nextOffset);
+      }}
+    >
+      <text value="A" marginRight={5} />
+      <text value="B" />
+      <text value="C" />
+      <text value="D" />
+    </ScrollView>,
+    { terminal }
+  );
+
+  app.start();
+  await nextMicrotask();
+
+  stdin.emitKey(undefined, { name: "home" });
+  await nextMicrotask();
+
+  assert.equal(scrollX.get(), 0);
+  assert.equal(scrollY.get(), 0);
+
+  stdin.emitKey(undefined, { name: "end" });
+  await nextMicrotask();
+
+  assert.ok(scrollX.get() > 0);
+  assert.ok(scrollY.get() > 0);
+
+  app.dispose();
+});
+
+test("tsx app keeps TextInput arrow keys from scrolling ScrollView", async () => {
+  const stdout = createFakeStdout(24, 8);
+  const stdin = createFakeStdin();
+  const scrollX = createSignal(0);
+  const scrollY = createSignal(0);
+  const value = createSignal("abc");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <vstack>
+      <TextInput
+        id="name"
+        value={value}
+        onChange={(nextValue) => {
+          value.set(nextValue);
+        }}
+      />
+      <ScrollView
+        width={8}
+        height={3}
+        offsetX={scrollX}
+        offsetY={scrollY}
+        onOffsetXChange={(nextOffset) => {
+          scrollX.set(nextOffset);
+        }}
+        onOffsetYChange={(nextOffset) => {
+          scrollY.set(nextOffset);
+        }}
+      >
+        <vstack>
+          <text value="0123456789ABCDEF" />
+          <text value="ROW2" />
+          <text value="ROW3" />
+          <text value="ROW4" />
+        </vstack>
+      </ScrollView>
+    </vstack>,
+    { terminal }
+  );
+
+  app.start();
+
+  stdin.emitKey(undefined, { name: "tab" });
+  await nextMicrotask();
+  stdin.emitKey(undefined, { name: "right" });
+  await nextMicrotask();
+
+  assert.equal(scrollX.get(), 0);
+  assert.equal(scrollY.get(), 0);
 
   app.dispose();
 });

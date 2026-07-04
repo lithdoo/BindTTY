@@ -35,6 +35,7 @@
 - [ ] `Select` widget（单选）
 - [ ] `ProgressBar` widget
 - [x] VScrollView / HScrollView scrollbar（视觉指示，非鼠标交互）
+- [x] ScrollView 双轴滚动（X+Y；见 [doc/specs/SCROLL_VIEWPORT.md](doc/specs/SCROLL_VIEWPORT.md) §5.6）
 
 ---
 

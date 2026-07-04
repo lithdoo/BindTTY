@@ -7,6 +7,7 @@ import {
   List,
   VScrollView,
   HScrollView,
+  ScrollView,
   TextInput,
   computed,
   createApp,
@@ -224,7 +225,8 @@ test("bindtty exports the TextInput widget", () => {
   assert.equal(typeof TextInput, "function");
 });
 
-test("bindtty exports VScrollView, HScrollView and List widgets", () => {
+test("bindtty exports ScrollView, VScrollView, HScrollView and List widgets", () => {
+  assert.equal(typeof ScrollView, "function");
   assert.equal(typeof VScrollView, "function");
   assert.equal(typeof HScrollView, "function");
   assert.equal(typeof List, "function");
@@ -1128,6 +1130,54 @@ test("terminal mode VScrollView uses YogaLayoutEngine scroll metadata", () => {
 
   terminal.emitKey(keyEvent("", { name: "home" }));
   assert.equal(offset.get(), 0);
+
+  app.dispose();
+});
+
+test("terminal mode ScrollView uses YogaLayoutEngine dual scroll metadata", () => {
+  const terminal = createMockTerminal(12, 8);
+  const scrollX = createSignal(0);
+  const scrollY = createSignal(0);
+  const app = createApp(
+    ScrollView({
+      width: 2,
+      height: 2,
+      offsetX: scrollX,
+      offsetY: scrollY,
+      onOffsetXChange: (nextOffset) => {
+        scrollX.set(nextOffset);
+      },
+      onOffsetYChange: (nextOffset) => {
+        scrollY.set(nextOffset);
+      },
+      children: [
+        elementTemplate("text", { value: "A", marginRight: 5 }),
+        elementTemplate("text", { value: "B" }),
+        elementTemplate("text", { value: "C" }),
+        elementTemplate("text", { value: "D" })
+      ]
+    }),
+    {
+      terminal,
+      layoutEngine: createYogaLayoutEngine()
+    }
+  );
+
+  app.start();
+
+  terminal.emitKey(keyEvent("", { name: "down" }));
+  assert.equal(scrollY.get(), 1);
+
+  terminal.emitKey(keyEvent("", { name: "right" }));
+  assert.equal(scrollX.get(), 1);
+
+  terminal.emitKey(keyEvent("", { name: "end" }));
+  assert.ok(scrollX.get() > 0);
+  assert.ok(scrollY.get() > 0);
+
+  terminal.emitKey(keyEvent("", { name: "home" }));
+  assert.equal(scrollX.get(), 0);
+  assert.equal(scrollY.get(), 0);
 
   app.dispose();
 });

@@ -170,6 +170,89 @@ export function readBooleanBindingValue(
   return typeof nextValue === "boolean" ? nextValue : fallback;
 }
 
+export interface ScrollbarAxisFlags {
+  vertical?: boolean;
+  horizontal?: boolean;
+}
+
+export interface ResolvedScrollbarAxisFlags {
+  vertical: boolean;
+  horizontal: boolean;
+}
+
+export function readScrollbarAxisFlags(
+  value:
+    | BindingValue<boolean | ScrollbarAxisFlags>
+    | undefined,
+  fallback: ResolvedScrollbarAxisFlags = { vertical: false, horizontal: false }
+): ResolvedScrollbarAxisFlags {
+  const nextValue = isReadableSignal<boolean | ScrollbarAxisFlags>(value)
+    ? value.get()
+    : value;
+
+  if (nextValue === true) {
+    return { vertical: true, horizontal: true };
+  }
+
+  if (nextValue === false || nextValue === undefined) {
+    return fallback;
+  }
+
+  if (typeof nextValue === "object") {
+    return {
+      vertical: nextValue.vertical !== false,
+      horizontal: nextValue.horizontal !== false
+    };
+  }
+
+  return fallback;
+}
+
+export interface ScrollAxisLayoutSlice {
+  rect: { width?: number; height?: number };
+  contentRect: { width?: number; height?: number };
+  clip?: { width?: number; height?: number };
+  scrollOffset?: { x?: number; y?: number };
+  contentSize?: { width?: number; height?: number };
+}
+
+export function applyAxisLayoutState(
+  state: ScrollAxisAppliedState,
+  layout: ScrollAxisLayoutSlice,
+  axis: "x" | "y"
+): void {
+  const viewportSize =
+    axis === "x"
+      ? (layout.clip?.width ??
+        layout.contentRect.width ??
+        layout.rect.width ??
+        0)
+      : (layout.clip?.height ??
+        layout.contentRect.height ??
+        layout.rect.height ??
+        0);
+  const contentSize =
+    axis === "x"
+      ? (layout.contentSize?.width ??
+        layout.contentRect.width ??
+        layout.rect.width ??
+        0)
+      : (layout.contentSize?.height ??
+        layout.contentRect.height ??
+        layout.rect.height ??
+        0);
+
+  state.hasLayout = true;
+  state.applied =
+    axis === "x"
+      ? (layout.scrollOffset?.x ?? 0)
+      : (layout.scrollOffset?.y ?? 0);
+  state.max = Math.max(0, contentSize - viewportSize);
+  state.page = Math.max(1, viewportSize);
+  state.viewportSize = Math.max(1, viewportSize);
+  state.contentSize = Math.max(1, contentSize);
+}
+
 export function omitUndefined(
   props: Record<string, BindingValue<unknown> | undefined>
 ): Record<string, BindingValue<unknown>> {

@@ -28,7 +28,7 @@ TSX
 它负责：
 
 ```text
-1. 提供 Button / TextInput / VScrollView / HScrollView / List 等高层组件，Checkbox / Select 等后续扩展。
+1. 提供 Button / TextInput / ScrollView / VScrollView / HScrollView / List 等高层组件，Checkbox / Select 等后续扩展。
 2. 把业务 props 转换成 intrinsic element 的 style props / interaction props。
 3. 把 keyboard event 转换成控件语义，例如 onPress、onInput、onChange。
 4. 通过 signal-friendly props 支持受控组件。
@@ -357,6 +357,7 @@ TextInput 是第二个落地控件，在 Button 之后实现。
 2. TextInput
 3. VScrollView
 4. HScrollView
+5. ScrollView（双轴）
 5. List
 5. Checkbox
 6. Select / Menu
@@ -606,10 +607,10 @@ npm test
 13. TextInput 键盘编辑：字符插入、Backspace、Delete、方向键、Home、End。
 14. TextInput placeholder / disabled / focus 生命周期。
 15. TextInput 单元测试 + App 集成 + E2E 全覆盖。
-16. bindtty 顶层 re-export Button、TextInput、VScrollView、HScrollView 和 List。
+16. bindtty 顶层 re-export Button、TextInput、ScrollView、VScrollView、HScrollView 和 List。
 17. VScrollView 受控 offset、clip、键盘滚动已覆盖。
 18. List 作为 VScrollView + forTemplate 语法糖已覆盖。
-19. VScrollView `stickToBottom` 与 `showScrollbar`、HScrollView 已覆盖（见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §5.3–§5.4）。
+19. VScrollView `stickToBottom` 与 `showScrollbar`、HScrollView、ScrollView 双轴已覆盖（见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §5.3–§5.6）。
 ```
 
 ## 14. 后续方向

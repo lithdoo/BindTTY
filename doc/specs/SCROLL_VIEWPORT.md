@@ -20,6 +20,7 @@
 - renderer clip stack 与 scroll offset
 - VScrollView / List（受控 offset）
 - HScrollView（受控水平 offset）
+- ScrollView（双轴 X+Y 受控 offset）
 - 键盘滚动与 TextInput focus 优先级
 - `stickToBottom`（log viewer / chat 自动滚底）
 
@@ -363,7 +364,80 @@ const offset = createSignal(0);
 
 `showScrollbar`（水平）：外层 `box` + 内层 `vstack`；track `─`、thumb `█`；thumb 公式与 §5.3.2 相同（轴换为 width）。
 
-### 5.5 List 场景（用户面向）
+### 5.6 ScrollView 控件（双轴，用户面向）
+
+`@bindtty/widgets` 提供 `ScrollView`，内部组合单个 `box` + 同时 `scrollX` / `scrollY` + `onKey`。单轴场景继续用 `VScrollView` / `HScrollView`。
+
+```tsx
+import { createSignal } from "@bindtty/signal";
+import { ScrollView } from "@bindtty/widgets";
+
+const scrollX = createSignal(0);
+const scrollY = createSignal(0);
+
+<ScrollView
+  width={80}
+  height={20}
+  offsetX={scrollX}
+  offsetY={scrollY}
+  onOffsetXChange={scrollX.set}
+  onOffsetYChange={scrollY.set}
+>
+  <LargeGrid />
+</ScrollView>
+```
+
+`ScrollView` props：
+
+| Prop | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `BindingValue<string \| number>` | 可选 focus id |
+| `offsetX` / `offsetY` | `BindingValue<number>` | 水平 / 垂直偏移，默认 0 |
+| `width` / `height` | `BindingValue<number>` | 可见宽高，**必填** |
+| `children` | `Template` | 可滚动内容 |
+| `scrollOnArrow` | `BindingValue<boolean>` | focus 于容器时响应方向键，默认 true |
+| `onOffsetXChange` / `onOffsetYChange` | `(nextOffset: number) => void` | 各轴键盘滚动写回；缺一则该轴不可键盘滚动 |
+| `onFocusChange` | `InteractionNodeFocusChangeEvent => void` | 透传到内部 box |
+| `stickToBottom` | `BindingValue<boolean>` | Y 轴 stick，规则同 §5.3.1 |
+| `stickToEnd` | `BindingValue<boolean>` | X 轴 stick，规则同 §5.4 |
+| `showScrollbar` | `BindingValue<boolean \| { vertical?: boolean; horizontal?: boolean }>` | 纯视觉滚动条，默认 false |
+
+受控规则与 V/H 相同：layout 不隐式反写外部 signal；键盘基于 applied offset / max 计算 next intent。
+
+#### 5.6.1 键盘
+
+`scrollOnArrow !== false` 且至少一个 `onOffsetChange` 存在时挂载 handler：
+
+| 键 | 行为 |
+| --- | --- |
+| `up` / `down` | `offsetY ± 1`；`stickToBottom` 时 `up` detach |
+| `left` / `right` | `offsetX ± 1`；`stickToEnd` 时 `left` detach |
+| `pageup` / `pagedown` | Y 轴翻页（page = viewportHeight） |
+| `home` | `onOffsetXChange(0)` 与 `onOffsetYChange(0)`（若存在） |
+| `end` | `onOffsetXChange(maxX)` 与 `onOffsetYChange(maxY)`；sticky 两轴 re-attach |
+
+与单轴 widget 差异：`home` / `end` 同时作用于 X 与 Y（单轴时 `VScrollView` 的 home/end 仅 Y，`HScrollView` 仅 X）。
+
+#### 5.6.2 `showScrollbar`（双轴）
+
+`showScrollbar === true` 等价 `{ vertical: true, horizontal: true }`。
+
+布局：
+
+```text
+outer box (width, height, 样式)
+└─ vstack
+   ├─ hstack [ scrollBox (flexGrow) | vScrollbar (w=1) ]
+   └─ hstack [ hScrollbar (flexGrow) | corner (1×1) ]   ← 仅 maxX>0 且 horizontal 启用
+```
+
+- 垂直条：`maxY > 0` 且 `vertical !== false`；track `│`、thumb `█`
+- 水平条：`maxX > 0` 且 `horizontal !== false`；track `─`、thumb `█`
+- corner：两轴条均可见时 1×1，内容为空
+- thumb 公式：§5.3.2 / §5.4（各轴独立）
+- 无溢出轴不占用 scrollbar 行/列（layout 后动态 `width: 0` / `height: 0`）
+
+### 5.7 List 场景（用户面向）
 
 M7 不强制新 `<list>` intrinsic；推荐 **composition**：
 

@@ -7,6 +7,7 @@ import {
   List,
   VScrollView,
   HScrollView,
+  ScrollView,
   computeScrollbarThumb,
   renderScrollbarColumn,
   renderScrollbarRow,
@@ -15,7 +16,8 @@ import {
   type ListProps,
   type VScrollViewProps,
   type VScrollViewStyleProps,
-  type HScrollViewProps
+  type HScrollViewProps,
+  type ScrollViewProps
 } from "@bindtty/widgets";
 import type { InteractionKeyBinding } from "@bindtty/interaction";
 import type { InteractionKeyHandler } from "@bindtty/interaction";
@@ -738,4 +740,288 @@ test("HScrollView with showScrollbar renders a vstack wrapper", () => {
   assert.equal(column.tag, "vstack");
   assert.equal(asElement(column.children[0] as Template).tag, "box");
   assert.equal(asElement(column.children[1] as Template).props.height, 1);
+});
+
+function connectScrollViewRef(template: ElementTemplate): TestScrollApi {
+  const scrollBox = getScrollViewScrollBox(template);
+  const ref = scrollBox.props.ref;
+  assert.equal(typeof ref, "function");
+
+  const api: TestScrollApi = {};
+  (ref as (api: TestScrollApi) => void)(api);
+  return api;
+}
+
+function getScrollViewScrollBox(template: ElementTemplate): ElementTemplate {
+  if (hasOwn(template.props, "scrollX") || hasOwn(template.props, "scrollY")) {
+    return template;
+  }
+
+  assert.equal(template.tag, "box");
+  const firstChild = asElement(template.children[0] as Template);
+
+  if (firstChild.tag === "vstack" && firstChild.children[0]?.kind === "element") {
+    const topRow = asElement(firstChild.children[0] as Template);
+    if (topRow.tag === "hstack" && topRow.children[0]?.kind === "element") {
+      return asElement(topRow.children[0] as Template);
+    }
+  }
+
+  throw new Error("ScrollView scroll box not found");
+}
+
+function hasOwn(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function readScrollViewOnKeyHandler(template: ElementTemplate): InteractionKeyHandler {
+  return readOnKeyHandler(getScrollViewScrollBox(template));
+}
+
+function layoutPayloadXY(
+  scrollOffsetX: number,
+  scrollOffsetY: number,
+  contentWidth: number,
+  contentHeight: number,
+  viewportWidth: number,
+  viewportHeight: number
+) {
+  return {
+    rect: { width: viewportWidth, height: viewportHeight },
+    contentRect: { width: viewportWidth, height: viewportHeight },
+    clip: { width: viewportWidth, height: viewportHeight },
+    scrollOffset: { x: scrollOffsetX, y: scrollOffsetY },
+    contentSize: { width: contentWidth, height: contentHeight }
+  };
+}
+
+test("ScrollView renders as a clipped box with dual scroll metadata", () => {
+  const template = asElement(
+    ScrollView({
+      width: 10,
+      height: 8,
+      offsetX: 1,
+      offsetY: 2,
+      onOffsetXChange() {},
+      onOffsetYChange() {}
+    })
+  );
+
+  assert.equal(template.tag, "box");
+  assert.equal(template.props.width, 10);
+  assert.equal(template.props.height, 8);
+  assert.equal(template.props.overflow, "clip");
+  assert.equal(template.props.scrollX, 1);
+  assert.equal(template.props.scrollY, 2);
+});
+
+test("ScrollView exposes the planned props types", () => {
+  const props: ScrollViewProps = {
+    width: 10,
+    height: 8,
+    offsetX: 0,
+    offsetY: 0,
+    showScrollbar: { vertical: true, horizontal: false },
+    onOffsetXChange() {},
+    onOffsetYChange() {}
+  };
+
+  assert.equal(asElement(ScrollView(props)).props.width, 10);
+});
+
+test("ScrollView vertical keys change only Y offset", () => {
+  const changesY: number[] = [];
+  const changesX: number[] = [];
+  const template = asElement(
+    ScrollView({
+      width: 4,
+      height: 4,
+      offsetX: 0,
+      offsetY: 1,
+      onOffsetXChange(nextOffset) {
+        changesX.push(nextOffset);
+      },
+      onOffsetYChange(nextOffset) {
+        changesY.push(nextOffset);
+      }
+    })
+  );
+  const onKey = readScrollViewOnKeyHandler(template);
+
+  assert.equal(onKey(key("up"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("down"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("pageup"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("pagedown"), { node: {} as never, isFocused: true }), true);
+  assert.deepEqual(changesX, []);
+  assert.deepEqual(changesY, [0, 2, 0, 5]);
+});
+
+test("ScrollView horizontal keys change only X offset", () => {
+  const changesY: number[] = [];
+  const changesX: number[] = [];
+  const template = asElement(
+    ScrollView({
+      width: 4,
+      height: 4,
+      offsetX: 1,
+      offsetY: 0,
+      onOffsetXChange(nextOffset) {
+        changesX.push(nextOffset);
+      },
+      onOffsetYChange(nextOffset) {
+        changesY.push(nextOffset);
+      }
+    })
+  );
+  const onKey = readScrollViewOnKeyHandler(template);
+
+  assert.equal(onKey(key("left"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("right"), { node: {} as never, isFocused: true }), true);
+  assert.deepEqual(changesY, []);
+  assert.deepEqual(changesX, [0, 2]);
+});
+
+test("ScrollView home and end update both axes", () => {
+  const changesY: number[] = [];
+  const changesX: number[] = [];
+  const template = asElement(
+    ScrollView({
+      width: 2,
+      height: 2,
+      offsetX: 1,
+      offsetY: 1,
+      onOffsetXChange(nextOffset) {
+        changesX.push(nextOffset);
+      },
+      onOffsetYChange(nextOffset) {
+        changesY.push(nextOffset);
+      }
+    })
+  );
+  const onKey = readScrollViewOnKeyHandler(template);
+  const api = connectScrollViewRef(template);
+
+  api.onLayout?.(layoutPayloadXY(1, 1, 6, 6, 2, 2));
+
+  assert.equal(onKey(key("home"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("end"), { node: {} as never, isFocused: true }), true);
+  assert.deepEqual(changesX, [0, 4]);
+  assert.deepEqual(changesY, [0, 4]);
+});
+
+test("ScrollView uses applied layout state for scroll keys after layout", () => {
+  const changesY: number[] = [];
+  const template = asElement(
+    ScrollView({
+      width: 2,
+      height: 2,
+      offsetY: 100,
+      onOffsetYChange(nextOffset) {
+        changesY.push(nextOffset);
+      }
+    })
+  );
+  const onKey = readScrollViewOnKeyHandler(template);
+  const api = connectScrollViewRef(template);
+
+  api.onLayout?.(layoutPayloadXY(0, 4, 2, 6, 2, 2));
+
+  assert.equal(onKey(key("down"), { node: {} as never, isFocused: true }), true);
+  assert.deepEqual(changesY, [4]);
+});
+
+test("ScrollView is not focusable without offset change handlers", () => {
+  const template = asElement(
+    ScrollView({
+      width: 4,
+      height: 4
+    })
+  );
+
+  assert.equal(readOnKey(template), false);
+});
+
+test("ScrollView stickToBottom requests max Y offset after layout", () => {
+  const changesY: number[] = [];
+  const template = asElement(
+    ScrollView({
+      width: 2,
+      height: 2,
+      offsetY: 0,
+      stickToBottom: true,
+      onOffsetYChange(nextOffset) {
+        changesY.push(nextOffset);
+      }
+    })
+  );
+  const api = connectScrollViewRef(template);
+
+  api.onLayout?.(layoutPayloadXY(0, 0, 2, 6, 2, 2));
+
+  assert.deepEqual(changesY, [4]);
+});
+
+test("ScrollView stickToEnd requests max X offset after layout", () => {
+  const changesX: number[] = [];
+  const template = asElement(
+    ScrollView({
+      width: 2,
+      height: 2,
+      offsetX: 0,
+      stickToEnd: true,
+      onOffsetXChange(nextOffset) {
+        changesX.push(nextOffset);
+      }
+    })
+  );
+  const api = connectScrollViewRef(template);
+
+  api.onLayout?.(layoutPayloadXY(0, 0, 6, 2, 2, 2));
+
+  assert.deepEqual(changesX, [4]);
+});
+
+test("ScrollView with showScrollbar renders a vstack wrapper with two rows", () => {
+  const template = asElement(
+    ScrollView({
+      width: 6,
+      height: 4,
+      offsetX: 0,
+      offsetY: 0,
+      showScrollbar: true,
+      onOffsetXChange() {},
+      onOffsetYChange() {}
+    })
+  );
+  const column = asElement(template.children[0] as Template);
+  const topRow = asElement(column.children[0] as Template);
+  const bottomRow = asElement(column.children[1] as Template);
+
+  assert.equal(template.tag, "box");
+  assert.equal(column.tag, "vstack");
+  assert.equal(topRow.tag, "hstack");
+  assert.equal(bottomRow.tag, "box");
+  assert.equal(asElement(topRow.children[0] as Template).tag, "box");
+});
+
+test("ScrollView showScrollbar hides horizontal row when only Y overflows", () => {
+  const template = asElement(
+    ScrollView({
+      width: 4,
+      height: 3,
+      offsetX: 0,
+      offsetY: 0,
+      showScrollbar: true,
+      onOffsetXChange() {},
+      onOffsetYChange() {}
+    })
+  );
+  const api = connectScrollViewRef(template);
+
+  api.onLayout?.(layoutPayloadXY(0, 0, 4, 8, 4, 3));
+
+  const column = asElement(template.children[0] as Template);
+  const bottomRow = asElement(column.children[1] as Template);
+
+  assert.equal(resolveSignal<number>(bottomRow.props.height), 0);
 });

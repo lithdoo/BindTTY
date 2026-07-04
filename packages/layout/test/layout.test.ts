@@ -663,6 +663,70 @@ test("contentSize grows beyond contentRect when content overflows", () => {
   assert.deepEqual(yogaLayout?.scrollOffset, basicLayout?.scrollOffset);
 });
 
+test("YogaLayoutEngine dual-axis scroll keeps vertical contentSize when width is fixed", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      width: 2,
+      height: 2,
+      overflow: "clip",
+      scrollX: 0,
+      scrollY: 0
+    },
+    [
+      createMountedElement("text", { value: "A", marginRight: 5 }),
+      createMountedText("B"),
+      createMountedText("C"),
+      createMountedText("D")
+    ]
+  );
+  const layout = layoutRoot(root, { viewport });
+
+  assert.deepEqual(layout?.contentSize, {
+    width: 5,
+    height: 4
+  });
+  assert.equal(layout?.contentRect.height, 2);
+  assert.deepEqual(layout?.scrollOffset, {
+    x: 0,
+    y: 0
+  });
+});
+
+test("YogaLayoutEngine ScrollView inner scroll box measures overflow inside sized outer box", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      width: 2,
+      height: 2
+    },
+    [
+      createMountedElement(
+        "box",
+        {
+          flexGrow: 1,
+          overflow: "clip",
+          scrollX: 0,
+          scrollY: 0
+        },
+        [
+          createMountedElement("text", { value: "A", marginRight: 5 }),
+          createMountedText("B"),
+          createMountedText("C"),
+          createMountedText("D")
+        ]
+      )
+    ]
+  );
+  const layout = layoutRoot(root, { viewport });
+  const inner = layout?.children[0];
+
+  assert.deepEqual(inner?.contentSize, {
+    width: 5,
+    height: 4
+  });
+});
+
 test("wrapped text contributes to scroll content size", () => {
   const root = createMountedElement(
     "box",
