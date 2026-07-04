@@ -4,34 +4,6 @@
 
 ---
 
-## 高优先级
-
-### TextInput：grapheme-aware 编辑语义
-
-**位置**：`packages/widgets/src/text-input.ts`
-
-**现状**：光标与删除按 JavaScript string index（UTF-16 code unit）工作，未使用 `@bindtty/text` 的 `segmentText()`。
-
-**影响**：
-
-- emoji 光标可能停在 surrogate 中间，`cursorChar` 显示半个字符
-- `backspace` / `delete` 一次只删一个 code unit，删 emoji 需两次，可能留下孤立 surrogate（`\uD83D`）
-- `left` / `right` 在 emoji 内部逐步移动，而非按 display column 或 grapheme 跳转
-- 宽字符 value 在 TextInput 内的「列宽」与 terminal renderer 的 display width 语义不一致
-
-**测试（记录现状，非目标行为）**：
-
-- `packages/widgets/test/text-input.test.ts` — `TextInput moves the cursor by JavaScript string index around emoji`
-- `packages/e2e/mock/test/app-terminal.test.tsx` — `tsx app types emoji into TextInput through fake terminal`
-
-**建议方向**：
-
-- 用 `segmentText()` 维护 cursor 为 grapheme index 或 display column offset
-- backspace/delete 按 grapheme 边界删整段
-- 可选：光标移动按 display column（与 renderer 对齐）
-
----
-
 ## 中优先级
 
 ### Real PTY：Windows 上 `stdout` `resize` 事件不可靠
@@ -53,7 +25,19 @@
 
 **现状**：已修复——仅含 placeholder 的 patch 返回空字符串（不再输出多余 `\x1b[0m`）。
 
-**后续**：若 diff 不应产生 placeholder-only change，可在 `diffFrames` 层过滤，减少无效 patch 条目。
+**后续**：已在 `diffFrames` 层过滤不可见的 placeholder-only dirty range，减少无效 patch 条目。
+
+### TextInput：display-column 输入窗口
+
+**位置**：`packages/widgets/src/text-input.ts`
+
+**现状**：已修复 grapheme-aware 编辑语义；cursor / backspace / delete 按 `segmentText()` 的 grapheme index 工作。
+
+**剩余限制**：
+
+- 尚未实现固定宽度输入窗口
+- 尚未实现横向滚动
+- 光标位置不是按 terminal display column 绝对定位，而是通过 before / cursor / after 三段 `<text>` 渲染
 
 ---
 
@@ -79,11 +63,11 @@
 
 **现状**：仍为 public export；内部已是 segment-based。
 
-**文档债务**：归档计划曾讨论是否改为 internal helper——未决。若无 external 消费者，可标记 deprecated 或移出 public index。
+**结论**：保留为 public low-level Frame text writer；现行规范见 [doc/DISPLAY_WIDTH.md](doc/DISPLAY_WIDTH.md) §6.3。
 
 ### 复杂 ZWJ emoji sequence
 
-**现状**：`@bindtty/text` 对 ZWJ 有基础 segment + string-width 测试；layout/renderer 路径可用。TextInput 与极端 terminal 字体组合未 hardening。
+**现状**：`@bindtty/text` 对 ZWJ 有基础 segment + string-width 测试；layout/renderer/TextInput 路径可用。极端 terminal 字体组合未 hardening。
 
 **测试**：`packages/text/test/text.test.ts` — ZWJ family emoji
 
@@ -99,6 +83,9 @@
 - [x] 归档：`doc/archive/WIDE_TEXT_IMPLEMENTATION_PLAN.md`
 - [x] 同步：`LAYOUT.md` §12.1、`YOGA_LAYOUT.md`、`TEXT_INPUT.md`、`E2E_TESTING.md`、`doc/README.md`
 - [x] 重定向：`doc/WIDE_TEXT_FRAME.md` → `DISPLAY_WIDTH.md`
+- [x] TextInput grapheme-aware 编辑：emoji / combining mark 不再按 UTF-16 code unit 切分
+- [x] `diffFrames` 过滤 placeholder-only dirty range
+- [x] `writeText()` public API 定位为 low-level Frame text writer
 
 **仍可选**：`doc/LAYOUT.md` 前文里程碑列表（约 §504）中「unicode display width」条目可改为「已完成，见 DISPLAY_WIDTH.md」。
 
@@ -107,5 +94,5 @@
 ## 如何贡献
 
 1. 先读 [doc/DISPLAY_WIDTH.md](doc/DISPLAY_WIDTH.md) 与对应包测试。
-2. TextInput grapheme 改动应更新 widget 单测 + mock E2E，并修正本节「记录现状」的测试断言为期望行为。
+2. TextInput 后续编辑能力改动应保留 grapheme 单测，并同步更新 mock E2E。
 3. 不要在没有 spec 变更的情况下扩大 Frame width > 2 范围。

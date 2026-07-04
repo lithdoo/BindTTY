@@ -1327,11 +1327,6 @@ test("tsx app types emoji into TextInput through fake terminal", async () => {
   stdin.emitKey(undefined, { name: "backspace" });
   await nextMicrotask();
 
-  assert.equal(value.get(), "\uD83D");
-
-  stdin.emitKey(undefined, { name: "backspace" });
-  await nextMicrotask();
-
   assert.equal(value.get(), "");
 
   app.dispose();

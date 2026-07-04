@@ -400,7 +400,7 @@ test("TextInput forwards style props to the correct intrinsic elements", () => {
   assert.equal(after.props.dim, true);
 });
 
-test("TextInput inserts and deletes CJK characters as whole code units", () => {
+test("TextInput inserts and deletes CJK characters as whole graphemes", () => {
   const value = createSignal("");
   const changes: string[] = [];
   const template = asElement(
@@ -464,7 +464,7 @@ test("TextInput inserts emoji input as a single controlled value", () => {
   assert.equal(value.get(), "A🙂");
 });
 
-test("TextInput moves the cursor by JavaScript string index around emoji", () => {
+test("TextInput moves the cursor by grapheme around emoji", () => {
   const value = createSignal("A🙂B");
   const template = asElement(
     TextInput({
@@ -489,12 +489,12 @@ test("TextInput moves the cursor by JavaScript string index around emoji", () =>
   assert.equal(resolveSignal<string>(after.props.value), "");
 
   assert.equal(callOnKey(onKey, key("", { name: "left" })), true);
-  assert.equal(resolveSignal<string>(before.props.value), "A\uD83D");
-  assert.equal(resolveSignal<string>(cursor.props.value), value.get()[2] ?? "");
+  assert.equal(resolveSignal<string>(before.props.value), "A");
+  assert.equal(resolveSignal<string>(cursor.props.value), "🙂");
   assert.equal(resolveSignal<string>(after.props.value), "B");
 });
 
-test("TextInput backspace removes one JavaScript code unit from emoji input", () => {
+test("TextInput backspace removes an emoji as one grapheme", () => {
   const value = createSignal("A🙂");
   const changes: string[] = [];
   const template = asElement(
@@ -514,10 +514,41 @@ test("TextInput backspace removes one JavaScript code unit from emoji input", ()
 
   assert.equal(callOnKey(onKey, key("", { name: "end" })), true);
   assert.equal(callOnKey(onKey, key("", { name: "backspace" })), true);
-  assert.equal(value.get(), "A\uD83D");
-  assert.deepEqual(changes, ["A\uD83D"]);
+  assert.equal(value.get(), "A");
+  assert.deepEqual(changes, ["A"]);
 
   assert.equal(callOnKey(onKey, key("", { name: "backspace" })), true);
-  assert.equal(value.get(), "A");
-  assert.deepEqual(changes, ["A\uD83D", "A"]);
+  assert.equal(value.get(), "");
+  assert.deepEqual(changes, ["A", ""]);
+});
+
+test("TextInput treats combining marks as part of the same grapheme", () => {
+  const value = createSignal("Ae\u0301B");
+  const changes: string[] = [];
+  const template = asElement(
+    TextInput({
+      value,
+      onChange(nextValue) {
+        changes.push(nextValue);
+        value.set(nextValue);
+      }
+    })
+  );
+  const onKey = readOnKeyHandler(template);
+  const { before, cursor, after } = readParts(template);
+
+  (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
+    focusEvent(true)
+  );
+
+  assert.equal(callOnKey(onKey, key("", { name: "end" })), true);
+  assert.equal(callOnKey(onKey, key("", { name: "left" })), true);
+  assert.equal(callOnKey(onKey, key("", { name: "left" })), true);
+  assert.equal(resolveSignal<string>(before.props.value), "A");
+  assert.equal(resolveSignal<string>(cursor.props.value), "e\u0301");
+  assert.equal(resolveSignal<string>(after.props.value), "B");
+
+  assert.equal(callOnKey(onKey, key("", { name: "delete" })), true);
+  assert.equal(value.get(), "AB");
+  assert.deepEqual(changes, ["AB"]);
 });

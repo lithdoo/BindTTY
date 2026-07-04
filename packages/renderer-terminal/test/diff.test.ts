@@ -223,6 +223,27 @@ test("diffFrames includes placeholder cells for new wide characters", () => {
   ]);
 });
 
+test("diffFrames ignores placeholder-only style changes", () => {
+  const previous = createFrame(2, 1);
+  const next = createFrame(2, 1);
+
+  writeText(previous, 0, 0, "中");
+  writeText(next, 0, 0, "中");
+  next.cells[1] = {
+    char: "",
+    style: {
+      inverse: true
+    },
+    width: 0
+  };
+
+  assert.deepEqual(diffFrames(previous, next), {
+    width: 2,
+    height: 1,
+    changes: []
+  });
+});
+
 test("diffFrames clears wide text when cells become blank", () => {
   const previous = createFrame(2, 1);
   const next = createFrame(2, 1);

@@ -22,9 +22,19 @@ export function diffFrames(previous: Frame | null, next: Frame): FramePatch {
       }
     }
   }
-  const changes = Array.from(dirtyCells)
+  const dirtyCoordinates = Array.from(dirtyCells)
     .map(parseCellKey)
-    .sort((left, right) => left.y - right.y || left.x - right.x)
+    .sort((left, right) => left.y - right.y || left.x - right.x);
+
+  if (!hasVisibleChange(dirtyCoordinates, previous, next)) {
+    return {
+      width: next.width,
+      height: next.height,
+      changes: []
+    };
+  }
+
+  const changes = dirtyCoordinates
     .flatMap(({ x, y }) => {
       const cell = next.cells[y * next.width + x];
 
@@ -42,6 +52,24 @@ export function diffFrames(previous: Frame | null, next: Frame): FramePatch {
     height: next.height,
     changes
   };
+}
+
+function hasVisibleChange(
+  coordinates: Array<{ x: number; y: number }>,
+  previous: Frame,
+  next: Frame
+): boolean {
+  return coordinates.some(({ x, y }) => {
+    const index = y * next.width + x;
+    const nextCell = next.cells[index];
+    const previousCell = previous.cells[index];
+
+    return (
+      nextCell !== undefined &&
+      normalizeWidth(nextCell) !== 0 &&
+      (!previousCell || !cellsEqual(previousCell, nextCell))
+    );
+  });
 }
 
 function createFullFramePatch(frame: Frame): FramePatch {

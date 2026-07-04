@@ -36,6 +36,9 @@ BindTTY 在 **text → layout → renderer → ANSI** 全链路使用 **terminal
 
 app / E2E / examples/wide-text
   首屏渲染、更新、resize、ScrollView、focus inverse
+
+@bindtty/widgets TextInput
+  cursor / backspace / delete 按 grapheme segment 工作
 ```
 
 ### 1.2 不在范围内
@@ -43,7 +46,6 @@ app / E2E / examples/wide-text
 ```text
 text value 内嵌 ANSI escape（style 走 CellStyle / props）
 RichText / TextSpan（后续单独设计）
-TextInput 按 grapheme 移动光标 / 删除（当前为 JS string index，见 §8）
 IME preedit
 width > 2 的 grapheme（segment 层 clamp 到 2）
 ```
@@ -179,8 +181,7 @@ interface Cell {
 
 | 区域 | 现状 | 说明 |
 | --- | --- | --- |
-| **TextInput** | JS `string` index 光标 | `slice(0, cursor)` / `left`/`right` ±1；emoji 可能在 surrogate 中间停住；backspace 一次删一个 code unit |
-| **TextInput 显示** | 按 code unit 拆三列 text | 宽字符在输入框内可能占列数与 terminal renderer 不一致 |
+| **TextInput display-column window** | 未实现 | 光标编辑按 grapheme index；尚未支持固定宽度输入窗口、水平滚动或按 display column 定位 |
 | **ANSI in value** | 不支持 | `\x1b[31m` 等按 plain char 处理；颜色应用 CellStyle |
 | **复杂 ZWJ** | measure/segment 有基础支持 | 编辑控件与极端 sequence 未 hardening |
 | **Terminal 字体** | 不保证一致 | 以 string-width 为 oracle |
@@ -201,7 +202,7 @@ Widget 层改进项见 [../TODO.md](../TODO.md)。
 | runtime 集成 | `packages/renderer-terminal/test/integration.test.ts` |
 | layout CJK / rewrap | `packages/layout/test/layout.test.ts` |
 | app terminal 模式 | `packages/bindtty/test/app.test.ts` |
-| TextInput CJK / emoji 现状 | `packages/widgets/test/text-input.test.ts` |
+| TextInput CJK / emoji / combining 编辑 | `packages/widgets/test/text-input.test.ts` |
 | mock E2E 示例 UI | `packages/e2e/mock/test/app-terminal.test.tsx` |
 | real PTY CJK / scroll | `packages/e2e/real/harness/wide-text-app.tsx` |
 | real PTY resize rewrap | `packages/e2e/real/harness/wide-text-resize-app.tsx` |
@@ -222,7 +223,7 @@ npm run start --workspace @bindtty/example-wide-text
 ## 11. 未来方向
 
 ```text
-1. TextInput：cursor / backspace / delete 按 grapheme segment 工作
+1. TextInput：display-column 输入窗口、水平滚动、光标列定位
 2. RichText / TextSpan：ANSI 或 inline style span
 3. width > 2：扩展 placeholder 链与 diff expansion
 4. IME / 选区 / 多行编辑（见 TEXT_INPUT.md 非目标）

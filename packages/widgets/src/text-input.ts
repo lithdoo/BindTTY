@@ -1,4 +1,5 @@
 import { computed, createSignal } from "@bindtty/signal";
+import { segmentText, type TextSegment } from "@bindtty/text";
 import {
   elementTemplate,
   isReadableSignal,
@@ -37,12 +38,13 @@ export function TextInput(props: TextInputProps): Template {
   const cursor = createSignal(0);
   const focused = createSignal(false);
   const rawValue = computed(() => readStringBindingValue(props.value));
+  const segments = computed(() => segmentText(rawValue.get()));
   const disabled = computed(() => readBindingValue(props.disabled) === true);
   const placeholderVisible = computed(
     () => rawValue.get().length === 0 && !focused.get()
   );
   const clampedCursor = computed(() =>
-    Math.min(cursor.get(), rawValue.get().length)
+    Math.min(cursor.get(), segments.get().length)
   );
   const beforeCursor = computed(() => {
     if (!focused.get()) {
@@ -51,23 +53,25 @@ export function TextInput(props: TextInputProps): Template {
         : rawValue.get();
     }
 
-    return rawValue.get().slice(0, clampedCursor.get());
+    return joinSegments(segments.get().slice(0, clampedCursor.get()));
   });
   const cursorChar = computed(() => {
     if (!focused.get() || disabled.get()) {
       return "";
     }
 
-    const raw = rawValue.get();
+    const currentSegments = segments.get();
     const position = clampedCursor.get();
-    return position < raw.length ? raw[position] ?? " " : " ";
+    return position < currentSegments.length
+      ? currentSegments[position]?.text ?? " "
+      : " ";
   });
   const afterCursor = computed(() => {
     if (!focused.get()) {
       return "";
     }
 
-    return rawValue.get().slice(clampedCursor.get() + 1);
+    return joinSegments(segments.get().slice(clampedCursor.get() + 1));
   });
   const beforeDim = props.dim ?? computed(() => disabled.get() || placeholderVisible.get());
   const disabledDim = props.dim ?? computed(() => disabled.get());
@@ -127,19 +131,25 @@ function createTextInputOnKey(
 ): BindingValue<InteractionKeyBinding> {
   const handler: InteractionKeyHandler = (event) => {
     const value = readStringBindingValue(props.value);
-    const position = clamp(cursor.get(), 0, value.length);
+    const segments = segmentText(value);
+    const position = clamp(cursor.get(), 0, segments.length);
 
     if (isTextInputKey(event)) {
+      const inputSegments = segmentText(event.input);
       const nextValue =
-        value.slice(0, position) + event.input + value.slice(position);
-      cursor.set(position + event.input.length);
+        joinSegments(segments.slice(0, position)) +
+        event.input +
+        joinSegments(segments.slice(position));
+      cursor.set(position + inputSegments.length);
       props.onChange?.(nextValue);
       return true;
     }
 
     if (event.name === "backspace") {
       if (position > 0) {
-        const nextValue = value.slice(0, position - 1) + value.slice(position);
+        const nextValue =
+          joinSegments(segments.slice(0, position - 1)) +
+          joinSegments(segments.slice(position));
         cursor.set(position - 1);
         props.onChange?.(nextValue);
       }
@@ -148,8 +158,10 @@ function createTextInputOnKey(
     }
 
     if (event.name === "delete") {
-      if (position < value.length) {
-        const nextValue = value.slice(0, position) + value.slice(position + 1);
+      if (position < segments.length) {
+        const nextValue =
+          joinSegments(segments.slice(0, position)) +
+          joinSegments(segments.slice(position + 1));
         props.onChange?.(nextValue);
       }
 
@@ -162,7 +174,7 @@ function createTextInputOnKey(
     }
 
     if (event.name === "right") {
-      cursor.set(Math.min(value.length, position + 1));
+      cursor.set(Math.min(segments.length, position + 1));
       return true;
     }
 
@@ -172,7 +184,7 @@ function createTextInputOnKey(
     }
 
     if (event.name === "end") {
-      cursor.set(value.length);
+      cursor.set(segments.length);
       return true;
     }
 
@@ -213,6 +225,10 @@ function readBindingValue<T>(value: BindingValue<T> | undefined): T | undefined 
 
 function readStringBindingValue(value: BindingValue<string>): string {
   return isReadableSignal<string>(value) ? value.get() : value;
+}
+
+function joinSegments(segments: TextSegment[]): string {
+  return segments.map((segment) => segment.text).join("");
 }
 
 function clamp(value: number, min: number, max: number): number {
