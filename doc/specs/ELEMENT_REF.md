@@ -523,6 +523,13 @@ user updates signal
 
 layout 不再需要反写用户 signal。
 
+`stickToBottom` 例外：启用且未 detached 时，`onLayout` 可在 `appliedY < maxY` 时调用 `onOffsetChange(maxY)`。detach 条件：`up` / `pageup` / `home`，或非首帧 layout 时外部 `offset < maxY`。re-attach：`end`，或 `down` / `pagedown` 到达 `maxY`。
+
+```text
+stickToBottom && !userDetached && appliedY < maxY
+  → onOffsetChange(maxY)   // 唯一 layout→signal 回写
+```
+
 ## 9. 与现有模块的关系
 
 ### 9.1 @bindtty/vnode

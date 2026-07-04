@@ -20,10 +20,12 @@
 - renderer clip stack 与 scroll offset
 - ScrollView / List（受控 offset）
 - 键盘滚动与 TextInput focus 优先级
+- `stickToBottom`（log viewer / chat 自动滚底）
 
 ### 1.2 不在范围内
 
-- 虚拟列表、水平滚动、scrollbar、stickToBottom
+- 虚拟列表、水平滚动
+- scrollbar 鼠标交互、虚拟化、selected row
 
 ---
 
@@ -287,6 +289,8 @@ const offset = createSignal(0);
 | `scrollOnArrow` | `BindingValue<boolean>` | 是否在 focus 于容器时响应方向键，默认 true |
 | `onOffsetChange` | `(nextOffset: number) => void` | 键盘滚动时写回外部状态 |
 | `onFocusChange` | `InteractionNodeFocusChangeEvent => void` | 透传到内部 box |
+| `stickToBottom` | `BindingValue<boolean>` | 内容增高时自动滚到底，默认 `false` |
+| `showScrollbar` | `BindingValue<boolean>` | 显示纯视觉滚动条（占 1 列宽），默认 `false` |
 
 受控规则：
 
@@ -295,6 +299,36 @@ const offset = createSignal(0);
 3. `onOffsetChange` 接收下一次用户意图值；键盘滚动基于上一轮 layout 输出的 applied offset / max offset 计算 next，而不是基于可能越界的原始 `offset`。
 4. layout 不会隐式反写用户传入的 `offset` signal；若外部 `offset` 越界，画面按 layout clamp 后的 applied offset 渲染，用户状态保持受控。
 5. 若业务希望精确知道 applied scroll state，后续可以增加 `onScrollStateChange`，M7 不做。
+
+#### 5.3.1 `stickToBottom`
+
+log viewer / chat 场景：新行追加时自动滚到底；用户手动上滚后暂停跟随，滚回底部后恢复。
+
+| 规则 | 行为 |
+| --- | --- |
+| 前置条件 | 必须提供 `onOffsetChange`；否则与无 handler 时一样，不自动 stick |
+| 启用且未 detach | 每次 `onLayout` 后，若 `appliedY < maxY`，调用 `onOffsetChange(maxY)` |
+| 用户 detach | sticky 启用时，按 `up` / `pageup` / `home` → 进入 **detached**（停止自动 stick） |
+| 重新 attach | 按 `end`；或 `down` / `pagedown` 使 offset 到达 `maxY` → 清除 detached |
+| Prop 变 `false` | 停止自动 stick，保留当前 offset |
+| Prop 变 `true` | 下一帧 layout 后若 `appliedY < maxY` 且未 detached，则滚到底 |
+| 外部改 offset | 非首帧 layout 且外部 `offset < maxY` 时视为 detached；若仅因 content 增高导致 `maxY` 变大且 offset 仍停在原底部，则不 detach |
+| 内部状态 | `userDetached` 为 widget 闭包状态，不暴露为 prop |
+
+`stickToBottom` 是 layout 不反写 signal 规则的唯一例外：`ScrollView` 在 `onLayout` 中可主动调用 `onOffsetChange(maxY)`。仅在 `appliedY < maxY` 时调用，避免 layout 循环。
+
+#### 5.3.2 `showScrollbar`
+
+纯视觉滚动条，不响应鼠标或点击。
+
+| 规则 | 行为 |
+| --- | --- |
+| 可见条件 | `showScrollbar === true` 且 `maxY > 0` |
+| 布局 | 外层 `box`（`width` / 样式）+ 内层 `hstack`：左侧 clip 内容区（`height` + `flexGrow: 1`），右侧 1 列 scrollbar（`width: 1` + 同 `height`） |
+| 字符 | track `│`；thumb 区间 `█`，其余为 track |
+| thumb 尺寸 | `max(1, round(viewportHeight * viewportHeight / contentHeight))` |
+| thumb 位置 | `round(appliedY / maxY * (viewportHeight - thumbSize))`（`maxY === 0` 时不显示） |
+| CJK | 与 clip 相同，按 display-column 裁剪 |
 
 ### 5.4 List 场景（用户面向）
 
@@ -332,8 +366,10 @@ M7 不强制新 `<list>` intrinsic；推荐 **composition**：
 | `height` | `BindingValue<number>` | 转发给 `ScrollView` |
 | `offset` | `BindingValue<number>` | 转发给 `ScrollView` |
 | `onOffsetChange` | `(nextOffset: number) => void` | 转发给 `ScrollView` |
+| `stickToBottom` | `BindingValue<boolean>` | 转发给 `ScrollView` |
+| `showScrollbar` | `BindingValue<boolean>` | 转发给 `ScrollView` |
 
-不做 `selectedIndex`、虚拟化、滚动条、行复用；这些进入后续里程碑。
+不做 `selectedIndex`、虚拟化、行复用；这些进入后续里程碑。
 
 ---
 
@@ -682,9 +718,9 @@ if (event.name === "end") onOffsetChange(maxY)
 
 **后置项**：
 
-- `stickToBottom`
+- [x] `stickToBottom`
+- [x] scrollbar（纯视觉 MVP）
 - virtualization
-- scrollbar
 - selected row / active descendant
 
 ---
@@ -729,6 +765,8 @@ Widgets：
 - [x] `ScrollView` onKey 调用 `onOffsetChange`
 - [x] `scrollOnArrow=false` 行为符合文档
 - [x] `List` 渲染所有 item 并保留 key
+- [x] `stickToBottom` 内容增高时 auto stick；detach / re-attach
+- [x] `showScrollbar` thumb 位置与键盘滚动同步
 
 E2E mock：
 
@@ -737,6 +775,8 @@ E2E mock：
 - [x] 键盘滚动
 - [x] TextInput 与 ScrollView 同屏时方向键优先级
 - [x] 动态 list push/delete
+- [x] `stickToBottom` 动态 push 自动滚底；上滚 detach；End 后 re-stick
+- [x] `showScrollbar` 输出 track/thumb 字符
 
 ---
 

@@ -6,6 +6,8 @@ import {
   Button,
   List,
   ScrollView,
+  computeScrollbarThumb,
+  renderScrollbarColumn,
   type ButtonProps,
   type ButtonStyleProps,
   type ListProps,
@@ -45,6 +47,45 @@ function key(name: string): Parameters<InteractionKeyHandler>[0] {
     ctrl: false,
     meta: false,
     shift: false
+  };
+}
+
+interface TestScrollApi {
+  onLayout?: (layout: unknown) => void;
+  onUnmount?: () => void;
+}
+
+function connectScrollViewRef(template: ElementTemplate): TestScrollApi {
+  let scrollBox = template;
+
+  if (template.tag === "box" && template.children[0]?.kind === "element") {
+    const firstChild = asElement(template.children[0] as Template);
+    if (firstChild.tag === "hstack" && firstChild.children[0]?.kind === "element") {
+      scrollBox = asElement(firstChild.children[0] as Template);
+    }
+  } else if (template.tag === "hstack" && template.children[0]?.kind === "element") {
+    scrollBox = asElement(template.children[0] as Template);
+  }
+
+  const ref = scrollBox.props.ref;
+  assert.equal(typeof ref, "function");
+
+  const api: TestScrollApi = {};
+  (ref as (api: TestScrollApi) => void)(api);
+  return api;
+}
+
+function layoutPayload(
+  scrollOffsetY: number,
+  contentHeight: number,
+  viewportHeight: number
+) {
+  return {
+    rect: { height: viewportHeight },
+    contentRect: { height: viewportHeight },
+    clip: { height: viewportHeight },
+    scrollOffset: { y: scrollOffsetY },
+    contentSize: { height: contentHeight }
   };
 }
 
@@ -404,4 +445,184 @@ test("List exposes the planned props types", () => {
   };
 
   assert.equal(asElement(List(props)).props.id, "typed");
+});
+
+test("ScrollView stickToBottom requests max offset after layout", () => {
+  const changes: number[] = [];
+  const template = asElement(
+    ScrollView({
+      height: 2,
+      offset: 0,
+      stickToBottom: true,
+      onOffsetChange(nextOffset) {
+        changes.push(nextOffset);
+      }
+    })
+  );
+  const api = connectScrollViewRef(template);
+
+  api.onLayout?.(layoutPayload(0, 4, 2));
+
+  assert.deepEqual(changes, [2]);
+});
+
+test("ScrollView stickToBottom stays detached after up key", () => {
+  const changes: number[] = [];
+  const template = asElement(
+    ScrollView({
+      height: 2,
+      offset: 0,
+      stickToBottom: true,
+      onOffsetChange(nextOffset) {
+        changes.push(nextOffset);
+      }
+    })
+  );
+  const api = connectScrollViewRef(template);
+  const scrollBox =
+    template.tag === "hstack"
+      ? asElement(template.children[0] as Template)
+      : template;
+  const onKey = readOnKeyHandler(scrollBox);
+
+  api.onLayout?.(layoutPayload(0, 4, 2));
+  api.onLayout?.(layoutPayload(2, 4, 2));
+  changes.length = 0;
+
+  assert.equal(onKey(key("up"), { node: {} as never, isFocused: true }), true);
+  api.onLayout?.(layoutPayload(1, 5, 2));
+
+  assert.deepEqual(changes, [1]);
+});
+
+test("ScrollView stickToBottom re-attaches after end key", () => {
+  const offset = createSignal(0);
+  const changes: number[] = [];
+  const template = asElement(
+    ScrollView({
+      height: 2,
+      offset,
+      stickToBottom: true,
+      onOffsetChange(nextOffset) {
+        changes.push(nextOffset);
+        offset.set(nextOffset);
+      }
+    })
+  );
+  const api = connectScrollViewRef(template);
+  const scrollBox =
+    template.tag === "hstack"
+      ? asElement(template.children[0] as Template)
+      : template;
+  const onKey = readOnKeyHandler(scrollBox);
+
+  api.onLayout?.(layoutPayload(0, 4, 2));
+  api.onLayout?.(layoutPayload(2, 4, 2));
+  onKey(key("up"), { node: {} as never, isFocused: true });
+  api.onLayout?.(layoutPayload(1, 5, 2));
+  changes.length = 0;
+
+  onKey(key("end"), { node: {} as never, isFocused: true });
+  api.onLayout?.(layoutPayload(3, 5, 2));
+  changes.length = 0;
+
+  api.onLayout?.(layoutPayload(3, 6, 2));
+
+  assert.deepEqual(changes, [4]);
+});
+
+test("ScrollView stickToBottom false does not auto scroll", () => {
+  const changes: number[] = [];
+  const template = asElement(
+    ScrollView({
+      height: 2,
+      offset: 0,
+      stickToBottom: false,
+      onOffsetChange(nextOffset) {
+        changes.push(nextOffset);
+      }
+    })
+  );
+  const api = connectScrollViewRef(template);
+
+  api.onLayout?.(layoutPayload(0, 4, 2));
+
+  assert.deepEqual(changes, []);
+});
+
+test("ScrollView stickToBottom without onOffsetChange does not auto scroll", () => {
+  const template = asElement(
+    ScrollView({
+      height: 2,
+      offset: 0,
+      stickToBottom: true
+    })
+  );
+  const api = connectScrollViewRef(template);
+
+  assert.doesNotThrow(() => {
+    api.onLayout?.(layoutPayload(0, 4, 2));
+  });
+});
+
+test("List stickToBottom auto scrolls after layout", () => {
+  const changes: number[] = [];
+  const template = asElement(
+    List({
+      height: 2,
+      items: [{ id: 1, label: "One" }],
+      stickToBottom: true,
+      onOffsetChange(nextOffset) {
+        changes.push(nextOffset);
+      },
+      render: (item) => ({
+        kind: "element",
+        tag: "text",
+        props: { value: item.label },
+        children: []
+      })
+    })
+  );
+  const api = connectScrollViewRef(template);
+
+  api.onLayout?.(layoutPayload(0, 4, 2));
+
+  assert.deepEqual(changes, [2]);
+});
+
+test("computeScrollbarThumb follows the scroll viewport formula", () => {
+  assert.deepEqual(computeScrollbarThumb(0, 10, 10, 100), {
+    start: 0,
+    size: 1
+  });
+  assert.deepEqual(computeScrollbarThumb(5, 10, 10, 100), {
+    start: 5,
+    size: 1
+  });
+  assert.deepEqual(computeScrollbarThumb(0, 0, 10, 100), {
+    start: 0,
+    size: 0
+  });
+});
+
+test("renderScrollbarColumn draws track and thumb characters", () => {
+  assert.equal(renderScrollbarColumn(0, 4, 4, 8), "█\n█\n│\n│");
+  assert.equal(renderScrollbarColumn(0, 0, 4, 8), "");
+});
+
+test("ScrollView with showScrollbar renders an hstack wrapper", () => {
+  const template = asElement(
+    ScrollView({
+      height: 3,
+      offset: 0,
+      showScrollbar: true,
+      onOffsetChange() {}
+    })
+  );
+  const row = asElement(template.children[0] as Template);
+
+  assert.equal(template.tag, "box");
+  assert.equal(row.tag, "hstack");
+  assert.equal(asElement(row.children[0] as Template).tag, "box");
+  assert.equal(asElement(row.children[1] as Template).props.width, 1);
 });

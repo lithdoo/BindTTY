@@ -22,7 +22,7 @@
 
 - [x] Layout prop matrix：`minWidth` / `minHeight` / `maxWidth` / `maxHeight`
 - [x] Layout prop matrix：edge `padding*`、`margin*`
-- [ ] ScrollView `stickToBottom`（log viewer / chat 场景）
+- [x] ScrollView `stickToBottom`（log viewer / chat 场景）
 - [x] Layout 支持矩阵文档与 `layout-props.ts` 对齐（[doc/specs/LAYOUT_PROPS.md](doc/specs/LAYOUT_PROPS.md)）
 
 ---
@@ -32,7 +32,7 @@
 - [ ] `Checkbox` widget
 - [ ] `Select` widget（单选）
 - [ ] `ProgressBar` widget
-- [ ] ScrollView scrollbar（视觉指示，非鼠标交互）
+- [x] ScrollView scrollbar（视觉指示，非鼠标交互）
 
 ---
 

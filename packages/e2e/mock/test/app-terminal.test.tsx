@@ -826,6 +826,167 @@ test("tsx app scrolls dynamic List data with for keys", async () => {
   app.dispose();
 });
 
+test("tsx app List stickToBottom auto scrolls on push", async () => {
+  const stdout = createFakeStdout(12, 5);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const items = createSignal<readonly Item[]>([
+    { id: 1, label: "A" },
+    { id: 2, label: "B" },
+    { id: 3, label: "C" },
+    { id: 4, label: "D" }
+  ]);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <List
+      height={2}
+      offset={offset}
+      stickToBottom={true}
+      items={items}
+      getKey={(item) => (item as Item).id}
+      render={(item) => <text value={(item as Item).label} />}
+      onOffsetChange={(nextOffset) => {
+        offset.set(nextOffset);
+      }}
+    />,
+    { terminal }
+  );
+
+  app.start();
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 2);
+  assert.match(visibleText(stdout.writes.at(-1)), /C/);
+  assert.match(visibleText(stdout.writes.at(-1)), /D/);
+
+  items.set([
+    ...items.get(),
+    { id: 5, label: "E" }
+  ]);
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 3);
+  assert.match(visibleText(stdout.writes.at(-1)), /D/);
+  assert.match(visibleText(stdout.writes.at(-1)), /E/);
+
+  app.dispose();
+});
+
+test("tsx app List stickToBottom detaches after up and re-attaches after end", async () => {
+  const stdout = createFakeStdout(12, 5);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const items = createSignal<readonly Item[]>([
+    { id: 1, label: "A" },
+    { id: 2, label: "B" },
+    { id: 3, label: "C" },
+    { id: 4, label: "D" }
+  ]);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <List
+      height={2}
+      offset={offset}
+      stickToBottom={true}
+      items={items}
+      getKey={(item) => (item as Item).id}
+      render={(item) => <text value={(item as Item).label} />}
+      onOffsetChange={(nextOffset) => {
+        offset.set(nextOffset);
+      }}
+    />,
+    { terminal }
+  );
+
+  app.start();
+  await nextMicrotask();
+
+  stdin.emitKey(undefined, { name: "up" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 1);
+
+  items.set([
+    ...items.get(),
+    { id: 5, label: "E" }
+  ]);
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 1);
+  assert.match(visibleText(stdout.writes.at(-1)), /B/);
+  assert.match(visibleText(stdout.writes.at(-1)), /C/);
+  assert.doesNotMatch(visibleText(stdout.writes.at(-1)), /E/);
+
+  stdin.emitKey(undefined, { name: "end" });
+  await nextMicrotask();
+
+  items.set([
+    ...items.get(),
+    { id: 6, label: "F" }
+  ]);
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 4);
+  assert.match(visibleText(stdout.writes.at(-1)), /E/);
+  assert.match(visibleText(stdout.writes.at(-1)), /F/);
+
+  app.dispose();
+});
+
+test("tsx app ScrollView showScrollbar renders track characters", async () => {
+  const stdout = createFakeStdout(12, 5);
+  const stdin = createFakeStdin();
+  const offset = createSignal(0);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <ScrollView
+      height={3}
+      width={6}
+      offset={offset}
+      showScrollbar={true}
+      onOffsetChange={(nextOffset) => {
+        offset.set(nextOffset);
+      }}
+    >
+      <text value="A" />
+      <text value="B" />
+      <text value="C" />
+      <text value="D" />
+      <text value="E" />
+    </ScrollView>,
+    { terminal }
+  );
+
+  app.start();
+  await nextMicrotask();
+
+  const rendered = visibleText(stdout.writes.join(""));
+  assert.match(rendered, /[│█]/);
+
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 1);
+  assert.match(visibleText(stdout.writes.join("")), /[│█]/);
+
+  app.dispose();
+});
+
 test("tsx app clamps List scroll offset at bottom after end and down keys", async () => {
   const stdout = createFakeStdout(20, 12);
   const stdin = createFakeStdin();

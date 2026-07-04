@@ -17,6 +17,8 @@ export interface ListProps<T = unknown> extends ScrollViewStyleProps {
   height: BindingValue<number>;
   width?: BindingValue<number>;
   scrollOnArrow?: BindingValue<boolean>;
+  stickToBottom?: BindingValue<boolean>;
+  showScrollbar?: BindingValue<boolean>;
   onOffsetChange?: (nextOffset: number) => void;
 }
 
@@ -27,6 +29,8 @@ export function List<T = unknown>(props: ListProps<T>): Template {
     height: props.height,
     width: props.width,
     scrollOnArrow: props.scrollOnArrow,
+    stickToBottom: props.stickToBottom,
+    showScrollbar: props.showScrollbar,
     onOffsetChange: props.onOffsetChange,
     background: props.background,
     borderColor: props.borderColor,

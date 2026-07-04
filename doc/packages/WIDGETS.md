@@ -608,6 +608,7 @@ npm test
 16. bindtty 顶层 re-export Button、TextInput、ScrollView 和 List。
 17. ScrollView 受控 offset、clip、键盘滚动已覆盖。
 18. List 作为 ScrollView + forTemplate 语法糖已覆盖。
+19. ScrollView `stickToBottom` 与 `showScrollbar` 已覆盖（见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §5.3.1–§5.3.2）。
 ```
 
 ## 14. 后续方向
@@ -619,7 +620,7 @@ Button、TextInput、ScrollView 和 List 跑通后，下一步建议：
   先做 Checkbox。
 
 如果目标是增强长内容体验：
-  增强 Scroll/List（stickToBottom、scrollbar、virtualization、selected row）。
+  增强 Scroll/List（virtualization、selected row）。
 
 如果目标是丰富表单输入能力：
   增强 TextInput（width、selection、多行）。

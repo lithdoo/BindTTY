@@ -121,7 +121,7 @@ import {
 
 1. ~~min/max layout props~~（Phase 1 已完成）
 2. ~~edge padding / margin props~~（Phase 2–3 已完成）
-3. ScrollView `stickToBottom`
+3. ~~ScrollView `stickToBottom`~~（已完成）
 4. ~~layout 支持矩阵文档 + CI 同步~~（Phase 4 已完成）
 
 ### Phase C：组件生态（P2）
@@ -138,19 +138,19 @@ import {
 
 ## 5. Scroll/List 产品化要点
 
-### stickToBottom（P1）
+### stickToBottom（P1）— 已实现
 
 ```tsx
-<ScrollView height={10} stickToBottom={vm.autoScroll}>
+<ScrollView height={10} stickToBottom offset={scrollY} onOffsetChange={scrollY.set}>
   <List items={vm.logs} getKey={(log) => log.id} render={(log) => <text value={log.message} />} />
 </ScrollView>
 ```
 
-需明确：用户手动上滚后是否保持 stick、动态追加时的 offset 策略。
+语义见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §5.3.1：用户 `up`/`pageup`/`home` 后 detach；`end` 或滚到底 re-attach；内容追加时 auto stick。
 
-### scrollbar（P2）
+### scrollbar（P2）— 已实现（纯视觉 MVP）
 
-先做视觉指示，不做鼠标交互。需明确是否占用内容宽度、thumb 计算与 CJK clip 关系。
+`showScrollbar={true}` 在 clip 区域右侧占 1 列，thumb 随 offset 移动。语义见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §5.3.2。
 
 ### virtualization
 
@@ -184,7 +184,8 @@ import {
 ### 0.1.0-beta.0
 
 - layout prop matrix 稳定（min/max、margin、edge padding）；文档 CI 同步（`check:layout-props`）
-- ScrollView `stickToBottom`
+- ~~ScrollView `stickToBottom`~~（已完成）
+- ~~ScrollView scrollbar~~（已完成）
 - Checkbox widget
 - changelog、稳定发布流程
 
@@ -235,5 +236,6 @@ API freeze → CI / release → layout prop matrix → Scroll/List → widgets e
 | 7 | layout roadmap 与 Yoga 对齐 | ⏳ open |
 | 8 | min/max layout props | ⏳ open |
 | 9 | edge padding / margin props | ⏳ open |
-| 10 | ScrollView stickToBottom | ⏳ open |
+| 10 | ScrollView stickToBottom | ✅ done |
+| 10b | ScrollView scrollbar | ✅ done |
 | 11 | Checkbox widget | ⏳ open |

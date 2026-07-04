@@ -30,7 +30,8 @@ const logs = createSignal<readonly LogLine[]>([
 ]);
 const offset = createSignal(0);
 const header = computed(
-  () => `Log Viewer  offset=${offset.get()}  (arrow keys to scroll)`
+  () =>
+    `Log Viewer  offset=${offset.get()}  stick=on  (↑ scroll up detaches, End re-attaches)`
 );
 
 const terminal = createNodeTerminal({
@@ -48,6 +49,7 @@ const app = createApp(
       height={6}
       items={logs}
       offset={offset}
+      stickToBottom={true}
       getKey={(line) => (line as LogLine).id}
       render={(line) => <text value={(line as LogLine).message} />}
       onOffsetChange={(nextOffset) => {
