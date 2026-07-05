@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/terminal",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "type": "module",
   "description": "Terminal lifecycle and input host for BindTTY.",
   "main": "./dist/index.js",

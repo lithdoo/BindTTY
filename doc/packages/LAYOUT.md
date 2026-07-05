@@ -10,6 +10,20 @@
 - [DESIGN.md](../architecture/DESIGN.md) — 视图树总体设计
 - [TUI_IMPLEMENTATION_PLAN.md](../architecture/ROADMAP.md) — 实现计划与里程碑
 
+## 本章导航
+
+| § | 章节 | § | 章节 |
+| --- | --- | --- | --- |
+| [1](#1-目标) | 目标 | [10](#10-basiclayoutengine-legacy-语义) | BasicLayoutEngine |
+| [2](#2-包位置) | 包位置 | [11](#11-基础布局模型) | 基础布局模型 |
+| [3](#3-输入与输出) | 输入与输出 | [12](#12-measure-规则) | Measure 规则 |
+| [4](#4-layoutnode-类型) | LayoutNode | [13](#13-structure-node-规则) | Structure Node |
+| [5](#5-与-runtime-renderer-app-的接口-contract) | 接口 contract | [14](#14-unsupported-tag-策略) | Unsupported Tag |
+| [6](#6-layoutengine-接口) | LayoutEngine | [15](#15-dirty-与重新-layout) | Dirty / relayout |
+| [7](#7-内建基础元素与控件边界) | 内建元素边界 | [16](#16-测试计划) | 测试计划 |
+| [8](#8-当前支持范围) | 支持范围 | [17](#17-验收标准) | 验收标准 |
+| [9](#9-盒模型与-flexbox当前-vs-预留) | 盒模型 / Flex | [18](#18-当前结论) | 当前结论 |
+
 ## 1. 目标
 
 layout 的目标是回答几何问题：

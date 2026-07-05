@@ -5,6 +5,21 @@
 > **最后核对**：2026-07  
 > **相关**：[DESIGN.md](./DESIGN.md) · [../specs/SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) · [../README.md](../README.md)
 
+## 本章导航
+
+| 章节 | 内容 |
+| --- | --- |
+| [当前结论](#当前结论) | M1–M7 完成状态 |
+| [总体目标](#总体目标) | 框架目标 |
+| [Monorepo 包结构](#monorepo-包结构) | 11 包模型 |
+| [核心分层](#核心分层) | 四层链路 |
+| [BindingValue 和 control node](#bindingvalue-和-control-node) | 绑定与控制流 |
+| [Signal 后续补强](#signal-后续补强) | signal 包规划 |
+| [里程碑](#里程碑) | M1–M7 明细 |
+| [工程事项](#工程事项) | CI / 发布等 |
+| [优先级](#优先级) | 下一阶段 |
+| [一句话方向](#一句话方向) | 总结 |
+
 ## 当前结论
 
 @bindtty/signal 已具备响应式内核：读取时追踪依赖、更新时触发依赖，支持 `createSignal`、`computed`、`effect`、`subscribe`、dispose 与动态依赖清理。

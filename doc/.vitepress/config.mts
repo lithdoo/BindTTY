@@ -127,7 +127,8 @@ export default defineConfig({
       next: "下一页"
     },
     outline: {
-      label: "本页目录"
+      label: "本页目录",
+      level: [2, 3]
     },
     darkModeSwitchLabel: "外观",
     sidebarMenuLabel: "菜单",

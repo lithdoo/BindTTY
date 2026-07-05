@@ -21,13 +21,13 @@
     "test": "npm run build --workspace @bindtty/text && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
   },
   "dependencies": {
-    "@bindtty/interaction": "0.1.0-alpha.1",
-    "@bindtty/signal": "0.1.0-alpha.1",
-    "@bindtty/text": "0.1.0-alpha.1",
-    "@bindtty/vnode": "0.1.0-alpha.1"
+    "@bindtty/interaction": "0.1.0-alpha.2",
+    "@bindtty/signal": "0.1.0-alpha.2",
+    "@bindtty/text": "0.1.0-alpha.2",
+    "@bindtty/vnode": "0.1.0-alpha.2"
   },
   "peerDependencies": {
-    "@bindtty/signal": "0.1.0-alpha.1"
+    "@bindtty/signal": "0.1.0-alpha.2"
   },
   "peerDependenciesMeta": {
     "@bindtty/signal": {
