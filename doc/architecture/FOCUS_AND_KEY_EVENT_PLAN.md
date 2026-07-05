@@ -129,7 +129,7 @@ key event 基于这个 path 派发。
 focusedPath 是 interaction 内部实现细节；
 不公开 getFocusedPath()；
 不公开 MountedElementNode[]；
-不在 key event 中暴露 target/currentTarget。
+key event 不暴露 mounted node 或节点引用。
 ```
 
 ### 3.4 Key event 三阶段传播
@@ -904,7 +904,7 @@ Panel 有两种模式：
 1. 原有 interaction 测试通过。
 2. 嵌套节点 focused 时，内部 path 正确包含 ancestors。
 3. 不公开 getFocusedPath()。
-4. key event 不暴露 target/currentTarget。
+4. key event 不暴露 mounted node 或节点引用。
 ```
 
 ### Phase 3：Key bubbling / capture
