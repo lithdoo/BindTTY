@@ -102,10 +102,10 @@ onKey?: (event: BindTTYKeyEvent) => boolean | void
 `@bindtty/interaction` 负责：
 
 ```text
-1. 从 MountedNode tree 收集 key-focus targets。
+1. 从 MountedNode tree 收集 focusable targets。
 2. 维护当前 focused node。
-3. 处理 Tab / Shift+Tab focus traversal。
-4. 把非导航键派发给当前 focused node 的 onKey handler。
+3. 处理 Tab / Shift+Tab focus traversal（fallback）。
+4. 沿 focused path 派发 key event：capture → target → bubble；未 handled 时执行 fallback。
 5. 在 focus 变化时返回 dirty nodes，驱动 repaint。
 6. 在 runtime flush 后刷新 focus list。
 ```
@@ -215,31 +215,46 @@ keyboard.ts
 
 ## 6. onKey 模型
 
-`onKey` 是 interaction MVP 的唯一交互入口。
+`onKeyCapture` / `onKey` 是 interaction 的键盘事件入口；`focusable` 控制节点是否进入 Tab focus list。
 
-建议类型：
+类型：
 
 ```ts
+export type KeyEventPhase = "capture" | "target" | "bubble";
+
+export interface BindTTYKeyEvent {
+  input: string;
+  name?: string;
+  ctrl: boolean;
+  meta: boolean;
+  shift: boolean;
+  sequence?: string;
+  phase: KeyEventPhase;
+  propagationStopped: boolean;
+  stopPropagation(): void;
+}
+
 export type InteractionKeyHandler = (
-  event: TerminalKeyEvent,
-  context: InteractionKeyContext
+  event: BindTTYKeyEvent
 ) => boolean | void;
+
+export type InteractionKeyListener =
+  | InteractionKeyHandler
+  | null
+  | undefined;
 
 export type InteractionKeyBinding =
   | boolean
   | InteractionKeyHandler
   | null
   | undefined;
-
-export interface InteractionKeyContext {
-  node: MountedElementNode;
-  isFocused: true;
-}
 ```
 
-在 vnode / JSX props 中，`onKey` 应支持 BindingValue：
+在 vnode / JSX props 中：
 
 ```ts
+focusable?: BindingValue<boolean>
+onKeyCapture?: BindingValue<InteractionKeyListener>
 onKey?: BindingValue<InteractionKeyBinding>
 onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void
 ```
@@ -247,6 +262,7 @@ onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void
 因此以下写法都成立：
 
 ```tsx
+<box focusable onKeyCapture={(event) => event.name === "escape"} />
 <box onKey={true} />
 <box onKey={false} />
 <box onKey={vm.canFocus} />
@@ -254,54 +270,65 @@ onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void
 <box onKey={vm.dynamicKeyHandler} />
 ```
 
+`onKeyCapture` 只接受 handler / null / undefined，不含 `onKey={true}` 的 boolean legacy shorthand。
+
 如果组件需要根据自身 focus 状态更新样式，可以同时提供节点级 `onFocusChange`：
 
 ```tsx
 <box
-  onKey={true}
+  focusable
+  onKey={handleKey}
   onFocusChange={(event) => {
     vm.boxFocused.set(event.focused);
   }}
 />
 ```
 
-`onFocusChange` 不让节点进入 focus list。节点是否可聚焦仍然只由 `onKey` 决定。
+`onFocusChange` 不让节点进入 focus list。节点是否可聚焦由 `focusable` 决定；未显式设置 `focusable` 时，`onKey === true | function` 仍隐式 focusable（legacy）。
 
 语义：
 
 ```text
-onKey === true:
+focusable === true:
   节点进入 focus list。
   节点可以获得 focus。
-  非导航键到达时视为未处理。
 
-typeof onKey === "function":
-  节点进入 focus list。
-  非导航键到达时调用该函数。
-  函数返回 true 表示 handled。
-  函数返回 false / undefined 表示 unhandled。
-
-onKey === false / null / undefined:
+focusable === false:
   节点不进入 focus list。
   如果它原本 focused，refresh 后需要迁移 focus。
+
+未显式 focusable 且 onKey === true / function:
+  legacy 隐式 focusable。
+
+onKeyCapture / onKey === function:
+  对应阶段调用 handler。
+  函数返回 true 表示 handled，并 stopPropagation。
+  函数返回 false / undefined 表示该阶段未 handled。
+
+onKey === true:
+  节点可聚焦（legacy），但 target/bubble 阶段无 handler，视为未 handled。
+
+onKey === false / null / undefined:
+  不单独决定 focusable（除非配合 focusable prop）。
+  若节点因此不再可聚焦且原本 focused，refresh 后需要迁移 focus。
 ```
 
 动态值：
 
 ```text
-onKey 是 ReadableSignal / computed 时：
+focusable / onKey / onKeyCapture 是 ReadableSignal / computed 时：
   runtime 负责更新 mounted node props。
   app 在 runtime flush 后调用 interaction.refresh(root)。
-  interaction 使用刷新后的 onKey 值重建 focus list。
+  interaction 使用刷新后的值重建 focus list。
 ```
 
 这意味着：
 
 ```text
-onKey: true -> false
+focusable: true -> false
   节点从 focus list 移除。
 
-onKey: false -> true
+focusable: false -> true
   节点进入 focus list。
 
 onKey: handlerA -> handlerB
@@ -407,7 +434,7 @@ clear:
   clearFocus() 清空已有 focus。
 
 refresh:
-  当前 focused node 消失或 onKey 变为不可用，refresh 迁移或清空 focus。
+  当前 focused node 消失或不再 focusable，refresh 迁移或清空 focus。
 ```
 
 不触发：
@@ -508,12 +535,18 @@ createApp(view, { terminal })
 ### 8.2 Key Event
 
 ```text
-TerminalHost.onKey(event)
-  -> app.handleKey(event)
-  -> interaction.handleKey(event)
-  -> Tab / Shift+Tab?
-       yes: focus traversal
-       no:  dispatch to focused entry handler
+TerminalHost.onKey(raw)
+  -> app.handleKey(raw)
+  -> interaction.handleKey(raw)
+  -> create BindTTYKeyEvent
+  -> focused path 存在?
+       no:  Tab/Shift+Tab fallback 或 handled=false
+       yes: capture (root -> parent)
+            -> target (focused node)
+            -> bubble (parent -> root)
+            -> 任一 handler return true?
+                 yes: handled=true
+                 no:  Tab/Shift+Tab fallback 或 handled=false
   -> dirtyNodes
   -> app repaint if needed
 ```
@@ -521,15 +554,18 @@ TerminalHost.onKey(event)
 派发规则：
 
 ```text
-1. Tab / Shift+Tab 由 interaction 用于移动 focus。
-2. Tab / Shift+Tab MVP 不派发给 onKey handler。
-3. 非导航键只派发给当前 focused node。
-4. 当前 focused node 的 handler 为 null 时，返回 handled=false。
-5. handler 返回 true 时，返回 handled=true。
-6. handler 返回 false / undefined 时，返回 handled=false。
-7. 不做 bubbling。
-8. 不做 capture。
-9. 不自动向父节点回退。
+1. 所有键（含 Tab / Shift+Tab）先走 capture → target → bubble。
+2. capture 阶段调用祖先链上的 onKeyCapture handler（root 到 parent）。
+3. target 阶段调用 focused node 的 onKey handler。
+4. bubble 阶段从 parent 向 root 调用 onKey handler。
+5. handler 返回 true 时：handled=true，停止传播，不执行 fallback。
+6. handler 返回 false / undefined 时：该阶段未 handled，继续下一阶段。
+7. event.stopPropagation() 停止后续传播，但不自动 handled。
+8. 全部阶段结束后仍未 handled：
+     Tab / Shift+Tab -> focusNext / focusPrevious（fallback）
+     其他键 -> handled=false
+9. onKey={true} 无 function handler，target/bubble 视为未 handled。
+10. focusable=false 的节点可监听 key（如 ScrollView），但不进入 Tab focus list。
 ```
 
 ### 8.3 Runtime Flush 后
@@ -544,11 +580,11 @@ signal update
 `refresh` 需要处理：
 
 ```text
-1. 重新收集 key-focus targets。
-2. 如果当前 focused node 仍存在且 onKey 仍可用，保留 focus。
+1. 重新收集 focus list（focusable targets）。
+2. 如果当前 focused node 仍存在且仍 focusable，保留 focus。
 3. 如果当前 focused node 消失，移动到下一个可用节点。
-4. 如果当前 focused node 的 onKey 变为 false / null / undefined，移动到下一个可用节点。
-5. 如果没有 key-focus targets，focused = null。
+4. 如果当前 focused node 不再 focusable，移动到下一个可用节点。
+5. 如果没有 focus target，focused = null。
 ```
 
 ## 9. Focus 语义
@@ -564,9 +600,9 @@ MVP 规则：
 4. 没有 key-focus target 则 focused = null。
 ```
 
-`autoFocus` 不进入 MVP。它依赖 mounted lifecycle hook、组件首次挂载语义和业务组件扩展方式，后续应由 widgets 或业务组件自行实现。
-
 ### 9.2 Tab
+
+Tab / Shift+Tab 与其他键一样先走 capture → target → bubble。仅当全部阶段未 handled 时，才执行 focus traversal fallback：
 
 ```text
 Tab:
@@ -648,14 +684,14 @@ Shift+Tab:
 结构更新后，不使用永久 focus 缓存。focus 只在当前 MountedNode tree 中有效。
 
 ```text
-focused node still present and onKey still enabled:
+focused node still present and still focusable:
   keep focus
 
 focused node removed:
   move to nearest next focus target by previous order
   focusChange.reason = "refresh"
 
-focused node onKey becomes false / null / undefined:
+focused node becomes non-focusable:
   move to nearest next focus target
   focusChange.reason = "refresh"
 
@@ -681,71 +717,59 @@ same id later appears as new mounted node:
 
 ## 10. 嵌套 onKey 元素
 
-MVP 允许 key-focus target 嵌套。
+MVP 允许 focus target 与 key listener 嵌套。
 
 示例：
 
 ```tsx
-<box onKey={true}>
+<box focusable onKey={(event) => event.name === "return"}>
   <text value="Panel" />
-  <custom-input onKey={handleInputKey} />
+  <TextInput onSubmit={handleSubmit} />
 </box>
 ```
 
 收集规则：
 
 ```text
-1. 按 MountedNode tree 的深度优先先序遍历收集。
-2. 父节点 onKey=true 或 onKey=function 时，父节点进入 focus list。
-3. 子节点 onKey=true 或 onKey=function 时，子节点也进入同一个 focus list。
-4. 父子都可聚焦时，两者是两个独立 focus target。
-5. interaction MVP 不因为父节点可聚焦而屏蔽子节点。
+1. 按 MountedNode tree 的深度优先先序遍历收集 focusable 节点。
+2. focusable=true（或 legacy onKey=true/function）时，节点进入 focus list。
+3. 父子都可聚焦时，两者是两个独立 focus target。
+4. interaction 不因为父节点可聚焦而屏蔽子节点。
+5. focusable=false 的节点不进入 focus list，但仍可注册 onKey / onKeyCapture。
 ```
 
 事件派发规则：
 
 ```text
-1. key event 只派发给当前 focused node。
-2. 不做 DOM 风格 bubbling。
-3. 不做 capture。
-4. 不自动向父 key-focus target 回退。
-5. 如果当前 focused node 的 handler 不处理，事件返回 handled=false。
+1. key event 沿当前 focused target 的 mounted ancestor path 传播。
+2. capture：root -> ... -> parent，调用 onKeyCapture。
+3. target：focused node，调用 onKey。
+4. bubble：parent -> ... -> root，调用 onKey。
+5. 子节点 focused 时，父节点可在 capture/bubble 阶段拦截或补充处理。
+6. handler 不 return true 时，事件继续传播；全部阶段结束后仍未 handled 才走 fallback。
+7. ScrollView 等 focusable=false 容器可在 bubble 阶段接收子节点未处理的箭头键。
 ```
 
 Tab 顺序示例：
 
 ```text
-<parent onKey={true}>
-  <child-a onKey={handlerA} />
-  <child-b onKey={handlerB} />
+<parent focusable onKey={parentHandler}>
+  <child-a focusable onKey={handlerA} />
+  <child-b focusable onKey={handlerB} />
 </parent>
 
 focus order:
   parent -> child-a -> child-b
+
+Escape 在 TextInput focused 时：
+  Modal onKeyCapture 可在 capture 阶段先于 target 处理。
 ```
 
-为什么 MVP 不做 bubbling：
-
-```text
-1. 终端 UI 的控件组合可能很自由，冒泡语义容易过早绑定 DOM 模型。
-2. focus target 与 key owner 保持一一对应，行为更容易测试。
-3. 组合控件可以在 widgets 层自行管理内部子控件。
-```
-
-后续如需复杂组合控件，可以再设计：
-
-```text
-focus scope
-roving focus
-event bubbling / capture
-composite widget controller
-```
-
-这些不进入 interaction MVP。
+组合控件应在 widgets 层把语义行为转换成 `onKey` / `onKeyCapture`，而不是依赖 interaction 提供 roving focus 或 focus scope API。
 
 ## 11. Key Event 语义
 
-interaction 直接复用 `@bindtty/terminal` 的 `TerminalKeyEvent`：
+`handleKey` 接收 `@bindtty/terminal` 的 `TerminalKeyEvent`，内部构造 `BindTTYKeyEvent` 再派发：
 
 ```ts
 export interface TerminalKeyEvent {
@@ -757,6 +781,8 @@ export interface TerminalKeyEvent {
   sequence?: string;
 }
 ```
+
+handler 只看到 `BindTTYKeyEvent`（含 `phase`、`propagationStopped`、`stopPropagation()`），不暴露 mounted node。
 
 常见特殊键通过 `name` 判断：
 
@@ -791,7 +817,7 @@ isArrowKey(event)
 isTextInputKey(event)
 ```
 
-MVP 中 Tab / Shift+Tab 是 interaction 的 focus traversal 键，不派发给 `onKey`。方向键、Enter、Escape、Backspace、普通字符都属于非 focus traversal key，会派发给当前 focused node 的 handler。
+Tab / Shift+Tab 与其他键一样先走 capture → target → bubble。若 handler 在任一阶段 `return true`，则 focus traversal fallback 不执行。全部阶段未 handled 时，Tab / Shift+Tab 触发 `focusNext` / `focusPrevious`；Enter、Escape、Backspace、方向键、普通字符等同理沿 focused path 传播。
 
 ## 12. 与具体 Widget 的边界
 
@@ -800,10 +826,10 @@ MVP 中 Tab / Shift+Tab 是 interaction 的 focus traversal 键，不派发给 `
 它只提供：
 
 ```text
-1. onKey focus/key 协议。
-2. key-focus list。
-3. focus traversal。
-4. key event dispatch。
+1. focusable / onKey focus 协议。
+2. focus list。
+3. focus traversal fallback。
+4. capture / target / bubble key event dispatch。
 5. focus state 查询。
 ```
 
@@ -951,6 +977,8 @@ id / onKey:
 ```ts
 export interface IntrinsicInteractionProps {
   id?: BindingValue<string | number>;
+  focusable?: BindingValue<boolean>;
+  onKeyCapture?: BindingValue<InteractionKeyListener>;
   onKey?: BindingValue<InteractionKeyBinding>;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }
@@ -972,6 +1000,8 @@ export interface IntrinsicStyleProps {
 
 ```ts
 id?: BindingValue<string | number>
+focusable?: BindingValue<boolean>
+onKeyCapture?: BindingValue<InteractionKeyListener>
 onKey?: BindingValue<InteractionKeyBinding>
 onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void
 ```
@@ -984,8 +1014,11 @@ dirty 语义：
 id:
   interaction dirty。影响 focus(id) 和 focus restore，不影响 layout / paint。
 
-onKey:
+focusable:
   interaction dirty。动态值变化后需要 refresh focus list。
+
+onKey / onKeyCapture:
+  interaction dirty。动态值变化后需要 refresh focus list（onKeyCapture 不影响 focus list 成员资格）。
 
 onFocusChange:
   interaction dirty 或 paint dirty 均可。MVP 可以沿用未知 prop 默认 paint dirty，但 App 必须在 flush 后调用 interaction.refresh。
@@ -1000,6 +1033,8 @@ onFocusChange:
 ```ts
 interface InteractionElementProps {
   id?: BindingValue<string | number>;
+  focusable?: BindingValue<boolean>;
+  onKeyCapture?: BindingValue<InteractionKeyListener>;
   onKey?: BindingValue<InteractionKeyBinding>;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }
@@ -1012,14 +1047,14 @@ interface InteractionElementProps {
 ```text
 1. TSX 的特殊 key 仍只给 <for> 使用。
 2. interaction 使用的是普通 prop id，不使用 JSX special key。
-3. onKey 是普通 prop，可以是 boolean、function 或 signal。
+3. onKey / onKeyCapture 是普通 prop，可以是 boolean（仅 onKey）、function 或 signal。
 ```
 
 ### 13.4 runtime
 
-runtime 需要继续把 `id`、`onKey`、`onFocusChange` 保存在 `MountedElementNode.props` 中。
+runtime 需要继续把 `id`、`focusable`、`onKeyCapture`、`onKey`、`onFocusChange` 保存在 `MountedElementNode.props` 中。
 
-当动态 `onKey` / `id` 变化：
+当动态 `focusable` / `onKey` / `onKeyCapture` / `id` 变化：
 
 ```text
 signal update
@@ -1036,6 +1071,8 @@ interaction 不直接订阅 signal，也不直接依赖 runtime scheduler。
 
 ```text
 id
+focusable
+onKeyCapture
 onKey
 onFocusChange
 ```
@@ -1180,15 +1217,16 @@ onKey throws
 无 focused node：
 
 ```text
-handleKey(non-focus-navigation key)
-  -> handled = false
+handleKey(key)
+  -> capture/target/bubble 跳过
+  -> Tab/Shift+Tab fallback 或 handled=false
 ```
 
-focused node 没有 handler：
+focused node 无 function handler：
 
 ```text
 onKey === true
-  -> non-navigation key handled=false
+  -> target/bubble 未 handled；未 handled 的 Tab 仍走 fallback
 ```
 
 ## 17. 测试计划
@@ -1200,25 +1238,24 @@ createInteractionController exports expected API
 onFocusChange subscribes and unsubscribes listeners
 node onFocusChange fires with focused=true when node gains focus
 node onFocusChange fires with focused=false when node loses focus
-node onFocusChange does not make a node focusable without onKey
-refresh collects nodes with onKey=true
-refresh collects nodes with onKey=function
-refresh ignores nodes with onKey=false/null/undefined
-static onKey boolean controls focus membership
-dynamic onKey boolean controls focus membership after refresh
-dynamic onKey handler is used after refresh
+node onFocusChange does not make a node focusable without focusable/onKey
+refresh collects focusable nodes (focusable=true and legacy onKey)
+refresh ignores focusable=false nodes without legacy onKey
+static focusable / onKey boolean controls focus membership
+dynamic focusable / onKey controls focus membership after refresh
+dynamic onKey / onKeyCapture handler is used after refresh
 entry id uses explicit props.id when present
 entry id falls back to internal stable id when props.id is missing
 duplicate ids focus the first matching entry in tree order
-initial focus chooses first key-focus target
+initial focus chooses first focus target
 initial focus emits focusChange reason initial
-parent and child onKey nodes are both collected
-nested onKey nodes follow preorder traversal
-Tab moves focus next
+parent and child focusable nodes are both collected
+nested focusable nodes follow preorder traversal
+Tab moves focus next when unhandled
 Tab emits focusChange reason next
-Shift+Tab moves focus previous
+Shift+Tab moves focus previous when unhandled
 Shift+Tab emits focusChange reason previous
-Tab is not delivered to focused node onKey in MVP
+Tab delivered to onKey handler can return true and prevent fallback
 focus wraps around
 focus(id) moves focus to matching entry
 focus(id) emits focusChange reason programmatic
@@ -1229,15 +1266,18 @@ clearFocus emits focusChange reason clear
 getFocusedId returns current focused entry id
 removed focused node moves focus to next available
 removed focused node emits focusChange reason refresh
-focused node with onKey changing to false moves focus to next available
-onKey changing to false emits focusChange reason refresh
+node becoming non-focusable moves focus to next available
+non-focusable emits focusChange reason refresh
 programmatic focus does not persist as a long-term id intent after removal
-no key-focus targets keeps focus null
-focused node onKey receives non-navigation key events
-onKey returning true marks handled
-onKey returning false or undefined marks unhandled
+no focus targets keeps focus null
+focused node receives key events on target phase
+onKeyCapture runs on capture phase root to parent
+onKey bubbles parent to root when unhandled on target
+onKey returning true marks handled and stops propagation
+onKey returning false or undefined continues propagation
 onKey=true receives focus but has no handler
-unhandled child onKey does not bubble to parent
+onKeyCapture can handle Tab and prevent focus traversal
+stopPropagation without handled still runs Tab fallback
 dispose clears references and ignores later key events
 ```
 
@@ -1308,18 +1348,17 @@ npm test --workspace @bindtty/interaction
 状态：已完成。
 
 ```text
-1. 从 MountedNode tree 收集 onKey=true / onKey=function entries。
-2. 支持静态 onKey boolean。
-3. 支持静态 onKey function。
-4. 支持动态 BindingValue onKey。
-5. 支持 initial focus。
-6. 支持嵌套 onKey 元素，并按树序收集父子 focus target。
-7. 支持 explicit id 和内部临时 id。
-8. refresh 后保留仍存在且仍可聚焦的 focus。
-9. 支持 focusNext / focusPrevious。
-10. 支持 focus(id)、focus(node)、getFocusedId 和 clearFocus。
-11. 支持 onFocusChange 订阅和 focusChange reason。
-12. 支持节点级 onFocusChange。
+1. 从 MountedNode tree 收集 focusable entries（focusable=true 或 legacy onKey）。
+2. 支持 focusable 静态 / 动态 BindingValue。
+3. 支持 onKey / onKeyCapture 静态 function 与动态 BindingValue。
+4. 支持 initial focus。
+5. 支持嵌套 focusable 元素，并按树序收集父子 focus target。
+6. 支持 explicit id 和内部临时 id。
+7. refresh 后保留仍存在且仍 focusable 的 focus。
+8. 支持 focusNext / focusPrevious。
+9. 支持 focus(id)、focus(node)、getFocusedId 和 clearFocus。
+10. 支持 onFocusChange 订阅和 focusChange reason。
+11. 支持节点级 onFocusChange。
 ```
 
 验收：
@@ -1333,12 +1372,12 @@ focus traversal 单元测试通过。
 状态：已完成。
 
 ```text
-1. Tab / Shift+Tab 移动 focus。
-2. 非导航键派发给当前 focused node handler。
+1. Tab / Shift+Tab 与其他键一样先 capture → target → bubble。
+2. 未 handled 时 Tab / Shift+Tab 执行 focusNext / focusPrevious fallback。
 3. onKey=true 无 handler，返回 handled=false。
-4. handler 返回 true 时 handled=true。
-5. handler 返回 false / undefined 时 handled=false。
-6. 不做 bubbling / capture。
+4. handler 返回 true 时 handled=true，并 stopPropagation。
+5. handler 返回 false / undefined 时继续下一阶段或 fallback。
+6. onKeyCapture 使用 InteractionKeyListener（不含 boolean legacy）。
 ```
 
 验收：
@@ -1406,13 +1445,13 @@ npm test
 ```text
 1. 独立包可构建、可测试。
 2. App 能把 TerminalKeyEvent 交给 interaction。
-3. onKey=true / onKey=function 节点可进入 focus list。
-4. onKey 支持静态值和动态 BindingValue。
-5. Tab / Shift+Tab 可切换 focus。
+3. focusable / legacy onKey 节点可进入 focus list。
+4. onKey / onKeyCapture 支持静态值和动态 BindingValue。
+5. Tab / Shift+Tab 在未 handled 时可切换 focus。
 6. controller 支持 focus id、focus node、getFocusedId 和 clearFocus。
 7. controller 支持 onFocusChange 和 focusChange reason。
 8. 节点级 onFocusChange 可用于组件根据自身 focus 状态更新样式。
-9. 非导航键可派发给当前 focused node 的 onKey function。
+9. key event 沿 focused path 做 capture → target → bubble 派发。
 10. focus 变化能触发 repaint。
 11. stop / dispose 不泄漏 key listener。
 12. e2e 覆盖真实 TSX + createApp + createNodeTerminal + key dispatch。
@@ -1423,17 +1462,14 @@ npm test
 ```text
 1. 具体 button / input / select 控件实现。
 2. 独立的 onFocus / onBlur。
-3. autoFocus。
-4. mounted lifecycle hook。
-5. mouse。
-6. paste。
-7. IME preedit。
-8. selection。
-9. nested focus scopes。
-10. roving focus。
-11. event bubbling / capture。
-12. command mode / global shortcuts。
-13. React-style hooks。
+3. mounted lifecycle hook。
+4. mouse。
+5. paste。
+6. IME preedit。
+7. selection。
+8. nested focus scopes / roving focus。
+9. command mode / global shortcuts。
+10. React-style hooks。
 ```
 
 ## 20. 与 Hooks 的关系
