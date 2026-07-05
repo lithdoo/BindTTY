@@ -165,8 +165,7 @@ export function createInteractionController(): InteractionController {
     }
 
     return {
-      id: entry.id,
-      node: entry.node
+      id: entry.id
     };
   }
 
@@ -184,7 +183,6 @@ export function createInteractionController(): InteractionController {
     if (typeof listener === "function") {
       listener({
         id: entry.id,
-        node: entry.node,
         focused,
         reason
       });

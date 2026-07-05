@@ -202,7 +202,7 @@ packages/interaction/
 
 ```text
 types.ts
-  InteractionController、InteractionResult、InteractionKeyHandler、KeyFocusEntry、focus change types。
+  InteractionController、InteractionResult、InteractionKeyHandler、InteractionKeyListener、focus change types。
 
 controller.ts
   收集 key-focus targets、focus traversal、focus restore、key dispatch、InteractionController 实现。
@@ -354,7 +354,6 @@ export type InteractionFocusChangeReason =
 
 export interface InteractionFocusSnapshot {
   id: string;
-  node: MountedElementNode;
 }
 
 export interface InteractionFocusChangeEvent {
@@ -365,7 +364,6 @@ export interface InteractionFocusChangeEvent {
 
 export interface InteractionNodeFocusChangeEvent {
   id: string;
-  node: MountedElementNode;
   focused: boolean;
   reason: InteractionFocusChangeReason;
 }
@@ -374,6 +372,8 @@ export type InteractionFocusChangeListener = (
   event: InteractionFocusChangeEvent
 ) => void;
 ```
+
+`onFocusChange` / `InteractionFocusChangeEvent` 不暴露 `MountedElementNode`；需要节点引用请使用 `id` 或 controller 内部 API（不推荐应用层）。
 
 语义：
 
@@ -461,28 +461,20 @@ export interface InteractionResult {
 - `focusChange` 在本次操作改变 focus 时返回，同一事件也会通知 `onFocusChange` listeners。
 - 第一版 App 可以收到 dirty nodes 后直接 repaint。
 
-### 7.4 KeyFocusEntry
+### 7.4 Focus entry（controller 内部）
+
+Focus list 条目为 `controller.ts` 内部 `FocusEntry`，不作为公开 API 导出：
 
 ```ts
-export interface KeyFocusEntry {
+interface FocusEntry {
   id: string;
   node: MountedElementNode;
   order: number;
-  handler: InteractionKeyHandler | null;
+  path: MountedElementNode[];
 }
 ```
 
-`handler` 的来源：
-
-```text
-onKey === true:
-  handler = null
-
-typeof onKey === "function":
-  handler = onKey
-```
-
-`id` 的来源：
+`path` 用于 focus change dirty marking 与 key event 传播，仅内部使用。
 
 ```text
 1. 如果 mounted element props.id 是 string / number，使用 String(props.id)。

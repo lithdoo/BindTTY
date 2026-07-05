@@ -58,7 +58,6 @@ function key(
 function focusEvent(focused: boolean): InteractionNodeFocusChangeEvent {
   return {
     id: "input",
-    node: {} as never,
     focused,
     reason: "programmatic"
   };

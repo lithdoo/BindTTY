@@ -20,6 +20,7 @@ export const interactionPropsView = (
   <box
     id="panel"
     onKey={(event) => event.name === "return"}
+    onKeyCapture={(event) => event.name === "escape"}
     onFocusChange={(event) => {
       Boolean(event.focused);
     }}
@@ -34,6 +35,9 @@ export const interactionPropsView = (
     <text value="Focusable" color="green" />
   </box>
 );
+
+// @ts-expect-error onKeyCapture does not accept boolean legacy shorthand.
+export const invalidOnKeyCaptureBoolean = <box onKeyCapture={true} />;
 
 // @ts-expect-error text content must use value prop, not children.
 export const invalidTextChild = <text value="Hello">Hello</text>;

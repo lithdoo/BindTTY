@@ -29,7 +29,6 @@ type InteractionFocusChangeReason =
 
 interface InteractionNodeFocusChangeEvent {
   id: string;
-  node: unknown;
   focused: boolean;
   reason: InteractionFocusChangeReason;
 }
@@ -49,13 +48,14 @@ interface BindTTYKeyEvent {
 }
 
 type InteractionKeyHandler = (event: BindTTYKeyEvent) => boolean | void;
+type InteractionKeyListener = InteractionKeyHandler | null | undefined;
 type InteractionKeyBinding = boolean | InteractionKeyHandler | null | undefined;
 
 interface IntrinsicInteractionProps {
   id?: BindingValue<string | number>;
   ref?: MountedElementRefHandler | null | undefined;
   focusable?: BindingValue<boolean>;
-  onKeyCapture?: BindingValue<InteractionKeyBinding>;
+  onKeyCapture?: BindingValue<InteractionKeyListener>;
   onKey?: BindingValue<InteractionKeyBinding>;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }

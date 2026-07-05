@@ -16,8 +16,7 @@ import type {
   InteractionFocusChangeEvent,
   InteractionKeyHandler,
   InteractionNodeFocusChangeEvent,
-  InteractionResult,
-  KeyFocusEntry
+  InteractionResult
 } from "@bindtty/interaction";
 import type { TerminalKeyEvent } from "@bindtty/terminal";
 import type {
@@ -115,18 +114,15 @@ function reasons(
 
 test("exports expected interaction types", () => {
   const controller: InteractionController = createInteractionController();
-  const node = createMountedBox();
   const focusEvent: InteractionFocusChangeEvent = {
     previous: null,
     current: {
-      id: "box",
-      node
+      id: "box"
     },
     reason: "initial"
   };
   const nodeFocusEvent: InteractionNodeFocusChangeEvent = {
     id: "box",
-    node,
     focused: true,
     reason: "initial"
   };
@@ -134,12 +130,6 @@ test("exports expected interaction types", () => {
     assert.equal(event.input, "x");
     assert.equal(event.phase, "target");
     return true;
-  };
-  const entry: KeyFocusEntry = {
-    id: "box",
-    node,
-    order: 0,
-    path: [node]
   };
   const result: InteractionResult = {
     handled: false,
@@ -149,10 +139,6 @@ test("exports expected interaction types", () => {
 
   assert.equal(typeof controller.refresh, "function");
   assert.equal(nodeFocusEvent.focused, true);
-  assert.equal(
-    entry.path.length,
-    1
-  );
   assert.equal(result.focusChange?.reason, "initial");
   assert.equal(typeof handler, "function");
 });
@@ -176,8 +162,7 @@ test("refresh collects onKey=true and chooses initial focus", () => {
     focusChange: {
       previous: null,
       current: {
-        id: "first",
-        node: first
+        id: "first"
       },
       reason: "initial"
     }

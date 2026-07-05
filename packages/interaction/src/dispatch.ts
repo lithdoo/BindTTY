@@ -4,6 +4,7 @@ import { isShiftTabKey, isTabKey } from "./keyboard.js";
 import type {
   BindTTYKeyEvent,
   InteractionKeyBinding,
+  InteractionKeyListener,
   InteractionResult,
   KeyEventPhase
 } from "./types.js";
@@ -26,14 +27,16 @@ export function createKeyEvent(raw: TerminalKeyEvent): BindTTYKeyEvent {
   return event;
 }
 
-export function resolveKeyBinding(
-  node: MountedElementNode,
-  phase: KeyEventPhase
-): InteractionKeyBinding {
-  const value =
-    phase === "capture" ? node.props.onKeyCapture : node.props.onKey;
+export function resolveKeyCaptureBinding(
+  node: MountedElementNode
+): InteractionKeyListener {
+  return node.props.onKeyCapture as InteractionKeyListener;
+}
 
-  return value as InteractionKeyBinding;
+export function resolveKeyBinding(
+  node: MountedElementNode
+): InteractionKeyBinding {
+  return node.props.onKey as InteractionKeyBinding;
 }
 
 export function dispatchTo(
@@ -43,7 +46,10 @@ export function dispatchTo(
 ): boolean {
   event.phase = phase;
 
-  const binding = resolveKeyBinding(node, phase);
+  const binding =
+    phase === "capture"
+      ? resolveKeyCaptureBinding(node)
+      : resolveKeyBinding(node);
 
   if (binding === true || typeof binding !== "function") {
     return false;

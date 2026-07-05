@@ -189,12 +189,14 @@ export interface IntrinsicInteractionProps {
 
   focusable?: BindingValue<boolean>;
 
-  onKeyCapture?: BindingValue<InteractionKeyBinding>;
+  onKeyCapture?: BindingValue<InteractionKeyListener>;
   onKey?: BindingValue<InteractionKeyBinding>;
 
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }
 ```
+
+`InteractionKeyListener` 为 handler / null / undefined，不含 `boolean` legacy shorthand；`onKey` 仍保留 `boolean`。
 
 ### 4.2 Key event
 
@@ -1118,6 +1120,7 @@ focusedPath:
 
 onKeyCapture:
   root -> parent 捕获。
+  类型为 InteractionKeyListener（handler / null / undefined），不接受 boolean。
 
 onKey:
   target + parent -> root 冒泡。
@@ -1138,6 +1141,9 @@ fallback:
 
 MountedElementNode:
   runtime internal，不作为用户稳定 API。
+
+onFocusChange / InteractionFocusChangeEvent:
+  不暴露 MountedElementNode；用户事件仅含 id、focused、reason。
 ```
 
 ## 18. 一句话总结

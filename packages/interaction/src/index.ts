@@ -16,9 +16,9 @@ export type {
   InteractionFocusSnapshot,
   InteractionKeyBinding,
   InteractionKeyHandler,
+  InteractionKeyListener,
   InteractionNodeFocusChangeEvent,
   InteractionResult,
   IntrinsicInteractionProps,
-  KeyEventPhase,
-  KeyFocusEntry
+  KeyEventPhase
 } from "./types.js";
