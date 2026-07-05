@@ -1,5 +1,7 @@
 # BindTTY 文档
 
+> **文档索引页**：按阅读目标查入口，并列出 `doc/` 下全部活跃文档。首次使用或需要 copy-paste 示例请先看 **[快速开始（首页）](/)**。
+
 项目主文档：[仓库 README](https://github.com/lithdoo/BindTTY/blob/main/README.md)。维护规范：[CONVENTIONS.md](./CONVENTIONS.md)。
 
 ## 读者路径

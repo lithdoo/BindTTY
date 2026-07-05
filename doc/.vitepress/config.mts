@@ -1,10 +1,16 @@
 import { defineConfig } from "vitepress";
 
+const siteUrl = "https://lithdoo.github.io/BindTTY/";
+const siteTitle = "BindTTY 文档";
+const siteDescription =
+  "面向 MVVM + signal 的 TypeScript/TSX 终端 UI 框架";
+const ogImage = `${siteUrl}favicon.png`;
+
 export default defineConfig({
   base: "/BindTTY/",
   lang: "zh-CN",
   title: "BindTTY",
-  description: "面向 MVVM + signal 的 TypeScript/TSX 终端 UI 框架",
+  description: siteDescription,
   srcExclude: ["archive/**", "redirects/**"],
   rewrites: {
     "redirects/TEXT_INPUT.md": "widgets/TEXT_INPUT.md",
@@ -140,6 +146,18 @@ export default defineConfig({
   head: [
     ["link", { rel: "icon", href: "/BindTTY/favicon.ico", sizes: "any" }],
     ["link", { rel: "icon", type: "image/png", href: "/BindTTY/favicon.png" }],
-    ["link", { rel: "apple-touch-icon", href: "/BindTTY/favicon.png" }]
+    ["link", { rel: "apple-touch-icon", href: "/BindTTY/favicon.png" }],
+    ["link", { rel: "canonical", href: siteUrl }],
+    ["meta", { property: "og:site_name", content: siteTitle }],
+    ["meta", { property: "og:title", content: siteTitle }],
+    ["meta", { property: "og:description", content: siteDescription }],
+    ["meta", { property: "og:type", content: "website" }],
+    ["meta", { property: "og:url", content: siteUrl }],
+    ["meta", { property: "og:image", content: ogImage }],
+    ["meta", { property: "og:locale", content: "zh_CN" }],
+    ["meta", { name: "twitter:card", content: "summary" }],
+    ["meta", { name: "twitter:title", content: siteTitle }],
+    ["meta", { name: "twitter:description", content: siteDescription }],
+    ["meta", { name: "twitter:image", content: ogImage }]
   ]
 });

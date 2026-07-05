@@ -23,6 +23,8 @@ features:
     details: createApp + createNodeTerminal 支持 raw mode、焦点与键盘派发。
 ---
 
+> 本站**首页**聚焦安装、配置与最小示例，适合首次上手。完整读者路径、包 / 规范 / 控件目录见 **[文档索引](/README)**。
+
 ## 安装
 
 ```bash
