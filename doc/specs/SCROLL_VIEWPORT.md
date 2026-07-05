@@ -11,7 +11,7 @@
 
 ---
 
-## 本章导航
+::: info 本章导航
 
 | § | 章节 | § | 章节 |
 | --- | --- | --- | --- |
@@ -20,7 +20,9 @@
 | [3](#3-分层职责) | 分层职责 | [9](#9-分阶段开发计划) | 分阶段计划 |
 | [4](#4-数据流) | 数据流 | [10](#10-测试策略) | 测试策略 |
 | [5](#5-稳定接口契约) | 接口契约 | [11](#11-示例应用m7-完成后) | 示例应用 |
-| [6](#6-layout-设计要点) | Layout | [历史](#10-历史计划) | 历史计划 |
+| [6](#6-layout-设计要点) | Layout | [12](#12-历史计划) | 历史计划 |
+
+:::
 
 ## 1. 范围
 
@@ -711,6 +713,6 @@ const app = createApp(
 用于验证 M7 端到端体验，并作为 Quick Start 素材。
 
 
-## 10. 历史计划
+## 12. 历史计划
 
 见 [archive/plans/M7_SCROLL_VIEWPORT_PLAN.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/plans/M7_SCROLL_VIEWPORT_PLAN.md)。

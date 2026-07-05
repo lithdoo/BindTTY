@@ -20,13 +20,15 @@ signal 更新触发对应节点变化
 
 ---
 
-## 本章导航
+::: info 本章导航
 
 - **背景与分层**：[§1 设计目标](#1-设计目标) · [§2 VNode 模型取舍](#2-为什么不直接采用-react-vnode-模型) · [§3 核心分层](#3-核心分层) · [§4 总体结构](#4-总体结构) · [§5 ViewTemplate](#5-viewtemplate-的定位)
 - **绑定与控件**：[§6 BindingValue](#6-bindingvalue) · [§7 Text](#7-text-设计) · [§8 Component](#8-component-的定位) · [§9 Control Node](#9-control-node) · [§10 用户写法](#10-用户写法规范)
 - **Schema 与 MountedNode**：[§11 Element Schema](#11-element-schema) · [§12 TSX Normalize](#12-tsx-normalize-规则) · [§13 MountedNode](#13-mountednode-的定位) · [§14 ElementDefinition](#14-elementdefinition-与基础控件能力) · [§15 Control Runtime](#15-control-runtime)
 - **运行时与输出**：[§16 Dirty](#16-dirty-标记原则) · [§17 Layout/Paint/Input](#17-layout-paint-input) · [§18 Dispose](#18-dispose-机制) · [§19 Component 更新](#19-component-更新模型) · [§20 包结构](#20-monorepo-包结构)
 - **范围与展望**：[§21 MVP 范围](#21-mvp-范围) · [§22 后续扩展](#22-后续扩展方向) · [§23 总结](#23-总结)
+
+:::
 
 ---
 

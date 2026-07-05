@@ -17,6 +17,21 @@
 - [RUNTIME.md](./RUNTIME.md) — Template → MountedNode、binding、dirty、scheduler
 - [JSX_RUNTIME.md](./JSX_RUNTIME.md) — TSX → ViewTemplate
 
+::: info 本章导航
+
+| § | 章节 | § | 章节 |
+| --- | --- | --- | --- |
+| [1](#1-背景) | 背景 | [9](#9-输入模型) | 输入模型 |
+| [2](#2-目标) | 目标 | [10](#10-与-createapp-的关系) | createApp |
+| [3](#3-包归属) | 包归属 | [11](#11-与未来-widget-input-的关系) | Widget/Input |
+| [4](#4-包结构) | 包结构 | [12](#12-错误处理) | 错误处理 |
+| [5](#5-对外-api) | 对外 API | [13](#13-测试策略) | 测试策略 |
+| [6](#6-ansi-控制序列) | ANSI | [14](#14-e2e-策略) | E2E |
+| [7](#7-生命周期) | 生命周期 | [15](#15-落地阶段) | 落地阶段 |
+| [8](#8-viewport-与-resize) | Viewport | [16](#16-当前结论) | 当前结论 |
+
+:::
+
 ## 1. 背景
 
 APP 主链路已打通，支持 **stdout 模式**与 **terminal 模式**：

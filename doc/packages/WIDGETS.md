@@ -21,6 +21,20 @@ TSX
 - [JSX_RUNTIME.md](./JSX_RUNTIME.md) — TSX → ViewTemplate
 - [VNODE.md](./VNODE.md) — Template / MountedNode 数据结构
 
+::: info 本章导航
+
+| § | 章节 | § | 章节 |
+| --- | --- | --- | --- |
+| [1](#1-目标) | 目标 | [8](#8-与-intrinsic-button-input-的关系) | vs intrinsic |
+| [2](#2-包归属) | 包归属 | [9](#9-包结构) | 包结构 |
+| [3](#3-核心模型) | 核心模型 | [10](#10-jsx-与导出方式) | JSX 导出 |
+| [4](#4-props-分类) | Props | [11](#11-测试计划) | 测试计划 |
+| [5](#5-focus-与-disabled) | Focus | [12](#12-分阶段落地) | 分阶段落地 |
+| [6](#6-focused-样式) | Focused 样式 | [13](#13-完成标准) | 完成标准 |
+| [7](#7-第一批-widgets) | 第一批 Widgets | [14](#14-后续方向) | 后续方向 |
+
+:::
+
 ## 1. 目标
 
 `@bindtty/widgets` 的目标是把常见 TUI 控件语义封装成可复用组件。
@@ -316,7 +330,7 @@ ButtonProps / TextInputProps 等类型定义直接内联在各组件文件中（
 
 ## 10. JSX 与导出方式
 
-**Canonical 导入**：控件与类型一律从 `@bindtty/widgets` 导入；`bindtty` **不** re-export widgets（自 alpha.2 起）。
+**Canonical 导入**：控件与类型一律从 `@bindtty/widgets` 导入；`bindtty` **不** re-export widgets。
 
 ```tsx
 import { createApp, createSignal } from "bindtty";
@@ -411,8 +425,8 @@ npm test --workspace @bindtty/widgets
 状态：已完成。
 
 ```text
-1. bindtty 集成测试通过 devDependency 引用 @bindtty/widgets（alpha.2 起 runtime 不依赖 widgets）。
-2. 应用从 @bindtty/widgets 直接导入（alpha.2 起 bindtty 不再 re-export）。
+1. bindtty 集成测试通过 devDependency 引用 @bindtty/widgets（runtime 不依赖 widgets）。
+2. 应用从 @bindtty/widgets 直接导入。
 3. 补 bindtty app integration tests。
 ```
 
@@ -461,7 +475,7 @@ npm test
 3. TextInput 支持受控 value、onChange(nextValue)、onSubmit(value)。
 4. TextInput 支持 printable char、Backspace、Delete、Left / Right、Home / End。
 5. TextInput 使用 focusStyle="none"，cursor 样式由组件内部手动实现。
-6. bindtty 顶层 re-export TextInput。
+6. 应用从 @bindtty/widgets 导入 TextInput。
 7. 补 widgets 单元测试、bindtty app 集成测试、e2e 测试。
 ```
 
@@ -494,7 +508,7 @@ npm test
 13. TextInput 键盘编辑：字符插入、Backspace、Delete、方向键、Home、End。
 14. TextInput placeholder / disabled / focus 生命周期。
 15. TextInput 单元测试 + App 集成 + E2E 全覆盖。
-16. 应用显式安装 @bindtty/widgets 并从该包导入（alpha.2 解耦；历史阶段曾由 bindtty re-export）。
+16. 应用显式安装 @bindtty/widgets 并从该包导入。
 17. VScrollView 受控 offset、clip、键盘滚动已覆盖。
 18. List 作为 VScrollView + forTemplate 语法糖已覆盖。
 19. VScrollView `stickToBottom` 与 `showScrollbar`、HScrollView、ScrollView 双轴已覆盖（见 [SCROLL.md](../widgets/SCROLL.md)）。

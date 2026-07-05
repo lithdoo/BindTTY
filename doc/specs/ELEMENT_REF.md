@@ -25,7 +25,7 @@
 3. hooks / effect / watch。
 4. React ref object / forwardRef 语义。
 
-## 本章导航
+::: info 本章导航
 
 | § | 章节 | § | 章节 |
 | --- | --- | --- | --- |
@@ -37,6 +37,8 @@
 | [6](#6-生命周期时序) | 生命周期 | [14](#14-风险与约束) | 风险 |
 | [7](#7-layout-callback-语义) | Layout callback | [15](#15-推荐结论) | 推荐结论 |
 | [8](#8-vscrollview-数据流) | VScrollView | | |
+
+:::
 
 ## 1. 背景问题
 

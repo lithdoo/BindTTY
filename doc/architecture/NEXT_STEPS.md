@@ -9,6 +9,21 @@
 
 ---
 
+::: info 本章导航
+
+| § | 章节 |
+| --- | --- |
+| [1. 当前判断](#1-当前判断) | Alpha hardening 阶段判断 |
+| [2. 已完成项](#2-已完成项勿再列为阻塞) | 勿再列为阻塞 |
+| [3. 当前主要缺口](#3-当前主要缺口) | 开放缺口 |
+| [4. 推荐推进路线](#4-推荐推进路线) | 推进路线 |
+| [5. Scroll/List 产品化](#5-scroll-list-产品化要点) | Scroll/List |
+| [6. 版本目标](#6-版本目标修订) | 版本目标 |
+| [7. 长期原则](#7-长期原则) | 长期原则 |
+| [8. Issue 对照](#8-issue-对照供-milestone-拆分) | Milestone 拆分 |
+
+:::
+
 ## 1. 当前判断
 
 BindTTY 已完成 M1–M7 主链路，进入 **0.1 alpha hardening** 阶段。核心目标不再是补 MVP，而是：
@@ -36,7 +51,7 @@ TSX → ViewTemplate → MountedNode → LayoutNode → Frame → ANSI Patch
 | M1–M7 主链路 | ✅ | [ROADMAP.md](./ROADMAP.md) |
 | TextInput display-column 输入窗口 | ✅ | [TEXT_INPUT.md](../widgets/TEXT_INPUT.md) §1.1、`packages/widgets/src/form/text-input.ts` |
 | display-width / CJK / emoji | ✅ | [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) |
-| npm 发布元数据 | ✅ | `LICENSE`、`publishConfig`、`scripts/publish-packages.mjs`，版本 `0.1.0-alpha.1` |
+| npm 发布元数据 | ✅ | `LICENSE`、`publishConfig`、`scripts/publish-packages.mjs`，版本 `0.1.0-alpha.2` |
 | `bindtty` JSX 转发 | ✅ | `packages/bindtty` 导出 `./jsx-runtime`、`./jsx-dev-runtime` |
 | `@bindtty/signal` peer 单实例 | ✅ | `bindtty` / `widgets`：`peerDependencies` + `dependencies` |
 | Yoga flex 基础 props | ✅ | `gap`、`flexWrap`、`alignItems`、`justifyContent`、`flexGrow`、`flexShrink` |
@@ -63,7 +78,7 @@ real PTY 专项 job（Windows / WSL）可后续单独添加，不阻塞主 CI。
 
 ### 3.2 npm 发布
 
-**已完成（2026-07）**：11 包 `0.1.0-alpha.1` 已发布，tag `alpha`。
+**已完成（2026-07）**：11 包 `0.1.0-alpha.2` 首版公开发布，tag `alpha`。
 
 ```bash
 npm install bindtty@alpha
@@ -152,26 +167,15 @@ import { Button, List, TextInput } from "@bindtty/widgets";
 
 ## 6. 版本目标（修订）
 
-### 0.1.0-alpha.1（当前）
+### 0.1.0-alpha.2（当前）
 
 **已完成：**
 
-- npm 发布元数据、LICENSE、publish 脚本
+- npm 发布元数据、LICENSE、publish 脚本；11 包首版公开发布（tag `alpha`）
+- GitHub Actions CI
 - TextInput display-column 输入窗口
-- `bindtty` JSX runtime 转发
-
-**待完成：**
-
-- CI
-- 实际 `npm publish`
-- 顶层 API 文档冻结（[bindtty README](https://github.com/lithdoo/BindTTY/blob/main/packages/bindtty/README.md)）
-
-### 0.1.0-alpha.2（建议下一版）
-
-- GitHub Actions CI 绿
-- 全部包发布到 npm
-- `bindtty` 顶层 API 决策落地（signal re-export 已完成）
-- ROADMAP / 文档去漂移
+- `bindtty` JSX runtime 转发；顶层 API 冻结（widgets 见 `@bindtty/widgets`）
+- ROADMAP / 文档去漂移（进行中）
 
 ### 0.1.0-beta.0
 

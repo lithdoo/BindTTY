@@ -20,7 +20,7 @@
     "gen:layout-props": "npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/vnode && npm run build --workspace @bindtty/layout && node scripts/gen-layout-props-matrix.mjs",
     "check:layout-props": "npm run gen:layout-props && git diff --exit-code -- doc/specs/LAYOUT_PROPS.md",
     "docs:dev": "vitepress dev doc",
-    "docs:build": "npm run gen:layout-props && vitepress build doc",
+    "docs:build": "npm run gen:layout-props && vitepress build doc && node scripts/check-doc-chapter-nav.mjs",
     "docs:preview": "vitepress preview doc"
   },
   "devDependencies": {

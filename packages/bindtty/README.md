@@ -82,23 +82,6 @@ import { Button, TextInput } from "@bindtty/widgets";
   4. 应用 package.json overrides: { "@bindtty/signal": "0.1.0-alpha.2" }
 ```
 
-## Breaking change（alpha.1 → alpha.2）
-
-`bindtty` **不再** re-export `@bindtty/widgets`。控件须显式安装并从 `@bindtty/widgets` 导入：
-
-```ts
-// Before (alpha.1)
-import { createApp, Button } from "bindtty";
-
-// After (alpha.2)
-import { createApp } from "bindtty";
-import { Button } from "@bindtty/widgets";
-```
-
-```bash
-npm install bindtty @bindtty/widgets
-```
-
 ## 快速开始
 
 ```ts

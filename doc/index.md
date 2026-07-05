@@ -87,21 +87,6 @@ const app = createApp(view, { terminal });
 app.start();
 ```
 
-## 迁移（alpha.1 → alpha.2）
-
-`bindtty` 不再 re-export widgets，控件从 `@bindtty/widgets` 导入：
-
-```tsx
-// 之前
-import { createApp, Button } from "bindtty";
-
-// 之后
-import { createApp } from "bindtty";
-import { Button } from "@bindtty/widgets";
-```
-
-`ScrollView` 已重命名为 `VScrollView`，详见 [widgets/SCROLL](/widgets/SCROLL)。
-
 ## 下一步
 
 - [架构设计](/architecture/DESIGN) — 四层视图模型

@@ -9,14 +9,14 @@
 - M1–M7 主链路（TSX → mount → layout → paint → ANSI diff → terminal → interaction → widgets）
 - TextInput grapheme-aware 编辑与 **display-column 输入窗口**（`overflow: "clip"` + `scrollX`；见 [doc/widgets/TEXT_INPUT.md](doc/widgets/TEXT_INPUT.md) §1.1）
 - display-width / 宽字符全链路（见 [doc/specs/DISPLAY_WIDTH.md](doc/specs/DISPLAY_WIDTH.md)）
-- npm 发布工程配置：`0.1.0-alpha.1`、LICENSE、`scripts/publish-packages.mjs`（commit `8b03b27`）
+- npm 发布工程配置：`0.1.0-alpha.2`、LICENSE、`scripts/publish-packages.mjs`（commit `8b03b27`）
 - `bindtty` JSX runtime 转发（`jsxImportSource: "bindtty"`）
 - ROADMAP 历史 7 包 / 10 包模型移入 [doc/archive/plans/PACKAGE_MODEL_HISTORY.md](doc/archive/plans/PACKAGE_MODEL_HISTORY.md)
 - `bindtty` 顶层公共 API 冻结：`createApp`、`createSignal` / `computed` / `effect`、JSX 转发（widgets 见 `@bindtty/widgets`）
 - GitHub Actions CI（`.github/workflows/ci.yml`：`npm ci` / `build` / `test` / `build:examples`）
-- npm 发布：`0.1.0-alpha.1` 已发布至 npm（11 包，tag `alpha`）
-- `ScrollView` → `VScrollView` + 新增 `HScrollView`（breaking rename）
-- `bindtty` 与 `@bindtty/widgets` 解耦（alpha.2）：bindtty 不再 re-export / 依赖 widgets
+- npm 首版公开发布：`0.1.0-alpha.2`（11 包，tag `alpha`）
+- `VScrollView` / `HScrollView` / 双轴 `ScrollView` 滚动组件模型
+- `bindtty` 与 `@bindtty/widgets` 分包：`bindtty` 不 re-export widgets
 
 ---
 
@@ -25,7 +25,7 @@
 - [x] Layout prop matrix：`minWidth` / `minHeight` / `maxWidth` / `maxHeight`
 - [x] Layout prop matrix：edge `padding*`、`margin*`
 - [x] VScrollView `stickToBottom`（log viewer / chat；原 `ScrollView`）
-- [x] `ScrollView` → `VScrollView` 重命名 + `HScrollView`（breaking，alpha.2）
+- [x] `VScrollView` / `HScrollView` / 双轴 `ScrollView`
 - [x] Layout 支持矩阵文档与 `layout-props.ts` 对齐（[doc/specs/LAYOUT_PROPS.md](doc/specs/LAYOUT_PROPS.md)）
 
 ---

@@ -9,6 +9,21 @@
 - [DESIGN.md](../architecture/DESIGN.md) — 视图树总体设计
 - [TUI_IMPLEMENTATION_PLAN.md](../architecture/ROADMAP.md) — 实现计划与里程碑
 
+::: info 本章导航
+
+| § | 章节 | § | 章节 |
+| --- | --- | --- | --- |
+| [1](#1-阅读路径) | 阅读路径 | [9](#9-dirty-模型) | Dirty 模型 |
+| [2](#2-当前目标) | 当前目标 | [10](#10-dispose-机制) | dispose |
+| [3](#3-当前非目标) | 非目标 | [11](#11-mountednode-类型使用) | MountedNode |
+| [4](#4-包位置) | 包位置 | [12](#12-错误处理) | 错误处理 |
+| [5](#5-低层输入与输出) | 输入输出 | [13](#13-当前测试计划) | 测试计划 |
+| [6](#6-已实现支持范围) | 支持范围 | [14](#14-当前-mount-runtime-验收标准) | 验收标准 |
+| [7](#7-已实现-mount-规则) | mount 规则 | [15](#15-for-runtime-详细语义) | For runtime |
+| [8](#8-binding-runtime) | Binding | [16](#16-runtimeroot-与-scheduler) | Scheduler |
+
+:::
+
 ## 1. 阅读路径
 
 本文按阶段组织：

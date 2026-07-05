@@ -48,7 +48,7 @@ let out = body
   .replaceAll("[LAYOUT.md](./LAYOUT.md)", "[LAYOUT.md](../packages/LAYOUT.md)")
   .replaceAll("[E2E_TESTING.md](./E2E_TESTING.md)", "[E2E.md](../testing/E2E.md)");
 
-out += `\n\n## 10. 历史计划\n\n见 [archive/plans/M7_SCROLL_VIEWPORT_PLAN.md](../archive/plans/M7_SCROLL_VIEWPORT_PLAN.md)。\n`;
+out += `\n\n## 12. 历史计划\n\n见 [archive/plans/M7_SCROLL_VIEWPORT_PLAN.md](../archive/plans/M7_SCROLL_VIEWPORT_PLAN.md)。\n`;
 
 fs.writeFileSync(path.join(root, "doc/specs/SCROLL_VIEWPORT.md"), header + out);
 console.log("wrote SCROLL_VIEWPORT.md");

@@ -8,6 +8,20 @@
 
 相关文档：[@bindtty/e2e README](https://github.com/lithdoo/BindTTY/blob/main/packages/e2e/README.md) · [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md) §8 · [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) §9
 
+::: info 本章导航
+
+| 章节 | 内容 |
+| --- | --- |
+| [1. 目标与范围](#1-目标与范围) | E2E 目标 |
+| [为什么 fake stdout / stdin](#为什么-fake-stdout-stdin) | 测试 harness 选型 |
+| [包结构](#包结构) | mock / real 包结构 |
+| [当前测试场景](#当前测试场景) | 已有场景 |
+| [后续阶段](#后续阶段) | 规划阶段 |
+| [判断标准](#判断标准) | 通过标准 |
+| [5. Scroll / Viewport 场景](#5-scroll-viewport-场景) | Scroll 场景 |
+
+:::
+
 ## 1. 目标与范围
 
 E2E 测试验证公开包组合后的真实使用链路，而不是重复各包内部单元测试。

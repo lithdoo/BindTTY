@@ -24,6 +24,19 @@ widget props → intrinsic element (box + text + hstack)
 - [VNODE.md](../packages/VNODE.md) — Template / MountedNode 数据结构
 - [JSX_RUNTIME.md](../packages/JSX_RUNTIME.md) — TSX → ViewTemplate
 
+::: info 本章导航
+
+| § | 章节 | § | 章节 |
+| --- | --- | --- | --- |
+| [1](#1-目标) | 目标 | [7](#7-文件结构) | 文件结构 |
+| [2](#2-props-设计) | Props | [8](#8-测试计划) | 测试计划 |
+| [3](#3-渲染结构) | 渲染结构 | [9](#9-依赖方向) | 依赖方向 |
+| [4](#4-内部状态) | 内部状态 | [10](#10-mvp-边界) | MVP 边界 |
+| [5](#5-按键处理) | 按键处理 | [11](#11-实现步骤) | 实现步骤 |
+| [6](#6-focus-与-disabled) | Focus | | |
+
+:::
+
 ## 1. 目标
 
 TextInput 提供一个可控的单行文本编辑控件。

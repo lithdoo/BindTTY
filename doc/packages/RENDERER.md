@@ -11,6 +11,20 @@
 - [DESIGN.md](../architecture/DESIGN.md) — 视图树总体设计
 - [TUI_IMPLEMENTATION_PLAN.md](../architecture/ROADMAP.md) — 实现计划与里程碑
 
+::: info 本章导航
+
+| § | 章节 | § | 章节 |
+| --- | --- | --- | --- |
+| [1](#1-目标) | 目标 | [8](#8-样式-props) | 样式 Props |
+| [2](#2-包位置) | 包位置 | [9](#9-diff-与-ansi-patch) | Diff/ANSI |
+| [3](#3-输入与输出) | 输入输出 | [10](#10-dirty-模型对接) | Dirty |
+| [4](#4-与其它模块的接口调用) | 模块接口 | [11](#11-terminal-边界) | Terminal |
+| [5](#5-frame-模型) | Frame | [12](#12-mvp-落地阶段) | MVP 落地 |
+| [6](#6-paint-规则) | Paint | [13](#13-测试用例建议) | 测试 |
+| [7](#7-实现判定规则) | 判定规则 | [14](#14-当前结论) | 当前结论 |
+
+:::
+
 ## 1. 目标
 
 renderer 的目标是回答终端输出问题：

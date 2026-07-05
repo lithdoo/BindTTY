@@ -8,6 +8,20 @@
 - [DESIGN.md](../architecture/DESIGN.md) — 视图树总体设计
 - [TUI_IMPLEMENTATION_PLAN.md](../architecture/ROADMAP.md) — 实现计划与里程碑
 
+::: info 本章导航
+
+| § | 章节 | § | 章节 |
+| --- | --- | --- | --- |
+| [1](#1-目标) | 目标 | [8](#8-bindingvalue-规则) | BindingValue |
+| [2](#2-包位置) | 包位置 | [9](#9-jsx-类型约束) | JSX 类型 |
+| [3](#3-typescript-配置) | TS 配置 | [10](#10-实现伪代码) | 伪代码 |
+| [4](#4-必要导出) | 必要导出 | [11](#11-包导出建议) | 包导出 |
+| [5](#5-输入形态) | 输入形态 | [12](#12-测试计划) | 测试计划 |
+| [6](#6-转换规则) | 转换规则 | [13](#13-mvp-验收标准) | 验收标准 |
+| [7](#7-children-规则) | children | | |
+
+:::
+
 ## 1. 目标
 
 `@bindtty/jsx-runtime` 的目标是让用户可以写 TSX：
