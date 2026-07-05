@@ -5,13 +5,15 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# One deploy at a time; newer pushes supersede in-flight Pages runs.
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
+# Allow in-flight Pages deploys to finish; do not cancel mid-flight (avoids wedged state).
 permissions:
   contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -25,6 +27,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
       - name: Install dependencies
         run: npm ci
@@ -40,9 +45,6 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -50,3 +52,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          timeout: 600000
+          error_count: 10
+          reporting_interval: 5000
