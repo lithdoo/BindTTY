@@ -76,15 +76,6 @@ bubble:  parent -> ... -> root
 fallback: Tab / Shift+Tab focus traversal（无 handler return true 时）
 ```
 
-仍不引入：
-
-```text
-onFocus / onBlur（公开 API）
-autoFocus
-tabIndex
-mouse / paste / selection
-```
-
 详细设计见 [FOCUS_AND_KEY_EVENT_PLAN.md](../architecture/FOCUS_AND_KEY_EVENT_PLAN.md)。
 
 `onKey` handler 签名：
@@ -125,7 +116,7 @@ onKey?: (event: BindTTYKeyEvent) => boolean | void
 
 具体控件语义由 `@bindtty/widgets` 或业务组件自己转换成 `onKey`。
 
-例如未来 button 可以实现为：
+例如 button 可实现为：
 
 ```tsx
 <box
@@ -154,7 +145,7 @@ name: @bindtty/interaction
 2. 它不属于 terminal lifecycle。
 3. 它不属于 renderer。
 4. 它不应该知道 button / input / select 等具体控件。
-5. 后续支持 mouse、paste、selection、focus scope 时有独立演进空间。
+5. interaction 可以作为独立运行时能力维护，避免耦合 terminal / renderer / widgets。
 ```
 
 目标依赖方向：
@@ -361,7 +352,7 @@ export interface InteractionController {
 - `handleKey(event)` 处理 terminal key event。
 - `onFocusChange(listener)` 订阅 controller 级别的 focus change event。
 - `focus(target)` 编程式聚焦指定 id 或 mounted node。
-- `focusNext()` / `focusPrevious()` 可供 App 或未来用户 API 调用。
+- `focusNext()` / `focusPrevious()` 供 App 内部调用。
 - `clearFocus()` 清空当前 focus。
 - `getFocusedId()` 返回当前 focused entry id。
 - `getFocusedNode()` 返回当前 focused node。
