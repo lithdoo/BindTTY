@@ -18,16 +18,24 @@ const terminal = createNodeTerminal({
 const app = createApp(
   <vstack>
     <text value="Form" bold />
-    <TextInput
-      value={value}
-      placeholder="Name"
-      onChange={(nextValue) => {
-        value.set(nextValue);
+    <box
+      focusable={false}
+      onKey={(event) => {
+        if (event.name === "return") {
+          status.set(`Sent: ${value.get()}`);
+          return true;
+        }
+        return false;
       }}
-      onSubmit={(nextValue) => {
-        status.set(`Sent: ${nextValue}`);
-      }}
-    />
+    >
+      <TextInput
+        value={value}
+        placeholder="Name"
+        onChange={(nextValue) => {
+          value.set(nextValue);
+        }}
+      />
+    </box>
     <Checkbox
       label="Subscribe to updates"
       checked={agree}

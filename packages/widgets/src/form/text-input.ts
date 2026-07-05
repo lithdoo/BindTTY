@@ -30,6 +30,7 @@ export interface TextInputProps extends TextInputStyleProps {
   value: BindingValue<string>;
   placeholder?: BindingValue<string>;
   disabled?: BindingValue<boolean>;
+  focusable?: BindingValue<boolean>;
   onChange?: (nextValue: string) => void;
   onSubmit?: (value: string) => void;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
@@ -92,6 +93,7 @@ export function TextInput(props: TextInputProps): Template {
     omitUndefined({
       id: props.id,
       ref: createTextInputRef(contentWidth),
+      focusable: props.focusable ?? true,
       onKey: createTextInputOnKey(props, cursor),
       onFocusChange: createFocusChangeHandler(props, focused, cursor),
       focusStyle: "none",
@@ -280,8 +282,12 @@ function createTextInputOnKey(
     }
 
     if (isEnterKey(event)) {
-      props.onSubmit?.(value);
-      return true;
+      if (props.onSubmit) {
+        props.onSubmit(value);
+        return true;
+      }
+
+      return false;
     }
 
     return false;

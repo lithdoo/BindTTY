@@ -8,8 +8,7 @@ import {
   type SelectProps,
   type SelectStyleProps
 } from "@bindtty/widgets";
-import type { InteractionKeyBinding } from "@bindtty/interaction";
-import type { InteractionKeyHandler } from "@bindtty/interaction";
+import type { BindTTYKeyEvent, InteractionKeyBinding, InteractionKeyHandler } from "@bindtty/interaction";
 import type {
   ElementTemplate,
   ForTemplate,
@@ -50,20 +49,22 @@ function resolveSignal<T>(value: unknown): T {
   return (value as ReadableSignal<T>).get();
 }
 
-function key(name: string): Parameters<InteractionKeyHandler>[0] {
-  return {
+function key(name: string): BindTTYKeyEvent {
+  const event: BindTTYKeyEvent = {
     input: "",
     name,
     ctrl: false,
     meta: false,
-    shift: false
+    shift: false,
+    phase: "target",
+    propagationStopped: false,
+    stopPropagation() {
+      event.propagationStopped = true;
+    }
   };
-}
 
-const focusContext = {
-  node: {} as never,
-  isFocused: true as const
-};
+  return event;
+}
 
 function readListBox(template: ElementTemplate): ElementTemplate {
   const stack = asElement(template.children[0]!);
@@ -163,7 +164,7 @@ test("Select moves down with Down and calls onChange", () => {
   );
   const onKey = readOnKeyHandler(template);
 
-  assert.equal(onKey(key("down"), focusContext), true);
+  assert.equal(onKey(key("down")), true);
   assert.deepEqual(changes, ["b"]);
 });
 
@@ -180,7 +181,7 @@ test("Select does not move up from the first option", () => {
   );
   const onKey = readOnKeyHandler(template);
 
-  assert.equal(onKey(key("up"), focusContext), false);
+  assert.equal(onKey(key("up")), false);
   assert.equal(changes, 0);
 });
 
@@ -199,8 +200,8 @@ test("Select jumps to first and last options with Home and End", () => {
   );
   const onKey = readOnKeyHandler(template);
 
-  assert.equal(onKey(key("home"), focusContext), true);
-  assert.equal(onKey(key("end"), focusContext), true);
+  assert.equal(onKey(key("home")), true);
+  assert.equal(onKey(key("end")), true);
   assert.deepEqual(changes, ["a", "c"]);
 });
 
@@ -217,7 +218,7 @@ test("Select leaves unrelated keys unhandled", () => {
   );
   const onKey = readOnKeyHandler(template);
 
-  assert.equal(onKey(key("return"), focusContext), false);
+  assert.equal(onKey(key("return")), false);
   assert.equal(changes, 0);
 });
 
@@ -298,9 +299,9 @@ test("Select scrollY follows the viewport when height is set", () => {
   assert.equal(listBox.props.height, 3);
   assert.equal(resolveSignal<number>(listBox.props.scrollY), 0);
 
-  assert.equal(onKey(key("down"), focusContext), true);
-  assert.equal(onKey(key("down"), focusContext), true);
-  assert.equal(onKey(key("down"), focusContext), true);
+  assert.equal(onKey(key("down")), true);
+  assert.equal(onKey(key("down")), true);
+  assert.equal(onKey(key("down")), true);
 
   assert.equal(value.get(), "d");
   assert.equal(resolveSignal<number>(listBox.props.scrollY), 1);

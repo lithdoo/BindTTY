@@ -7,8 +7,7 @@ import {
   type CheckboxProps,
   type CheckboxStyleProps
 } from "@bindtty/widgets";
-import type { InteractionKeyBinding } from "@bindtty/interaction";
-import type { InteractionKeyHandler } from "@bindtty/interaction";
+import type { BindTTYKeyEvent, InteractionKeyBinding, InteractionKeyHandler } from "@bindtty/interaction";
 import type { ElementTemplate, ReadableSignal, Template } from "@bindtty/vnode";
 
 function asElement(template: Template): ElementTemplate {
@@ -33,29 +32,33 @@ function resolveSignal<T>(value: unknown): T {
   return (value as ReadableSignal<T>).get();
 }
 
-function key(name: string): Parameters<InteractionKeyHandler>[0] {
-  return {
-    input: name === "return" ? "\r" : "",
-    name,
+function createKeyEvent(
+  input: string,
+  overrides: Partial<BindTTYKeyEvent> = {}
+): BindTTYKeyEvent {
+  const event: BindTTYKeyEvent = {
+    input,
     ctrl: false,
     meta: false,
-    shift: false
+    shift: false,
+    phase: "target",
+    propagationStopped: false,
+    stopPropagation() {
+      event.propagationStopped = true;
+    },
+    ...overrides
   };
+
+  return event;
 }
 
-function spaceKey(): Parameters<InteractionKeyHandler>[0] {
-  return {
-    input: " ",
-    ctrl: false,
-    meta: false,
-    shift: false
-  };
+function key(name: string): BindTTYKeyEvent {
+  return createKeyEvent(name === "return" ? "\r" : "", { name });
 }
 
-const focusContext = {
-  node: {} as never,
-  isFocused: true as const
-};
+function spaceKey(): BindTTYKeyEvent {
+  return createKeyEvent(" ");
+}
 
 test("Checkbox renders as a focusable box with hstack marker and label", () => {
   const template = asElement(
@@ -133,8 +136,8 @@ test("Checkbox toggles on Space and Enter", () => {
   );
   const onKey = readOnKeyHandler(template);
 
-  assert.equal(onKey(spaceKey(), focusContext), true);
-  assert.equal(onKey(key("return"), focusContext), true);
+  assert.equal(onKey(spaceKey()), true);
+  assert.equal(onKey(key("return")), true);
   assert.deepEqual(changes, [true, true]);
 });
 
@@ -151,7 +154,7 @@ test("Checkbox leaves unrelated keys unhandled", () => {
   );
   const onKey = readOnKeyHandler(template);
 
-  assert.equal(onKey(key("down"), focusContext), false);
+  assert.equal(onKey(key("down")), false);
   assert.equal(changes, 0);
 });
 

@@ -32,6 +32,7 @@ export interface SelectProps<T = string> extends SelectStyleProps {
   options: BindingValue<readonly SelectOption<T>[]>;
   value: BindingValue<T>;
   disabled?: BindingValue<boolean>;
+  focusable?: BindingValue<boolean>;
   height?: BindingValue<number>;
   onChange?: (nextValue: T) => void;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
@@ -68,6 +69,7 @@ export function Select<T = string>(props: SelectProps<T>): Template {
     "box",
     omitUndefined({
       id: props.id,
+      focusable: props.focusable ?? true,
       onKey: createSelectOnKey(props, scrollOffset),
       onFocusChange: props.onFocusChange,
       border: false,

@@ -45,6 +45,7 @@ export interface ScrollViewProps extends ScrollViewStyleProps {
   width: BindingValue<number>;
   height: BindingValue<number>;
   children?: TemplateChildren;
+  focusable?: BindingValue<boolean>;
   scrollOnArrow?: BindingValue<boolean>;
   stickToBottom?: BindingValue<boolean>;
   stickToEnd?: BindingValue<boolean>;
@@ -80,6 +81,7 @@ export function ScrollView(props: ScrollViewProps): Template {
         horizontalBarHeight,
         showCorner
       ),
+      focusable: props.focusable ?? true,
       onKey: createScrollViewOnKey(props, stateX, stateY),
       onFocusChange: props.onFocusChange,
       width: usesScrollbar ? undefined : props.width,

@@ -8,16 +8,17 @@ export {
   isTextInputKey
 } from "./keyboard.js";
 export type {
+  BindTTYKeyEvent,
   InteractionController,
   InteractionFocusChangeEvent,
   InteractionFocusChangeListener,
   InteractionFocusChangeReason,
   InteractionFocusSnapshot,
   InteractionKeyBinding,
-  InteractionKeyContext,
   InteractionKeyHandler,
+  InteractionKeyListener,
   InteractionNodeFocusChangeEvent,
   InteractionResult,
   IntrinsicInteractionProps,
-  KeyFocusEntry
+  KeyEventPhase
 } from "./types.js";

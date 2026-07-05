@@ -11,12 +11,12 @@ import {
   isTextInputKey
 } from "@bindtty/interaction";
 import type {
+  BindTTYKeyEvent,
   InteractionController,
   InteractionFocusChangeEvent,
   InteractionKeyHandler,
   InteractionNodeFocusChangeEvent,
-  InteractionResult,
-  KeyFocusEntry
+  InteractionResult
 } from "@bindtty/interaction";
 import type { TerminalKeyEvent } from "@bindtty/terminal";
 import type {
@@ -114,31 +114,22 @@ function reasons(
 
 test("exports expected interaction types", () => {
   const controller: InteractionController = createInteractionController();
-  const node = createMountedBox();
   const focusEvent: InteractionFocusChangeEvent = {
     previous: null,
     current: {
-      id: "box",
-      node
+      id: "box"
     },
     reason: "initial"
   };
   const nodeFocusEvent: InteractionNodeFocusChangeEvent = {
     id: "box",
-    node,
     focused: true,
     reason: "initial"
   };
-  const handler: InteractionKeyHandler = (event, context) => {
+  const handler: InteractionKeyHandler = (event) => {
     assert.equal(event.input, "x");
-    assert.equal(context.isFocused, true);
+    assert.equal(event.phase, "target");
     return true;
-  };
-  const entry: KeyFocusEntry = {
-    id: "box",
-    node,
-    order: 0,
-    handler
   };
   const result: InteractionResult = {
     handled: false,
@@ -148,8 +139,8 @@ test("exports expected interaction types", () => {
 
   assert.equal(typeof controller.refresh, "function");
   assert.equal(nodeFocusEvent.focused, true);
-  assert.equal(entry.handler?.(createKeyEvent(), { node, isFocused: true }), true);
   assert.equal(result.focusChange?.reason, "initial");
+  assert.equal(typeof handler, "function");
 });
 
 test("refresh collects onKey=true and chooses initial focus", () => {
@@ -171,8 +162,7 @@ test("refresh collects onKey=true and chooses initial focus", () => {
     focusChange: {
       previous: null,
       current: {
-        id: "first",
-        node: first
+        id: "first"
       },
       reason: "initial"
     }
@@ -193,6 +183,36 @@ test("refresh collects onKey=function and ignores false null and missing values"
   assert.equal(controller.getFocusedId(), "enabled");
 });
 
+test("focusable=true enters focus list", () => {
+  const controller = createInteractionController();
+  const node = createMountedElement("node", { focusable: true });
+
+  controller.refresh(node);
+
+  assert.equal(controller.getFocusedId(), "node");
+});
+
+test("focusable=false with onKey does not enter focus list", () => {
+  const controller = createInteractionController();
+  const node = createMountedElement("node", {
+    focusable: false,
+    onKey: () => true
+  });
+
+  controller.refresh(node);
+
+  assert.equal(controller.getFocusedId(), null);
+});
+
+test("legacy onKey=function still enters focus list without focusable", () => {
+  const controller = createInteractionController();
+  const node = createMountedElement("node", { onKey: () => true });
+
+  controller.refresh(node);
+
+  assert.equal(controller.getFocusedId(), "node");
+});
+
 test("nested onKey nodes follow preorder traversal", () => {
   const controller = createInteractionController();
   const childA = createMountedElement("child-a", { onKey: true });
@@ -207,6 +227,17 @@ test("nested onKey nodes follow preorder traversal", () => {
 
   controller.focusNext();
   assert.equal(controller.getFocusedId(), "child-b");
+});
+
+test("focus change dirty includes ancestor path nodes", () => {
+  const controller = createInteractionController();
+  const child = createMountedElement("child", { onKey: true });
+  const parent = createMountedElement("parent", { onKey: true }, [child]);
+
+  controller.refresh(parent);
+  const result = controller.focus("child");
+
+  assert.deepEqual(result.dirtyNodes, [parent, child]);
 });
 
 test("structure nodes are traversed through active children and for items", () => {
@@ -402,7 +433,6 @@ test("refresh uses the latest dynamic onKey handler for focused nodes", () => {
     calls.push("second");
     return true;
   };
-  controller.refresh(node);
 
   assert.equal(controller.handleKey(createKeyEvent("x")).handled, true);
   assert.deepEqual(calls, ["first", "second"]);
@@ -529,33 +559,36 @@ test("handleKey handles empty and single-entry Tab traversal", () => {
   });
 });
 
-test("handleKey does not deliver Tab to onKey handlers", () => {
+test("handleKey delivers Tab to onKey handlers before fallback", () => {
   const controller = createInteractionController();
   let calls = 0;
   const node = createMountedElement("node", {
-    onKey: () => {
-      calls += 1;
-      return true;
+    onKey: (event: BindTTYKeyEvent) => {
+      if (event.name === "tab") {
+        calls += 1;
+        return true;
+      }
     }
   });
 
   controller.refresh(node);
 
   assert.equal(controller.handleKey(createNamedKeyEvent("tab")).handled, true);
-  assert.equal(calls, 0);
+  assert.equal(calls, 1);
+  assert.equal(controller.getFocusedId(), "node");
 });
 
 test("handleKey dispatches non-traversal keys to the focused handler", () => {
   const controller = createInteractionController();
   const calls: string[] = [];
   const first = createMountedElement("first", {
-    onKey: (event: TerminalKeyEvent) => {
+    onKey: (event: BindTTYKeyEvent) => {
       calls.push(`first:${event.input}`);
       return true;
     }
   });
   const second = createMountedElement("second", {
-    onKey: (event: TerminalKeyEvent) => {
+    onKey: (event: BindTTYKeyEvent) => {
       calls.push(`second:${event.input}`);
       return true;
     }
@@ -609,7 +642,7 @@ test("handleKey with onKey=true is focusable but has no handler", () => {
   });
 });
 
-test("handleKey does not bubble from focused child to parent", () => {
+test("handleKey bubbles from focused child to parent", () => {
   const controller = createInteractionController();
   const calls: string[] = [];
   const child = createMountedElement("child", {
@@ -630,6 +663,204 @@ test("handleKey does not bubble from focused child to parent", () => {
 
   const result = controller.handleKey(createKeyEvent("x"));
 
-  assert.equal(result.handled, false);
+  assert.equal(result.handled, true);
+  assert.deepEqual(calls, ["child", "parent"]);
+});
+
+test("handleKey capture runs root to parent before target", () => {
+  const controller = createInteractionController();
+  const phases: string[] = [];
+  const child = createMountedElement("child", {
+    onKey: (event: BindTTYKeyEvent) => {
+      phases.push(`child:${event.phase}`);
+      return false;
+    }
+  });
+  const parent = createMountedElement("parent", {
+    onKeyCapture: (event: BindTTYKeyEvent) => {
+      phases.push(`parent-capture:${event.phase}`);
+      return false;
+    },
+    onKey: (event: BindTTYKeyEvent) => {
+      phases.push(`parent-bubble:${event.phase}`);
+      return false;
+    }
+  }, [child]);
+
+  controller.refresh(parent);
+  controller.focus("child");
+  controller.handleKey(createKeyEvent("x"));
+
+  assert.deepEqual(phases, [
+    "parent-capture:capture",
+    "child:target",
+    "parent-bubble:bubble"
+  ]);
+});
+
+test("handleKey onKeyCapture can intercept Escape before target", () => {
+  const controller = createInteractionController();
+  const calls: string[] = [];
+  const child = createMountedElement("child", {
+    onKey: () => {
+      calls.push("child");
+      return false;
+    }
+  });
+  const parent = createMountedElement("parent", {
+    focusable: false,
+    onKeyCapture: (event: BindTTYKeyEvent) => {
+      if (event.name === "escape") {
+        calls.push("modal");
+        return true;
+      }
+      return false;
+    }
+  }, [child]);
+
+  controller.refresh(parent);
+  controller.focus("child");
+  controller.handleKey(createNamedKeyEvent("escape"));
+
+  assert.deepEqual(calls, ["modal"]);
+});
+
+test("handleKey stopPropagation prevents bubble but not fallback", () => {
+  const controller = createInteractionController();
+  const first = createMountedElement("first", { onKey: true });
+  const second = createMountedElement("second", {
+    onKey: (event: BindTTYKeyEvent) => {
+      if (event.name === "tab") {
+        event.stopPropagation();
+      }
+    }
+  });
+
+  controller.refresh(fragment([first, second]));
+  controller.focus("second");
+
+  const result = controller.handleKey(createNamedKeyEvent("tab"));
+
+  assert.equal(result.handled, true);
+  assert.equal(result.focusChange?.reason, "next");
+  assert.equal(controller.getFocusedId(), "first");
+});
+
+test("handleKey return true stops propagation and prevents fallback", () => {
+  const controller = createInteractionController();
+  const first = createMountedElement("first", { onKey: true });
+  const second = createMountedElement("second", {
+    onKey: () => true
+  });
+
+  controller.refresh(fragment([first, second]));
+  controller.focus("second");
+
+  const result = controller.handleKey(createKeyEvent("x"));
+
+  assert.equal(result.handled, true);
+  assert.equal(controller.getFocusedId(), "second");
+});
+
+test("handleKey bubbles Enter from child when child does not handle it", () => {
+  const controller = createInteractionController();
+  const calls: string[] = [];
+  const child = createMountedElement("child", {
+    onKey: (event: BindTTYKeyEvent) => {
+      if (event.name === "return") {
+        return false;
+      }
+      return false;
+    }
+  });
+  const form = createMountedElement("form", {
+    focusable: false,
+    onKey: (event: BindTTYKeyEvent) => {
+      if (event.name === "return") {
+        calls.push("submit");
+        return true;
+      }
+      return false;
+    }
+  }, [child]);
+
+  controller.refresh(form);
+  controller.focus("child");
+  controller.handleKey(createNamedKeyEvent("return"));
+
+  assert.deepEqual(calls, ["submit"]);
+});
+
+test("handleKey does not bubble when child handles Backspace", () => {
+  const controller = createInteractionController();
+  const calls: string[] = [];
+  const child = createMountedElement("child", {
+    onKey: (event: BindTTYKeyEvent) => {
+      if (event.name === "backspace") {
+        calls.push("child");
+        return true;
+      }
+      return false;
+    }
+  });
+  const form = createMountedElement("form", {
+    focusable: false,
+    onKey: () => {
+      calls.push("form");
+      return false;
+    }
+  }, [child]);
+
+  controller.refresh(form);
+  controller.focus("child");
+  controller.handleKey(createNamedKeyEvent("backspace"));
+
   assert.deepEqual(calls, ["child"]);
+});
+
+test("handleKey bubbles unhandled arrow keys to scroll container", () => {
+  const controller = createInteractionController();
+  let offset = 0;
+  const child = createMountedElement("input", {
+    onKey: (event: BindTTYKeyEvent) => {
+      if (event.name === "left" || event.name === "right") {
+        return true;
+      }
+      return false;
+    }
+  });
+  const scroll = createMountedElement("scroll", {
+    focusable: false,
+    onKey: (event: BindTTYKeyEvent) => {
+      if (event.name === "down") {
+        offset += 1;
+        return true;
+      }
+      return false;
+    }
+  }, [child]);
+
+  controller.refresh(scroll);
+  controller.focus("input");
+  controller.handleKey(createNamedKeyEvent("down"));
+
+  assert.equal(offset, 1);
+});
+
+test("onKeyCapture can handle Tab and prevent focus traversal", () => {
+  const controller = createInteractionController();
+  const first = createMountedElement("first", { onKey: true });
+  const second = createMountedElement("second", { onKey: true });
+  const parent = createMountedElement("parent", {
+    onKeyCapture: (event: BindTTYKeyEvent) => (event.name === "tab" ? true : false),
+    onKey: true
+  }, [first, second]);
+
+  controller.refresh(parent);
+  controller.focus("first");
+
+  const result = controller.handleKey(createNamedKeyEvent("tab"));
+
+  assert.equal(result.handled, true);
+  assert.equal(controller.getFocusedId(), "first");
 });

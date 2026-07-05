@@ -1,9 +1,9 @@
 # Focus 与 Key Event 传播计划
 
-> 类型：architecture / implementation plan  
-> 状态：draft  
-> 目标阶段：post-MVP / alpha hardening  
-> 相关包：`@bindtty/interaction`、`@bindtty/vnode`、`@bindtty/jsx-runtime`、`@bindtty/runtime`、`@bindtty/renderer-terminal`、`@bindtty/widgets`、`bindtty`
+> 类型：architecture / implementation plan
+> 状态：implemented
+> 目标阶段：post-MVP / alpha hardening
+> 相关包：`@bindtty/interaction`、`@bindtty/vnode`、`@bindtty/jsx-runtime`、`@bindtty/runtime`、`@bindtty/widgets`、`bindtty`
 
 ## 1. 背景
 
@@ -34,8 +34,7 @@ onKey === true / function
 TextInput 处理文本编辑键；
 TextInput 未处理的方向键可以冒泡给 ScrollView；
 TextInput 未处理的 Enter 可以冒泡给 Form；
-Escape 可以被 Modal 捕获；
-父节点可以感知子孙节点 hasFocusWithin 状态。
+Escape 可以被 Modal 捕获。
 ```
 
 现有模型无法自然表达这些行为，因为：
@@ -43,8 +42,7 @@ Escape 可以被 Modal 捕获；
 1. `onKey` 同时表示“可聚焦”和“监听键盘事件”。
 2. 父容器如果想监听子节点事件，就必须也变成 Tab focus target。
 3. key event 只派发给当前 focused node，不会冒泡到父节点。
-4. 没有 capture 阶段，Modal / Overlay 这类边界组件难以优先处理 Escape。
-5. renderer / ref 层缺少 `hasFocusWithin` 语义。
+4. 没有 capture 阶段，Modal 这类边界组件难以优先处理 Escape。
 
 ## 2. 目标
 
@@ -56,40 +54,28 @@ focus traversal:
 
 key event dispatch:
   使用 focused path 传播，用于 capture / target / bubble。
-
-focus state:
-  支持 isFocused 与 hasFocusWithin。
 ```
 
 一句话：
 
 ```text
-Focus 导航使用列表；Key 事件沿当前 focused target 的 mounted ancestor path 传播。
+Focus 导航使用列表；
+Key 事件沿当前 focused target 的 mounted ancestor path 传播。
 ```
 
-## 3. 非目标
-
-本阶段不实现：
+本计划只解决：
 
 ```text
-tabIndex
-autoFocus
-onFocusWithinChange
-focusWithinStyle
-focusScope / trapFocus
-roving focus
-Modal / Overlay 系统
-鼠标事件与 hit testing
-IME preedit / candidate window
-portal / z-index / floating layer
-完整 DOM Event API
+1. focusable 与 onKey 解耦。
+2. onKeyCapture / onKey 三阶段派发。
+3. return true 表示 handled。
+4. stopPropagation() 停止传播。
+5. unhandled key 交给 interaction fallback。
 ```
 
-这些能力可以作为 future extension，但不进入本次事件模型改造。
+## 3. 设计原则
 
-## 4. 设计原则
-
-### 4.1 解耦 focusable 与 key listener
+### 3.1 解耦 focusable 与 key listener
 
 新增明确的 `focusable` prop：
 
@@ -103,7 +89,7 @@ onKey / onKeyCapture:
 
 `onKey` 不应长期承担 focusable marker 的职责。
 
-### 4.2 保留 focus list
+### 3.2 保留 focus list
 
 Tab 顺序仍由 mounted tree 的 DFS preorder 生成：
 
@@ -117,12 +103,12 @@ focus list:
 ```text
 1. TUI 的 focus traversal 本质上是列表问题。
 2. Tab / Shift+Tab / focusNext / focusPrevious 需要稳定顺序。
-3. 后续 focusScope 可以把 focus list 分割成 scope-local list。
+3. 嵌套结构不应该破坏线性的键盘导航顺序。
 ```
 
-### 4.3 引入 focused path
+### 3.3 引入 focused path，但不公开
 
-每个 focus entry 保存从 root 到 target 的 element path：
+每个 focus entry 内部保存从 root 到 target 的 element path：
 
 ```text
 root
@@ -137,7 +123,16 @@ focusedPath:
 
 key event 基于这个 path 派发。
 
-### 4.4 Key event 三阶段传播
+注意：
+
+```text
+focusedPath 是 interaction 内部实现细节；
+不公开 getFocusedPath()；
+不公开 MountedElementNode[]；
+key event 不暴露 mounted node 或节点引用。
+```
+
+### 3.4 Key event 三阶段传播
 
 ```text
 capture:
@@ -149,24 +144,24 @@ target:
 bubble:
   parent -> ... -> root
 
-default action:
-  Tab / Shift+Tab focus traversal
+fallback:
+  如果没有任何 handler 处理该 key，则由 interaction controller 处理。
 ```
 
-### 4.5 Tab 是 default action
+### 3.5 Tab 是 fallback，不是元素默认行为
 
-Tab / Shift+Tab 不应在 dispatch 前硬拦截。
+BindTTY 当前没有浏览器意义上的元素默认行为。
 
-新的顺序是：
+Tab / Shift+Tab 是 interaction controller 的 fallback 行为：
 
 ```text
 1. 先把 Tab 作为普通 key event 派发。
-2. 如果没有 preventDefault()，再执行 focusNext / focusPrevious。
+2. 如果没有任何 handler return true，则执行 focusNext / focusPrevious。
 ```
 
-这样 TextInput、Select、Modal、未来 FocusScope 可以阻止 Tab 默认行为。
+这样 TextInput、Select、Modal 可以通过 `return true` 阻止 Tab fallback。
 
-### 4.6 兼容旧 API
+### 3.6 兼容旧 API
 
 短期保留旧规则：
 
@@ -182,11 +177,11 @@ onKey 不再隐式创建 focus target。
 组件必须显式声明 focusable。
 ```
 
-## 5. 用户侧公开接口
+## 4. 用户侧公开接口
 
-### 5.1 Element interaction props
+### 4.1 Element interaction props
 
-第一阶段只新增必要接口：
+只新增必要接口：
 
 ```ts
 export interface IntrinsicInteractionProps {
@@ -194,55 +189,22 @@ export interface IntrinsicInteractionProps {
 
   focusable?: BindingValue<boolean>;
 
-  onKeyCapture?: BindingValue<InteractionKeyBinding>;
+  onKeyCapture?: BindingValue<InteractionKeyListener>;
   onKey?: BindingValue<InteractionKeyBinding>;
 
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }
 ```
 
-暂不加入：
+`InteractionKeyListener` 为 handler / null / undefined，不含 `boolean` legacy shorthand；`onKey` 仍保留 `boolean`。
+
+### 4.2 Key event
+
+事件对象只暴露键盘信息、传播阶段和传播控制：
 
 ```ts
-// Future only. Do not implement in this phase.
-tabIndex?: BindingValue<0 | -1>;
-autoFocus?: BindingValue<boolean>;
-onFocusWithinChange?: (event: InteractionFocusWithinChangeEvent) => void;
-focusWithinStyle?: unknown;
-```
+export type KeyEventPhase = "capture" | "target" | "bubble";
 
-### 5.2 ElementHandle
-
-`MountedElementNode` 是 runtime 内部对象，不应作为用户稳定 API 暴露。
-
-用户侧通过受控句柄操作元素：
-
-```ts
-export interface ElementHandle<TLayout = unknown> {
-  readonly tag: IntrinsicElementTag;
-  readonly id: string | number | undefined;
-
-  getProp(name: string): unknown;
-  getLayout(): TLayout | null;
-
-  focus(): boolean;
-  blur(): boolean;
-  isFocused(): boolean;
-  hasFocusWithin(): boolean;
-
-  onMounted?: () => void;
-  onLayout?: (layout: TLayout) => void;
-  onUnmount?: () => void;
-}
-```
-
-`ElementHandle` 可以继续使用现有 `MountedElementApi` 名称实现，但文档中建议称为 `ElementHandle`，以区别内部的 `MountedElementNode`。
-
-### 5.3 Key event
-
-新事件对象不直接暴露 `MountedElementNode`，而暴露 `ElementHandle`：
-
-```ts
 export interface BindTTYKeyEvent {
   input: string;
   name?: string;
@@ -251,19 +213,26 @@ export interface BindTTYKeyEvent {
   shift: boolean;
   sequence?: string;
 
-  target: ElementHandle;
-  currentTarget: ElementHandle;
-  phase: "capture" | "target" | "bubble";
+  phase: KeyEventPhase;
 
-  defaultPrevented: boolean;
   propagationStopped: boolean;
 
-  preventDefault(): void;
   stopPropagation(): void;
 }
 ```
 
-handler 类型：
+事件对象不暴露当前节点、目标节点或内部 mounted node。
+
+原因：
+
+```text
+1. key event target 永远是当前 focused node，第一版不需要用户读取它。
+2. handler 挂在哪个元素上，可以通过闭包表达业务上下文。
+3. 不暴露节点对象可以避免泄漏 runtime 内部结构。
+4. 保持事件对象小而稳定。
+```
+
+### 4.3 Handler 类型
 
 ```ts
 export type InteractionKeyHandler = (
@@ -271,36 +240,71 @@ export type InteractionKeyHandler = (
 ) => boolean | void;
 ```
 
-兼容旧 handler 时，runtime 可以继续传第二参数，但文档不再鼓励依赖它：
-
-```ts
-// Legacy compatibility only.
-handler(event, legacyContext);
-```
-
-### 5.4 Handler 返回值兼容
+### 4.4 Handler 返回值语义
 
 ```text
 return true:
-  legacy shorthand。
-  等价于：
-    event.preventDefault()
-    event.stopPropagation()
+  表示事件已处理。
+  停止后续传播。
+  interaction 不再执行 fallback key action。
 
 return false / undefined:
-  不消费事件，继续传播。
+  表示当前 handler 未处理。
+  如果没有 stopPropagation，则继续传播。
 ```
 
-推荐新代码显式使用：
+### 4.5 stopPropagation 语义
 
-```ts
-event.preventDefault();
-event.stopPropagation();
+```text
+event.stopPropagation():
+  停止继续传播。
+  不自动表示 handled。
+  不自动阻止 fallback。
 ```
 
-## 6. 内部接口与边界
+也就是说：
 
-### 6.1 MountedElementNode
+```tsx
+<box
+  onKey={(event) => {
+    event.stopPropagation();
+    // 没有 return true
+  }}
+/>
+```
+
+表示：
+
+```text
+停止传播给后续节点；
+但本事件仍然是 unhandled；
+如果没有其他 handler handled，则 interaction 可以执行 fallback。
+```
+
+如果既要停止传播又要阻止 fallback：
+
+```tsx
+<box
+  onKey={(event) => {
+    event.stopPropagation();
+    return true;
+  }}
+/>
+```
+
+通常可以直接写：
+
+```tsx
+<box
+  onKey={() => true}
+/>
+```
+
+因为 `return true` 默认停止传播。
+
+## 5. 内部接口与边界
+
+### 5.1 MountedElementNode
 
 `MountedElementNode` 只作为内部实现类型：
 
@@ -326,7 +330,7 @@ api
 
 直接暴露会允许用户绕过 binding、dirty marking、scheduler、lifecycle、layout invalidation、interaction refresh 和 renderer diff。
 
-### 6.2 FocusEntry
+### 5.2 FocusEntry
 
 内部 focus entry：
 
@@ -341,20 +345,7 @@ interface FocusEntry {
 
 `path` 仅内部使用，不作为公开 API 暴露。
 
-不公开：
-
-```ts
-getFocusedPath(): MountedElementNode[];
-```
-
-公开状态查询应使用：
-
-```ts
-isFocused(target: string | ElementHandle): boolean;
-hasFocusWithin(target: string | ElementHandle): boolean;
-```
-
-### 6.3 FocusState
+### 5.3 FocusState
 
 ```ts
 interface FocusState {
@@ -368,50 +359,39 @@ interface FocusState {
 
 ```text
 1. key event dispatch。
-2. hasFocusWithin 查询。
-3. focus dirty 计算。
+2. focus dirty 计算。
+3. 判断父子 focus 关系。
 ```
 
-## 7. Controller API 调整
+## 6. Controller API 调整
 
-内部 controller 可以继续使用 node-oriented API。
-
-用户侧或 ref-facing API 应使用 id / handle：
+内部 controller 可以继续使用 node-oriented API：
 
 ```ts
 interface InteractionController {
   refresh(root: MountedNode | null): InteractionResult;
   handleKey(event: TerminalKeyEvent): InteractionResult;
 
-  focus(target: string | ElementHandle): InteractionResult;
+  focus(target: string | MountedElementNode): InteractionResult;
   focusNext(): InteractionResult;
   focusPrevious(): InteractionResult;
   clearFocus(): InteractionResult;
 
   getFocusedId(): string | null;
-  getFocusedElement(): ElementHandle | null;
+  getFocusedNode(): MountedElementNode | null;
 
-  isFocused(target: string | ElementHandle): boolean;
-  hasFocusWithin(target: string | ElementHandle): boolean;
+  isFocused(node: MountedNode): boolean;
 
   onFocusChange(listener: InteractionFocusChangeListener): () => void;
   dispose(): void;
 }
 ```
 
-内部可以保留：
+这些接口用于内部包协作，不应通过顶层 `bindtty` 作为应用开发者 API 暴露。
 
-```ts
-focusNode(node: MountedElementNode): InteractionResult;
-isFocusedNode(node: MountedNode): boolean;
-hasFocusWithinNode(node: MountedNode): boolean;
-```
+## 7. Focus 收集规则
 
-但这些不应成为用户文档中的稳定 API。
-
-## 8. Focus 收集规则
-
-### 8.1 DFS 收集
+### 7.1 DFS 收集
 
 继续使用 mounted tree DFS preorder。
 
@@ -475,7 +455,7 @@ function collectEntries(root: MountedNode | null): FocusEntry[] {
 }
 ```
 
-### 8.2 isFocusable
+### 7.2 isFocusable
 
 第一阶段兼容旧语义：
 
@@ -492,7 +472,7 @@ function isFocusable(node: MountedElementNode): boolean {
 }
 ```
 
-第二阶段可切换为严格语义：
+第二阶段切换为严格语义：
 
 ```ts
 function isFocusable(node: MountedElementNode): boolean {
@@ -500,9 +480,9 @@ function isFocusable(node: MountedElementNode): boolean {
 }
 ```
 
-## 9. Key event 派发规则
+## 8. Key event 派发规则
 
-### 9.1 总流程
+### 8.1 总流程
 
 ```text
 TerminalKeyEvent
@@ -511,11 +491,11 @@ TerminalKeyEvent
   -> dispatch capture
   -> dispatch target
   -> dispatch bubble
-  -> run default action if not defaultPrevented
+  -> run fallback action if unhandled
   -> return InteractionResult
 ```
 
-### 9.2 Capture phase
+### 8.2 Capture phase
 
 ```text
 root -> ... -> parent
@@ -527,7 +507,7 @@ root -> ... -> parent
 node.props.onKeyCapture
 ```
 
-### 9.3 Target phase
+### 8.3 Target phase
 
 ```text
 focused target
@@ -539,7 +519,7 @@ focused target
 target.props.onKey
 ```
 
-### 9.4 Bubble phase
+### 8.4 Bubble phase
 
 ```text
 parent -> ... -> root
@@ -551,9 +531,9 @@ parent -> ... -> root
 node.props.onKey
 ```
 
-### 9.5 Default action
+### 8.5 Fallback action
 
-第一阶段 default action：
+fallback action：
 
 ```text
 Tab:
@@ -566,33 +546,95 @@ Shift+Tab:
 只有在以下条件满足时执行：
 
 ```text
-event.defaultPrevented === false
+handled === false
 ```
 
-## 10. Focus 状态查询
-
-Controller / ElementHandle 支持：
-
-```ts
-isFocused(): boolean;
-hasFocusWithin(): boolean;
-```
-
-语义：
+其中 handled 来自：
 
 ```text
-isFocused:
-  当前节点就是 focused target。
-
-hasFocusWithin:
-  当前节点在 focusedPath 中。
+任一 handler return true。
 ```
 
-## 11. Dirty 规则
+### 8.6 Dispatch 伪代码
+
+```ts
+function handleKey(raw: TerminalKeyEvent): InteractionResult {
+  const focused = focusState.entry;
+
+  if (!focused) {
+    return runFallbackKeyAction(raw);
+  }
+
+  const event = createKeyEvent(raw);
+
+  let handled = false;
+
+  for (const node of focused.path.slice(0, -1)) {
+    handled = dispatchTo(node, "capture", event) || handled;
+    if (event.propagationStopped) {
+      break;
+    }
+  }
+
+  if (!event.propagationStopped) {
+    handled = dispatchTo(focused.node, "target", event) || handled;
+  }
+
+  if (!event.propagationStopped) {
+    for (const node of focused.path.slice(0, -1).reverse()) {
+      handled = dispatchTo(node, "bubble", event) || handled;
+      if (event.propagationStopped) {
+        break;
+      }
+    }
+  }
+
+  if (!handled) {
+    return runFallbackKeyAction(raw);
+  }
+
+  return {
+    handled: true,
+    dirtyNodes: []
+  };
+}
+```
+
+`dispatchTo`：
+
+```ts
+function dispatchTo(
+  node: MountedElementNode,
+  phase: KeyEventPhase,
+  event: BindTTYKeyEvent
+): boolean {
+  event.phase = phase;
+
+  const binding =
+    phase === "capture"
+      ? node.props.onKeyCapture
+      : node.props.onKey;
+
+  if (typeof binding !== "function") {
+    return false;
+  }
+
+  const handled = binding(event) === true;
+
+  if (handled) {
+    event.stopPropagation();
+    return true;
+  }
+
+  return false;
+}
+```
+
+## 9. Focus 状态与 dirty 规则
 
 当前 focus change dirty 只包含 previous focused node 与 current focused node。
 
-新模型需要包含：
+引入 focusedPath 后，dirty nodes 应扩大为：
 
 ```text
 previousPath ∪ nextPath
@@ -601,9 +643,9 @@ previousPath ∪ nextPath
 原因：
 
 ```text
-1. 父节点的 hasFocusWithin 状态可能变化。
-2. ref / renderer / widgets 可能查询 hasFocusWithin。
-3. 后续 focusWithinStyle 或 onFocusWithinChange 可以复用该 dirty 规则。
+1. 父节点可能依赖子孙 focus 状态重绘。
+2. 嵌套交互组件需要根据父子 focus 关系更新样式或状态。
+3. 后续内部实现可复用同一条 focusedPath。
 ```
 
 算法：
@@ -617,66 +659,9 @@ function collectFocusDirtyNodes(
 }
 ```
 
-## 12. Ref API 用于 programmatic focus
+## 10. Layout / schema / JSX 适配
 
-不提供 `autoFocus` prop。
-
-用户通过 ref 显式控制 focus：
-
-```tsx
-<TextInput
-  id="name"
-  focusable
-  ref={(api) => {
-    api.onMounted = () => {
-      api.focus();
-    };
-  }}
-/>
-```
-
-也可以用于 submit 后跳转：
-
-```tsx
-<TextInput
-  id="name"
-  focusable
-  onKey={(event) => {
-    if (event.name === "return") {
-      passwordRef?.focus();
-      return true;
-    }
-  }}
-/>
-```
-
-## 13. Renderer 适配
-
-第一阶段只新增查询能力，不新增 `focusWithinStyle`。
-
-renderer options 可扩展：
-
-```ts
-interface PaintOptions {
-  viewport: LayoutViewport;
-  isFocused?: (mounted: LayoutNode["mounted"]) => boolean;
-  hasFocusWithin?: (mounted: LayoutNode["mounted"]) => boolean;
-}
-```
-
-但 paint 行为第一阶段可以保持不变：
-
-```text
-focusStyle:
-  只在 isFocused=true 时应用。
-
-focusWithinStyle:
-  future extension。
-```
-
-## 14. Layout / schema / JSX 适配
-
-### 14.1 `@bindtty/vnode`
+### 10.1 `@bindtty/vnode`
 
 在 `commonElementProps` 中加入：
 
@@ -685,16 +670,7 @@ focusable: { dirty: "paint" },
 onKeyCapture: { dirty: "paint" }
 ```
 
-暂不加入：
-
-```ts
-tabIndex
-autoFocus
-onFocusWithinChange
-focusWithinStyle
-```
-
-### 14.2 `@bindtty/jsx-runtime`
+### 10.2 `@bindtty/jsx-runtime`
 
 在 `IntrinsicInteractionProps` 中加入：
 
@@ -703,7 +679,7 @@ focusable?: BindingValue<boolean>;
 onKeyCapture?: BindingValue<InteractionKeyBinding>;
 ```
 
-### 14.3 `@bindtty/layout`
+### 10.3 `@bindtty/layout`
 
 interaction props 不应被 layout 消费。
 
@@ -723,9 +699,9 @@ onKey
 onFocusChange
 ```
 
-## 15. Widgets 迁移
+## 11. Widgets 迁移
 
-### 15.1 Button
+### 11.1 Button
 
 Button 是 leaf interactive widget，默认进入 Tab 顺序：
 
@@ -737,9 +713,9 @@ elementTemplate("box", {
 });
 ```
 
-Enter / Space 后 `return true`，兼容语义下表示 `preventDefault + stopPropagation`。
+Enter / Space 后 `return true`，表示 handled，停止传播，并阻止 fallback。
 
-### 15.2 Checkbox
+### 11.2 Checkbox
 
 与 Button 相同：
 
@@ -748,7 +724,7 @@ focusable: props.focusable ?? true
 onKey: createCheckboxOnKey(props)
 ```
 
-### 15.3 TextInput
+### 11.3 TextInput
 
 TextInput 外层 `box` 显式声明：
 
@@ -772,7 +748,7 @@ if (isEnterKey(event)) {
 
 这样 TextInput 未声明 `onSubmit` 时，Enter 可以冒泡给 Form。
 
-### 15.4 Select
+### 11.4 Select
 
 Select 继续作为单一 focus target 管理内部选中状态：
 
@@ -783,7 +759,7 @@ onKey: createSelectOnKey(...)
 
 内部 option rows 不进入 focus list。
 
-### 15.5 ScrollView / List
+### 11.5 ScrollView / List
 
 ScrollView 支持两种模式。
 
@@ -828,9 +804,9 @@ ScrollView 默认 focusable=true。
 
 List 基于 VScrollView，可沿用同样策略。
 
-## 16. 父容器组件模式
+## 12. 父容器组件模式
 
-### 16.1 Form
+### 12.1 Form
 
 Form 不进入 focus list，只接收 bubble：
 
@@ -840,8 +816,7 @@ Form 不进入 focus list，只接收 bubble：
   onKey={(event) => {
     if (event.name === "return") {
       submit();
-      event.preventDefault();
-      event.stopPropagation();
+      return true;
     }
   }}
 >
@@ -849,7 +824,7 @@ Form 不进入 focus list，只接收 bubble：
 </box>
 ```
 
-### 16.2 Modal
+### 12.2 Modal
 
 Modal 不进入 focus list，通常使用 capture：
 
@@ -859,8 +834,7 @@ Modal 不进入 focus list，通常使用 capture：
   onKeyCapture={(event) => {
     if (event.name === "escape") {
       close();
-      event.preventDefault();
-      event.stopPropagation();
+      return true;
     }
   }}
 >
@@ -868,7 +842,7 @@ Modal 不进入 focus list，通常使用 capture：
 </box>
 ```
 
-### 16.3 Panel
+### 12.3 Panel
 
 Panel 有两种模式：
 
@@ -884,7 +858,7 @@ Panel 有两种模式：
 </Panel>
 ```
 
-## 17. 分阶段落地
+## 13. 分阶段落地
 
 ### Phase 1：类型与 schema 准备
 
@@ -910,31 +884,7 @@ Panel 有两种模式：
 
 均可类型通过，layout 不报 unsupported prop。
 
-### Phase 2：ElementHandle focus API
-
-目标：让 ref 能承载 programmatic focus。
-
-任务：
-
-```text
-1. 扩展 MountedElementApi / ElementHandle。
-2. 增加 focus()。
-3. 增加 blur()。
-4. 增加 isFocused()。
-5. 增加 hasFocusWithin()。
-6. 建立 ElementHandle -> MountedElementNode 的内部映射。
-```
-
-验收：
-
-```text
-1. ref api.focus() 可以聚焦当前元素。
-2. ref api.blur() 可以清除当前元素 focus。
-3. api.isFocused() 与 controller 状态一致。
-4. api.hasFocusWithin() 与 focusedPath 状态一致。
-```
-
-### Phase 3：FocusEntry path
+### Phase 2：FocusEntry path
 
 目标：保持 focus list 行为不变，但内部 entry 增加 path。
 
@@ -954,30 +904,10 @@ Panel 有两种模式：
 1. 原有 interaction 测试通过。
 2. 嵌套节点 focused 时，内部 path 正确包含 ancestors。
 3. 不公开 getFocusedPath()。
+4. key event 不暴露 mounted node 或节点引用。
 ```
 
-### Phase 4：hasFocusWithin
-
-目标：支持父节点 focusWithin 状态查询。
-
-任务：
-
-```text
-1. InteractionController 增加内部 hasFocusWithinNode(node)。
-2. ElementHandle 增加 hasFocusWithin()。
-3. focus change dirtyNodes 改为 previousPath ∪ nextPath。
-4. createApp 可将 hasFocusWithin 传给 renderer。
-```
-
-验收：
-
-```text
-1. 子节点 focus 时，父节点 hasFocusWithin=true。
-2. focus 离开子树时，父节点 hasFocusWithin=false。
-3. dirtyNodes 包含相关 ancestors。
-```
-
-### Phase 5：Key bubbling / capture
+### Phase 3：Key bubbling / capture
 
 目标：实现三阶段 key event dispatch。
 
@@ -989,8 +919,8 @@ Panel 有两种模式：
 3. dispatch capture。
 4. dispatch target。
 5. dispatch bubble。
-6. 未 preventDefault 时执行 Tab default action。
-7. legacy return true 映射为 preventDefault + stopPropagation。
+6. 未 handled 时执行 fallback action。
+7. return true 映射为 handled + stopPropagation。
 ```
 
 验收：
@@ -1001,10 +931,10 @@ Panel 有两种模式：
 3. Modal onKeyCapture 可优先处理 Escape。
 4. ScrollView focusable=false 时可接收子节点未消费方向键。
 5. Tab 默认仍能切换 focus。
-6. 子节点 preventDefault 后 Tab 不切 focus。
+6. 子节点 return true 后 Tab 不切 focus。
 ```
 
-### Phase 6：Widgets 迁移
+### Phase 4：Widgets 迁移
 
 目标：官方 widgets 显式声明 focusability。
 
@@ -1027,7 +957,7 @@ Panel 有两种模式：
 3. 新增 ScrollView containing TextInput arrow bubbling E2E。
 ```
 
-### Phase 7：文档更新
+### Phase 5：文档更新
 
 目标：替换 MVP onKey-only 叙述。
 
@@ -1040,9 +970,9 @@ Panel 有两种模式：
 4. 更新 examples：Form / Modal / nested ScrollView 示例。
 ```
 
-## 18. 测试计划
+## 14. 测试计划
 
-### 18.1 Unit tests：interaction
+### 14.1 Unit tests：interaction
 
 新增测试：
 
@@ -1051,32 +981,19 @@ Panel 有两种模式：
 2. focusable=false + onKey 不进入 focus list。
 3. 旧行为兼容：未设置 focusable 时 onKey=function 仍进入 focus list。
 4. focusedPath 内部状态正确。
-5. hasFocusWithin 正确。
-6. capture 顺序 root -> parent。
-7. bubble 顺序 parent -> root。
-8. target handler 先于 bubble。
-9. stopPropagation 阻止后续传播。
-10. preventDefault 阻止 Tab 默认 focus traversal。
-11. return true 兼容为消费并停止传播。
-12. onKeyCapture 可以处理 Tab。
-13. refresh 后保留 focusedPath。
-14. focused node unmount 后迁移 focus。
-15. focus dirty 包含 ancestors。
+5. capture 顺序 root -> parent。
+6. bubble 顺序 parent -> root。
+7. target handler 先于 bubble。
+8. stopPropagation 阻止后续传播。
+9. stopPropagation 不自动 handled。
+10. return true 兼容为 handled 并停止传播。
+11. onKeyCapture 可以处理 Tab。
+12. refresh 后保留 focusedPath。
+13. focused node unmount 后迁移 focus。
+14. focus dirty 包含 ancestors。
 ```
 
-### 18.2 Unit tests：ref / ElementHandle
-
-新增测试：
-
-```text
-1. ref.focus() 可以聚焦当前元素。
-2. ref.blur() 可以清除 focus。
-3. ref.isFocused() 返回正确状态。
-4. ref.hasFocusWithin() 返回正确状态。
-5. unmounted handle 调用 focus() 返回 false。
-```
-
-### 18.3 Unit tests：widgets
+### 14.2 Unit tests：widgets
 
 新增测试：
 
@@ -1089,7 +1006,7 @@ Panel 有两种模式：
 6. ScrollView 可以接收子节点未消费方向键。
 ```
 
-### 18.4 E2E tests
+### 14.3 E2E tests
 
 新增 mock E2E：
 
@@ -1105,17 +1022,19 @@ Panel 有两种模式：
    TextInput 不处理 Down；
    ScrollView offset 增加。
 
-4. Tab preventDefault：
-   focused node onKey 处理 Tab 并 preventDefault；
+4. Tab handled：
+   focused node onKey 处理 Tab 并 return true；
    focus 不移动。
 
-5. hasFocusWithin：
-   子节点 focus 时，父 handle hasFocusWithin() 为 true。
+5. stopPropagation unhandled：
+   handler 调用 stopPropagation 但不 return true；
+   不继续传播；
+   若是 Tab，仍执行 fallback focus traversal。
 ```
 
-## 19. 兼容策略
+## 15. 兼容策略
 
-### 19.1 短期兼容
+### 15.1 短期兼容
 
 保持：
 
@@ -1126,7 +1045,7 @@ Panel 有两种模式：
 
 这保证现有代码继续工作。
 
-### 19.2 文档提示
+### 15.2 文档提示
 
 文档中标注：
 
@@ -1135,7 +1054,7 @@ onKey 隐式 focusable 是 legacy compatibility。
 新代码应显式写 focusable。
 ```
 
-### 19.3 长期切换
+### 15.3 长期切换
 
 未来 beta 前可考虑 breaking change：
 
@@ -1147,9 +1066,9 @@ onKey 不再隐式 focusable。
 
 也可以保留 legacy 行为直到 1.0，避免过早破坏应用代码。
 
-## 20. 风险
+## 16. 风险
 
-### 20.1 冒泡可能引入重复处理
+### 16.1 冒泡可能引入重复处理
 
 例如 Button 在 Form 内：
 
@@ -1162,12 +1081,12 @@ Button Enter
 解决：
 
 ```text
-legacy return true = preventDefault + stopPropagation
+return true = handled + stopPropagation
 ```
 
-### 20.2 Tab 行为变化
+### 16.2 Tab 行为变化
 
-当前 Tab 不派发给 handler。新模型中 Tab 会先派发，再作为 default action。
+当前 Tab 不派发给 handler。新模型中 Tab 会先派发，再作为 fallback action。
 
 解决：
 
@@ -1177,7 +1096,7 @@ legacy return true = preventDefault + stopPropagation
 3. 对旧 handler return true 做兼容。
 ```
 
-### 20.3 dirty 范围扩大
+### 16.3 dirty 范围扩大
 
 focus change dirty 从两个节点扩大到 path union。
 
@@ -1189,30 +1108,7 @@ focus change dirty 从两个节点扩大到 path union。
 
 可接受，因为 terminal frame diff 仍会控制实际输出 patch。
 
-### 20.4 API 面积扩大
-
-本计划刻意不加入 `tabIndex`、`autoFocus`、`onFocusWithinChange`、`focusWithinStyle`、`focusScope`、`trapFocus`，以控制 alpha 阶段 API 面积。
-
-## 21. Future extensions
-
-本计划完成后，可以继续设计：
-
-```text
-tabIndex
-autoFocus sugar
-onFocusWithinChange
-focusWithinStyle
-focusScope
-trapFocus
-roving focus
-Modal / Overlay
-Select popup
-global shortcut layer
-mouse event target + bubbling
-paste event
-```
-
-## 22. 最终目标语义
+## 17. 最终目标语义
 
 ```text
 focusable:
@@ -1224,37 +1120,40 @@ focusedPath:
 
 onKeyCapture:
   root -> parent 捕获。
+  类型为 InteractionKeyListener（handler / null / undefined），不接受 boolean。
 
 onKey:
   target + parent -> root 冒泡。
 
-preventDefault:
-  阻止默认行为，例如 Tab focus traversal。
+return true:
+  handled。
+  停止传播。
+  阻止 interaction fallback。
 
 stopPropagation:
-  阻止继续传播给后续节点。
+  停止继续传播。
+  不自动 handled。
+  不自动阻止 fallback。
 
-ElementHandle:
-  用户侧 ref / event target / focus handle。
+fallback:
+  没有 handler handled 时，interaction controller 执行的行为。
+  包括 Tab / Shift+Tab focus traversal。
 
 MountedElementNode:
   runtime internal，不作为用户稳定 API。
 
-isFocused:
-  当前元素就是 focused target。
-
-hasFocusWithin:
-  当前元素在 focusedPath 中。
+onFocusChange / InteractionFocusChangeEvent:
+  不暴露 MountedElementNode；用户事件仅含 id、focused、reason。
 ```
 
-## 23. 一句话总结
+## 18. 一句话总结
 
 BindTTY 应从 MVP 的 `onKey-only focus model` 升级为：
 
 ```text
 Focus list for traversal,
 focused path for key event propagation,
-ElementHandle for user-facing imperative control.
+small key event API for alpha.
 ```
 
-这能保留 TUI 中简单直接的 Tab 顺序，同时让 Form、Modal、ScrollView、TextInput 等嵌套组件具备自然组合能力，并避免把 `MountedElementNode` 这类 runtime 内部对象暴露给用户。
+这能保留 TUI 中简单直接的 Tab 顺序，同时让 Form、Modal、ScrollView、TextInput 等嵌套组件具备自然组合能力，并避免在 alpha 阶段过早冻结不必要的 API。

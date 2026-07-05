@@ -16,6 +16,7 @@ export interface ListProps<T = unknown> extends VScrollViewStyleProps {
   offset?: BindingValue<number>;
   height: BindingValue<number>;
   width?: BindingValue<number>;
+  focusable?: BindingValue<boolean>;
   scrollOnArrow?: BindingValue<boolean>;
   stickToBottom?: BindingValue<boolean>;
   showScrollbar?: BindingValue<boolean>;
@@ -28,6 +29,7 @@ export function List<T = unknown>(props: ListProps<T>): Template {
     offset: props.offset,
     height: props.height,
     width: props.width,
+    focusable: props.focusable,
     scrollOnArrow: props.scrollOnArrow,
     stickToBottom: props.stickToBottom,
     showScrollbar: props.showScrollbar,

@@ -25,6 +25,7 @@ export interface CheckboxProps extends CheckboxStyleProps {
   label?: BindingValue<string | number>;
   checked: BindingValue<boolean>;
   disabled?: BindingValue<boolean>;
+  focusable?: BindingValue<boolean>;
   onChange?: (nextChecked: boolean) => void;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }
@@ -36,6 +37,7 @@ export function Checkbox(props: CheckboxProps): Template {
     "box",
     omitUndefined({
       id: props.id,
+      focusable: props.focusable ?? true,
       onKey: createCheckboxOnKey(props),
       onFocusChange: props.onFocusChange,
       border: false,

@@ -11,7 +11,6 @@ export type InteractionFocusChangeReason =
 
 export interface InteractionFocusSnapshot {
   id: string;
-  node: MountedElementNode;
 }
 
 export interface InteractionFocusChangeEvent {
@@ -22,7 +21,6 @@ export interface InteractionFocusChangeEvent {
 
 export interface InteractionNodeFocusChangeEvent {
   id: string;
-  node: MountedElementNode;
   focused: boolean;
   reason: InteractionFocusChangeReason;
 }
@@ -31,15 +29,28 @@ export type InteractionFocusChangeListener = (
   event: InteractionFocusChangeEvent
 ) => void;
 
-export interface InteractionKeyContext {
-  node: MountedElementNode;
-  isFocused: true;
+export type KeyEventPhase = "capture" | "target" | "bubble";
+
+export interface BindTTYKeyEvent {
+  input: string;
+  name?: string;
+  ctrl: boolean;
+  meta: boolean;
+  shift: boolean;
+  sequence?: string;
+  phase: KeyEventPhase;
+  propagationStopped: boolean;
+  stopPropagation(): void;
 }
 
 export type InteractionKeyHandler = (
-  event: TerminalKeyEvent,
-  context: InteractionKeyContext
+  event: BindTTYKeyEvent
 ) => boolean | void;
+
+export type InteractionKeyListener =
+  | InteractionKeyHandler
+  | null
+  | undefined;
 
 export type InteractionKeyBinding =
   | boolean
@@ -49,6 +60,8 @@ export type InteractionKeyBinding =
 
 export interface IntrinsicInteractionProps {
   id?: BindingValue<string | number>;
+  focusable?: BindingValue<boolean>;
+  onKeyCapture?: BindingValue<InteractionKeyListener>;
   onKey?: BindingValue<InteractionKeyBinding>;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }
@@ -57,13 +70,6 @@ export interface InteractionResult {
   handled: boolean;
   dirtyNodes: MountedNode[];
   focusChange?: InteractionFocusChangeEvent;
-}
-
-export interface KeyFocusEntry {
-  id: string;
-  node: MountedElementNode;
-  order: number;
-  handler: InteractionKeyHandler | null;
 }
 
 export interface InteractionController {

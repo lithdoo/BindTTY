@@ -8,6 +8,7 @@ import {
   type TextInputStyleProps
 } from "@bindtty/widgets";
 import type {
+  BindTTYKeyEvent,
   InteractionKeyBinding,
   InteractionKeyHandler,
   InteractionNodeFocusChangeEvent
@@ -57,20 +58,34 @@ function key(
 function focusEvent(focused: boolean): InteractionNodeFocusChangeEvent {
   return {
     id: "input",
-    node: {} as never,
     focused,
     reason: "programmatic"
   };
+}
+
+function toBindTTYKeyEvent(event: TerminalKeyEvent): BindTTYKeyEvent {
+  const keyEvent: BindTTYKeyEvent = {
+    input: event.input,
+    name: event.name,
+    ctrl: event.ctrl,
+    meta: event.meta,
+    shift: event.shift,
+    sequence: event.sequence,
+    phase: "target",
+    propagationStopped: false,
+    stopPropagation() {
+      keyEvent.propagationStopped = true;
+    }
+  };
+
+  return keyEvent;
 }
 
 function callOnKey(
   handler: InteractionKeyHandler,
   event: TerminalKeyEvent
 ): boolean | void {
-  return handler(event, {
-    node: {} as never,
-    isFocused: true
-  });
+  return handler(toBindTTYKeyEvent(event));
 }
 
 function readParts(template: ElementTemplate): {
@@ -333,6 +348,27 @@ test("TextInput submits current value and leaves unrelated keys unhandled", () =
   assert.equal(callOnKey(onKey, key("\r", { name: "return" })), true);
   assert.equal(callOnKey(onKey, key("", { name: "escape" })), false);
   assert.deepEqual(submitted, ["send"]);
+});
+
+test("TextInput Enter without onSubmit bubbles as unhandled", () => {
+  const template = asElement(
+    TextInput({
+      value: "hello"
+    })
+  );
+  const onKey = readOnKeyHandler(template);
+
+  assert.equal(callOnKey(onKey, key("\r", { name: "return" })), false);
+});
+
+test("TextInput defaults focusable to true", () => {
+  const template = asElement(
+    TextInput({
+      value: "hello"
+    })
+  );
+
+  assert.equal(template.props.focusable, true);
 });
 
 test("TextInput disabled maps onKey to false and hides cursor", () => {

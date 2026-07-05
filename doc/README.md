@@ -31,6 +31,7 @@
 | [DESIGN.md](./architecture/DESIGN.md) | 视图树总体设计、四层结构、BindingValue |
 | [ROADMAP.md](./architecture/ROADMAP.md) | M1–M7 里程碑与下一阶段 |
 | [NEXT_STEPS.md](./architecture/NEXT_STEPS.md) | Alpha hardening 阶段规划与 Issue 对照 |
+| [FOCUS_AND_KEY_EVENT_PLAN.md](./architecture/FOCUS_AND_KEY_EVENT_PLAN.md) | Focus list + key event 传播设计（已实现） |
 
 ## packages/
 
