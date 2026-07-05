@@ -61,9 +61,7 @@ export default defineConfig({
           { text: "SCROLL_VIEWPORT · 滚动", link: "/specs/SCROLL_VIEWPORT" },
           { text: "YOGA_AND_TEXT", link: "/specs/YOGA_AND_TEXT" },
           { text: "LAYOUT_PROPS · 属性矩阵", link: "/specs/LAYOUT_PROPS" },
-          { text: "ELEMENT_REF", link: "/specs/ELEMENT_REF" },
-          { text: "TEXT_INPUT（跳转）", link: "/specs/TEXT_INPUT" },
-          { text: "PROGRESS_BAR（跳转）", link: "/specs/PROGRESS_BAR" }
+          { text: "ELEMENT_REF", link: "/specs/ELEMENT_REF" }
         ]
       },
       {
