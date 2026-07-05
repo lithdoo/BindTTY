@@ -172,6 +172,8 @@ export const layoutPropAliases = new Map<string, string>([
 export const nonLayoutProps = new Set<string>([
   "id",
   "focusStyle",
+  "focusable",
+  "onKeyCapture",
   "onKey",
   "onFocusChange"
 ]);

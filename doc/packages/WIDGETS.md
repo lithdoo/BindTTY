@@ -164,7 +164,7 @@ widget custom props:
 2. widget 必须显式把 custom props 转换成 style / interaction props。
 3. disabled 不作为 interaction 通用 prop。
 4. disabled 由 widget 决定是否让 onKey 变为 false。
-5. focusable 不作为单独 prop；是否可聚焦仍由 onKey 决定。
+5. 官方 interactive widgets 暴露 `focusable?: BindingValue<boolean>`，默认 `true`；容器模式可设 `focusable={false}` 仅接收 bubble。
 6. focusStyle 是 renderer paint prop；复杂控件可用 focusStyle="none" 关闭默认 focused inverse。
 7. TextInput 当前不直接暴露 width；如需固定宽度可在外层布局中组合 `box width`，后续可再评估是否加入 TextInput 自身 props。
 ```

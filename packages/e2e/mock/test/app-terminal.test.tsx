@@ -2013,3 +2013,206 @@ test("tsx app applies minWidth on spacer through Yoga layout", async () => {
 
   app.dispose();
 });
+
+test("tsx app bubbles TextInput Enter to Form container onKey", async () => {
+  const stdout = createFakeStdout(24, 8);
+  const stdin = createFakeStdin();
+  const value = createSignal("hello");
+  const submitMarker = createSignal("idle");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <box
+      focusable={false}
+      onKey={(event) => {
+        if (event.name === "return") {
+          submitMarker.set(`sent:${value.get()}`);
+          return true;
+        }
+        return false;
+      }}
+    >
+      <TextInput
+        value={value}
+        onChange={(nextValue) => {
+          value.set(nextValue);
+        }}
+      />
+    </box>,
+    { terminal }
+  );
+
+  app.start();
+  stdin.emitKey("\r", { name: "return" });
+  await nextMicrotask();
+
+  assert.equal(submitMarker.get(), "sent:hello");
+
+  app.dispose();
+});
+
+test("tsx app Modal onKeyCapture handles Escape while TextInput is focused", async () => {
+  const stdout = createFakeStdout(24, 8);
+  const stdin = createFakeStdin();
+  const value = createSignal("typing");
+  const closeMarker = createSignal("open");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <box
+      focusable={false}
+      onKeyCapture={(event) => {
+        if (event.name === "escape") {
+          closeMarker.set("closed");
+          return true;
+        }
+        return false;
+      }}
+    >
+      <TextInput
+        value={value}
+        onChange={(nextValue) => {
+          value.set(nextValue);
+        }}
+      />
+    </box>,
+    { terminal }
+  );
+
+  app.start();
+  stdin.emitKey(undefined, { name: "escape" });
+  await nextMicrotask();
+
+  assert.equal(closeMarker.get(), "closed");
+
+  app.dispose();
+});
+
+test("tsx app ScrollView focusable=false receives bubbled Down from TextInput", async () => {
+  const stdout = createFakeStdout(24, 10);
+  const stdin = createFakeStdin();
+  const value = createSignal("abc");
+  const offset = createSignal(0);
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <ScrollView
+      focusable={false}
+      width={10}
+      height={3}
+      offsetY={offset}
+      onOffsetYChange={(nextOffset) => {
+        offset.set(nextOffset);
+      }}
+    >
+      <TextInput
+        value={value}
+        onChange={(nextValue) => {
+          value.set(nextValue);
+        }}
+      />
+    </ScrollView>,
+    { terminal }
+  );
+
+  app.start();
+  stdin.emitKey(undefined, { name: "down" });
+  await nextMicrotask();
+
+  assert.equal(offset.get(), 1);
+
+  app.dispose();
+});
+
+test("tsx app Tab handled by focused onKey does not move focus", async () => {
+  const stdout = createFakeStdout(24, 8);
+  const stdin = createFakeStdin();
+  const first = createSignal("A");
+  const second = createSignal("B");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <hstack>
+      <text
+        value={first}
+        onKey={(event) => {
+          if (event.name === "tab") {
+            return true;
+          }
+          return false;
+        }}
+      />
+      <text
+        value={second}
+        onKey={() => true}
+      />
+    </hstack>,
+    { terminal }
+  );
+
+  app.start();
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7mA/);
+
+  stdin.emitKey(undefined, { name: "tab" });
+  await nextMicrotask();
+
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7mA/);
+
+  app.dispose();
+});
+
+test("tsx app stopPropagation without handled still runs Tab fallback", async () => {
+  const stdout = createFakeStdout(24, 8);
+  const stdin = createFakeStdin();
+  const first = createSignal("A");
+  const second = createSignal("B");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <hstack>
+      <text value={first} onKey={true} />
+      <text
+        value={second}
+        onKey={(event) => {
+          if (event.name === "tab") {
+            event.stopPropagation();
+          }
+        }}
+      />
+    </hstack>,
+    { terminal }
+  );
+
+  app.start();
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7mA/);
+
+  stdin.emitKey(undefined, { name: "tab" });
+  await nextMicrotask();
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7mB/);
+
+  stdin.emitKey(undefined, { name: "tab" });
+  await nextMicrotask();
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7mA/);
+
+  app.dispose();
+});

@@ -54,27 +54,46 @@ Tab 应该移动到哪个节点？
 
 ## 2. 核心决定
 
-MVP 不引入：
+Alpha interaction 模型（2026-07 起）：
 
 ```text
-onFocus / onBlur
+focusable:
+  控制节点是否进入 Tab focus list。
+
+onKeyCapture / onKey:
+  控制节点是否监听 key event（capture / target / bubble）。
+
+legacy:
+  未显式设置 focusable 时，onKey === true | function 仍隐式 focusable。
+```
+
+Key event 沿当前 focused target 的 mounted ancestor path 传播：
+
+```text
+capture: root -> ... -> parent
+target:  focused node
+bubble:  parent -> ... -> root
+fallback: Tab / Shift+Tab focus traversal（无 handler return true 时）
+```
+
+仍不引入：
+
+```text
+onFocus / onBlur（公开 API）
 autoFocus
 tabIndex
-event bubbling / capture
+mouse / paste / selection
 ```
 
-MVP 只使用一个 prop 判断节点是否进入键盘 focus 系统：
+详细设计见 [FOCUS_AND_KEY_EVENT_PLAN.md](../architecture/FOCUS_AND_KEY_EVENT_PLAN.md)。
 
-```text
-onKey
+`onKey` handler 签名：
+
+```ts
+onKey?: (event: BindTTYKeyEvent) => boolean | void
 ```
 
-也就是说：
-
-```text
-有可用 onKey -> 节点可聚焦，可接收键盘事件
-无可用 onKey -> 节点不可聚焦
-```
+`return true` 表示 handled 并阻止 fallback；`event.stopPropagation()` 仅停止传播。
 
 `onKey` 可以是静态值，也可以是动态 BindingValue。
 

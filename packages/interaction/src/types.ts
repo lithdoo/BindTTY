@@ -31,14 +31,22 @@ export type InteractionFocusChangeListener = (
   event: InteractionFocusChangeEvent
 ) => void;
 
-export interface InteractionKeyContext {
-  node: MountedElementNode;
-  isFocused: true;
+export type KeyEventPhase = "capture" | "target" | "bubble";
+
+export interface BindTTYKeyEvent {
+  input: string;
+  name?: string;
+  ctrl: boolean;
+  meta: boolean;
+  shift: boolean;
+  sequence?: string;
+  phase: KeyEventPhase;
+  propagationStopped: boolean;
+  stopPropagation(): void;
 }
 
 export type InteractionKeyHandler = (
-  event: TerminalKeyEvent,
-  context: InteractionKeyContext
+  event: BindTTYKeyEvent
 ) => boolean | void;
 
 export type InteractionKeyBinding =
@@ -49,6 +57,8 @@ export type InteractionKeyBinding =
 
 export interface IntrinsicInteractionProps {
   id?: BindingValue<string | number>;
+  focusable?: BindingValue<boolean>;
+  onKeyCapture?: BindingValue<InteractionKeyBinding>;
   onKey?: BindingValue<InteractionKeyBinding>;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }
@@ -63,7 +73,7 @@ export interface KeyFocusEntry {
   id: string;
   node: MountedElementNode;
   order: number;
-  handler: InteractionKeyHandler | null;
+  path: MountedElementNode[];
 }
 
 export interface InteractionController {

@@ -34,6 +34,7 @@ export interface VScrollViewProps extends VScrollViewStyleProps {
   height: BindingValue<number>;
   width?: BindingValue<number>;
   children?: TemplateChildren;
+  focusable?: BindingValue<boolean>;
   scrollOnArrow?: BindingValue<boolean>;
   stickToBottom?: BindingValue<boolean>;
   showScrollbar?: BindingValue<boolean>;
@@ -57,6 +58,7 @@ export function VScrollView(props: VScrollViewProps): Template {
     omitUndefined({
       id: props.id,
       ref: createVScrollViewRef(props, scrollState, layoutTick, scrollbarText),
+      focusable: props.focusable ?? true,
       onKey: createVScrollViewOnKey(props, scrollState),
       onFocusChange: props.onFocusChange,
       height: props.height,

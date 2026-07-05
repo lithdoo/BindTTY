@@ -34,29 +34,28 @@ interface InteractionNodeFocusChangeEvent {
   reason: InteractionFocusChangeReason;
 }
 
-interface InteractionKeyEvent {
+type KeyEventPhase = "capture" | "target" | "bubble";
+
+interface BindTTYKeyEvent {
   input: string;
   name?: string;
   ctrl: boolean;
   meta: boolean;
   shift: boolean;
   sequence?: string;
+  phase: KeyEventPhase;
+  propagationStopped: boolean;
+  stopPropagation(): void;
 }
 
-interface InteractionKeyContext {
-  node: unknown;
-  isFocused: true;
-}
-
-type InteractionKeyHandler = (
-  event: InteractionKeyEvent,
-  context: InteractionKeyContext
-) => boolean | void;
+type InteractionKeyHandler = (event: BindTTYKeyEvent) => boolean | void;
 type InteractionKeyBinding = boolean | InteractionKeyHandler | null | undefined;
 
 interface IntrinsicInteractionProps {
   id?: BindingValue<string | number>;
   ref?: MountedElementRefHandler | null | undefined;
+  focusable?: BindingValue<boolean>;
+  onKeyCapture?: BindingValue<InteractionKeyBinding>;
   onKey?: BindingValue<InteractionKeyBinding>;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }

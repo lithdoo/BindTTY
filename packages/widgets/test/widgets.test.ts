@@ -22,7 +22,11 @@ import {
   type HScrollViewProps,
   type ScrollViewProps
 } from "@bindtty/widgets";
-import type { InteractionKeyBinding, InteractionKeyHandler } from "@bindtty/interaction";
+import type {
+  BindTTYKeyEvent,
+  InteractionKeyBinding,
+  InteractionKeyHandler
+} from "@bindtty/interaction";
 import type { ElementTemplate, ReadableSignal, Template } from "@bindtty/vnode";
 
 function asElement(template: Template): ElementTemplate {
@@ -47,14 +51,41 @@ function resolveSignal<T>(value: unknown): T {
   return (value as ReadableSignal<T>).get();
 }
 
-function key(name: string): Parameters<InteractionKeyHandler>[0] {
-  return {
+function key(name: string): BindTTYKeyEvent {
+  const event: BindTTYKeyEvent = {
     input: "",
     name,
     ctrl: false,
     meta: false,
-    shift: false
+    shift: false,
+    phase: "target",
+    propagationStopped: false,
+    stopPropagation() {
+      event.propagationStopped = true;
+    }
   };
+
+  return event;
+}
+
+function rawKey(
+  input: string,
+  overrides: Partial<BindTTYKeyEvent> = {}
+): BindTTYKeyEvent {
+  const event: BindTTYKeyEvent = {
+    input,
+    ctrl: false,
+    meta: false,
+    shift: false,
+    phase: "target",
+    propagationStopped: false,
+    stopPropagation() {
+      event.propagationStopped = true;
+    },
+    ...overrides
+  };
+
+  return event;
 }
 
 interface TestScrollApi {
@@ -149,15 +180,19 @@ test("Button triggers onPress for Enter and Space", () => {
     })
   );
   const onKey = readOnKeyHandler(template);
-  assert.equal(onKey({ input: "\r", name: "return", ctrl: false, meta: false, shift: false }, {
-    node: {} as never,
-    isFocused: true
-  }), true);
-  assert.equal(onKey({ input: " ", ctrl: false, meta: false, shift: false }, {
-    node: {} as never,
-    isFocused: true
-  }), true);
+  assert.equal(onKey(rawKey("\r", { name: "return" })), true);
+  assert.equal(onKey(rawKey(" ")), true);
   assert.equal(presses, 2);
+});
+
+test("Button defaults focusable to true", () => {
+  const template = asElement(
+    Button({
+      label: "Run"
+    })
+  );
+
+  assert.equal(template.props.focusable, true);
 });
 
 test("Button leaves unrelated keys unhandled", () => {
@@ -171,10 +206,7 @@ test("Button leaves unrelated keys unhandled", () => {
     })
   );
   const onKey = readOnKeyHandler(template);
-  assert.equal(onKey({ input: "x", ctrl: false, meta: false, shift: false }, {
-    node: {} as never,
-    isFocused: true
-  }), false);
+  assert.equal(onKey(rawKey("x")), false);
   assert.equal(presses, 0);
 });
 
@@ -304,13 +336,13 @@ test("VScrollView emits offset intents for scroll keys", () => {
   );
   const onKey = readOnKeyHandler(template);
 
-  assert.equal(onKey(key("up"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("down"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("pageup"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("pagedown"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("home"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("end"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("left"), { node: {} as never, isFocused: true }), false);
+  assert.equal(onKey(key("up")), true);
+  assert.equal(onKey(key("down")), true);
+  assert.equal(onKey(key("pageup")), true);
+  assert.equal(onKey(key("pagedown")), true);
+  assert.equal(onKey(key("home")), true);
+  assert.equal(onKey(key("end")), true);
+  assert.equal(onKey(key("left")), false);
 
   assert.deepEqual(changes, [
     4,
@@ -353,14 +385,14 @@ test("VScrollView uses applied layout state for scroll keys after layout", () =>
 
   const onKey = readOnKeyHandler(template);
 
-  assert.equal(onKey(key("down"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("pagedown"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("end"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("up"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("down")), true);
+  assert.equal(onKey(key("pagedown")), true);
+  assert.equal(onKey(key("end")), true);
+  assert.equal(onKey(key("up")), true);
   assert.deepEqual(changes, [7, 7, 7, 6]);
 });
 
-test("VScrollView is not focusable without an offset change handler", () => {
+test("VScrollView defaults focusable to true without an offset change handler", () => {
   const template = asElement(
     VScrollView({
       height: 3,
@@ -368,6 +400,7 @@ test("VScrollView is not focusable without an offset change handler", () => {
     })
   );
 
+  assert.equal(template.props.focusable, true);
   assert.equal(template.props.onKey, false);
 });
 
@@ -496,7 +529,7 @@ test("VScrollView stickToBottom stays detached after up key", () => {
   api.onLayout?.(layoutPayload(2, 4, 2));
   changes.length = 0;
 
-  assert.equal(onKey(key("up"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("up")), true);
   api.onLayout?.(layoutPayload(1, 5, 2));
 
   assert.deepEqual(changes, [1]);
@@ -525,11 +558,11 @@ test("VScrollView stickToBottom re-attaches after end key", () => {
 
   api.onLayout?.(layoutPayload(0, 4, 2));
   api.onLayout?.(layoutPayload(2, 4, 2));
-  onKey(key("up"), { node: {} as never, isFocused: true });
+  onKey(key("up"));
   api.onLayout?.(layoutPayload(1, 5, 2));
   changes.length = 0;
 
-  onKey(key("end"), { node: {} as never, isFocused: true });
+  onKey(key("end"));
   api.onLayout?.(layoutPayload(3, 5, 2));
   changes.length = 0;
 
@@ -613,7 +646,7 @@ test("computeScrollbarThumb follows the scroll viewport formula", () => {
 });
 
 test("renderScrollbarColumn draws track and thumb characters", () => {
-  assert.equal(renderScrollbarColumn(0, 4, 4, 8), "█\n█\n│\n│");
+  assert.equal(renderScrollbarColumn(0, 4, 4, 8), "\u2588\n\u2588\n\u2502\n\u2502");
   assert.equal(renderScrollbarColumn(0, 0, 4, 8), "");
 });
 
@@ -695,11 +728,11 @@ test("HScrollView emits offset intents for horizontal scroll keys", () => {
   );
   const onKey = readOnKeyHandler(template);
 
-  assert.equal(onKey(key("left"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("right"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("home"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("end"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("up"), { node: {} as never, isFocused: true }), false);
+  assert.equal(onKey(key("left")), true);
+  assert.equal(onKey(key("right")), true);
+  assert.equal(onKey(key("home")), true);
+  assert.equal(onKey(key("end")), true);
+  assert.equal(onKey(key("up")), false);
   assert.deepEqual(changes, [0, 2, 0, Number.MAX_SAFE_INTEGER]);
 });
 
@@ -723,7 +756,7 @@ test("HScrollView stickToEnd requests max offset after layout", () => {
 });
 
 test("renderScrollbarRow draws track and thumb characters", () => {
-  assert.equal(renderScrollbarRow(0, 4, 4, 8), "██──");
+  assert.equal(renderScrollbarRow(0, 4, 4, 8), "\u2588\u2588\u2500\u2500");
   assert.equal(renderScrollbarRow(0, 0, 4, 8), "");
 });
 
@@ -850,10 +883,10 @@ test("ScrollView vertical keys change only Y offset", () => {
   );
   const onKey = readScrollViewOnKeyHandler(template);
 
-  assert.equal(onKey(key("up"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("down"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("pageup"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("pagedown"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("up")), true);
+  assert.equal(onKey(key("down")), true);
+  assert.equal(onKey(key("pageup")), true);
+  assert.equal(onKey(key("pagedown")), true);
   assert.deepEqual(changesX, []);
   assert.deepEqual(changesY, [0, 2, 0, 5]);
 });
@@ -877,8 +910,8 @@ test("ScrollView horizontal keys change only X offset", () => {
   );
   const onKey = readScrollViewOnKeyHandler(template);
 
-  assert.equal(onKey(key("left"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("right"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("left")), true);
+  assert.equal(onKey(key("right")), true);
   assert.deepEqual(changesY, []);
   assert.deepEqual(changesX, [0, 2]);
 });
@@ -905,8 +938,8 @@ test("ScrollView home and end update both axes", () => {
 
   api.onLayout?.(layoutPayloadXY(1, 1, 6, 6, 2, 2));
 
-  assert.equal(onKey(key("home"), { node: {} as never, isFocused: true }), true);
-  assert.equal(onKey(key("end"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("home")), true);
+  assert.equal(onKey(key("end")), true);
   assert.deepEqual(changesX, [0, 4]);
   assert.deepEqual(changesY, [0, 4]);
 });
@@ -928,11 +961,11 @@ test("ScrollView uses applied layout state for scroll keys after layout", () => 
 
   api.onLayout?.(layoutPayloadXY(0, 4, 2, 6, 2, 2));
 
-  assert.equal(onKey(key("down"), { node: {} as never, isFocused: true }), true);
+  assert.equal(onKey(key("down")), true);
   assert.deepEqual(changesY, [4]);
 });
 
-test("ScrollView is not focusable without offset change handlers", () => {
+test("ScrollView defaults focusable to true without offset change handlers", () => {
   const template = asElement(
     ScrollView({
       width: 4,
@@ -940,6 +973,7 @@ test("ScrollView is not focusable without offset change handlers", () => {
     })
   );
 
+  assert.equal(template.props.focusable, true);
   assert.equal(readOnKey(template), false);
 });
 
@@ -1050,17 +1084,17 @@ function getProgressBarTrackText(template: ElementTemplate): ElementTemplate {
 }
 
 test("renderProgressBar follows the round formula", () => {
-  assert.equal(renderProgressBar(50, 100, 10, "█", "░"), "█████░░░░░");
-  assert.equal(renderProgressBar(100, 100, 4, "█", "░"), "████");
-  assert.equal(renderProgressBar(150, 100, 4, "█", "░"), "████");
-  assert.equal(renderProgressBar(0, 100, 4, "█", "░"), "░░░░");
-  assert.equal(renderProgressBar(50, 0, 10, "█", "░"), "");
-  assert.equal(renderProgressBar(50, 100, 0, "█", "░"), "");
+  assert.equal(renderProgressBar(50, 100, 10, "\u2588", "\u2591"), "\u2588\u2588\u2588\u2588\u2588\u2591\u2591\u2591\u2591\u2591");
+  assert.equal(renderProgressBar(100, 100, 4, "\u2588", "\u2591"), "\u2588\u2588\u2588\u2588");
+  assert.equal(renderProgressBar(150, 100, 4, "\u2588", "\u2591"), "\u2588\u2588\u2588\u2588");
+  assert.equal(renderProgressBar(0, 100, 4, "\u2588", "\u2591"), "\u2591\u2591\u2591\u2591");
+  assert.equal(renderProgressBar(50, 0, 10, "\u2588", "\u2591"), "");
+  assert.equal(renderProgressBar(50, 100, 0, "\u2588", "\u2591"), "");
 });
 
 test("renderProgressBar width 1 uses round", () => {
-  assert.equal(renderProgressBar(40, 100, 1, "█", "░"), "░");
-  assert.equal(renderProgressBar(60, 100, 1, "█", "░"), "█");
+  assert.equal(renderProgressBar(40, 100, 1, "\u2588", "\u2591"), "\u2591");
+  assert.equal(renderProgressBar(60, 100, 1, "\u2588", "\u2591"), "\u2588");
 });
 
 test("renderProgressPercent formats percentage text", () => {
@@ -1085,7 +1119,7 @@ test("ProgressBar renders hstack with track box and text", () => {
   assert.equal(row.children.length, 1);
   assert.equal(trackBox.props.width, 8);
   assert.equal(trackText.tag, "text");
-  assert.equal(trackText.props.value, "████░░░░");
+  assert.equal(trackText.props.value, "\u2588\u2588\u2588\u2588\u2591\u2591\u2591\u2591");
 });
 
 test("ProgressBar renders label and showPercent in hstack", () => {
@@ -1131,8 +1165,8 @@ test("ProgressBar updates bar text from a dynamic value signal", () => {
   );
   const trackText = getProgressBarTrackText(template);
 
-  assert.equal(resolveSignal<string>(trackText.props.value), "░░░░");
+  assert.equal(resolveSignal<string>(trackText.props.value), "\u2591\u2591\u2591\u2591");
 
   value.set(100);
-  assert.equal(resolveSignal<string>(trackText.props.value), "████");
+  assert.equal(resolveSignal<string>(trackText.props.value), "\u2588\u2588\u2588\u2588");
 });

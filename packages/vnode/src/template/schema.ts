@@ -17,6 +17,8 @@ const commonElementProps: Record<string, PropSchema> = {
   id: { dirty: "paint" },
   ref: {},
   focusStyle: { dirty: "paint" },
+  focusable: { dirty: "paint" },
+  onKeyCapture: { dirty: "paint" },
   onKey: { dirty: "paint" },
   onFocusChange: { dirty: "paint" }
 };

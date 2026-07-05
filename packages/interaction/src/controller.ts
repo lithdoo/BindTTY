@@ -1,6 +1,10 @@
 import type { TerminalKeyEvent } from "@bindtty/terminal";
 import type { MountedElementNode, MountedNode } from "@bindtty/vnode";
-import { isShiftTabKey, isTabKey } from "./keyboard.js";
+import {
+  createKeyEvent,
+  dispatchTo,
+  runTabFallback
+} from "./dispatch.js";
 import type {
   InteractionController,
   InteractionFocusChangeEvent,
@@ -8,20 +12,20 @@ import type {
   InteractionFocusChangeReason,
   InteractionFocusSnapshot,
   InteractionKeyBinding,
-  InteractionKeyHandler,
   InteractionResult
 } from "./types.js";
 
 interface FocusState {
   entry: FocusEntry | null;
   previousOrder: number | null;
+  focusedPath: MountedElementNode[];
 }
 
 interface FocusEntry {
   id: string;
   node: MountedElementNode;
   order: number;
-  handler: InteractionKeyHandler | null;
+  path: MountedElementNode[];
 }
 
 function createEmptyResult(handled = false): InteractionResult {
@@ -31,6 +35,29 @@ function createEmptyResult(handled = false): InteractionResult {
   };
 }
 
+function uniqueNodes(nodes: MountedElementNode[]): MountedNode[] {
+  const seen = new Set<MountedElementNode>();
+  const result: MountedNode[] = [];
+
+  for (const node of nodes) {
+    if (seen.has(node)) {
+      continue;
+    }
+
+    seen.add(node);
+    result.push(node);
+  }
+
+  return result;
+}
+
+function collectFocusDirtyNodes(
+  previousPath: MountedElementNode[],
+  nextPath: MountedElementNode[]
+): MountedNode[] {
+  return uniqueNodes([...previousPath, ...nextPath]);
+}
+
 export function createInteractionController(): InteractionController {
   const focusChangeListeners = new Set<InteractionFocusChangeListener>();
   const internalIds = new WeakMap<MountedElementNode, string>();
@@ -38,7 +65,8 @@ export function createInteractionController(): InteractionController {
   let entries: FocusEntry[] = [];
   let focusState: FocusState = {
     entry: null,
-    previousOrder: null
+    previousOrder: null,
+    focusedPath: []
   };
   let disposed = false;
 
@@ -68,35 +96,20 @@ export function createInteractionController(): InteractionController {
     return value as InteractionKeyBinding;
   }
 
-  function toFocusEntry(
-    node: MountedElementNode,
-    order: number
-  ): FocusEntry | null {
+  function isFocusable(node: MountedElementNode): boolean {
+    const explicit = node.props.focusable;
+
+    if (explicit !== undefined) {
+      return explicit === true;
+    }
+
     const onKey = resolveOnKey(node.props.onKey);
-
-    if (onKey === true) {
-      return {
-        id: getEntryId(node),
-        node,
-        order,
-        handler: null
-      };
-    }
-
-    if (typeof onKey === "function") {
-      return {
-        id: getEntryId(node),
-        node,
-        order,
-        handler: onKey
-      };
-    }
-
-    return null;
+    return onKey === true || typeof onKey === "function";
   }
 
   function collectEntries(root: MountedNode | null): FocusEntry[] {
     const nextEntries: FocusEntry[] = [];
+    const path: MountedElementNode[] = [];
     let order = 0;
 
     function visit(node: MountedNode | null): void {
@@ -106,16 +119,24 @@ export function createInteractionController(): InteractionController {
 
       switch (node.kind) {
         case "element": {
-          const entry = toFocusEntry(node, order);
-          order += 1;
+          path.push(node);
 
-          if (entry) {
-            nextEntries.push(entry);
+          if (isFocusable(node)) {
+            nextEntries.push({
+              id: getEntryId(node),
+              node,
+              order,
+              path: [...path]
+            });
           }
+
+          order += 1;
 
           for (const child of node.children) {
             visit(child);
           }
+
+          path.pop();
           return;
         }
         case "fragment":
@@ -173,6 +194,7 @@ export function createInteractionController(): InteractionController {
   function buildFocusResult(
     previous: FocusEntry | null,
     current: FocusEntry | null,
+    previousPath: MountedElementNode[],
     reason: InteractionFocusChangeReason,
     handled: boolean
   ): InteractionResult {
@@ -185,15 +207,16 @@ export function createInteractionController(): InteractionController {
       current: toSnapshot(current),
       reason
     };
-    const dirtyNodes: MountedNode[] = [];
+    const dirtyNodes = collectFocusDirtyNodes(
+      previousPath,
+      current?.path ?? []
+    );
 
     if (previous) {
-      dirtyNodes.push(previous.node);
       notifyNodeFocusChange(previous, false, reason);
     }
 
     if (current) {
-      dirtyNodes.push(current.node);
       notifyNodeFocusChange(current, true, reason);
     }
 
@@ -214,13 +237,15 @@ export function createInteractionController(): InteractionController {
     handled: boolean
   ): InteractionResult {
     const previous = focusState.entry;
+    const previousPath = focusState.focusedPath;
 
     focusState = {
       entry,
-      previousOrder: entry?.order ?? previous?.order ?? focusState.previousOrder
+      previousOrder: entry?.order ?? previous?.order ?? focusState.previousOrder,
+      focusedPath: entry?.path ?? []
     };
 
-    return buildFocusResult(previous, entry, reason, handled);
+    return buildFocusResult(previous, entry, previousPath, reason, handled);
   }
 
   function findEntryForNode(node: MountedElementNode): FocusEntry | null {
@@ -278,6 +303,10 @@ export function createInteractionController(): InteractionController {
     );
   }
 
+  function runFallbackKeyAction(raw: TerminalKeyEvent): InteractionResult {
+    return runTabFallback(raw, moveFocus);
+  }
+
   return {
     refresh(root: MountedNode | null): InteractionResult {
       if (disposed) {
@@ -294,7 +323,8 @@ export function createInteractionController(): InteractionController {
         if (retained) {
           focusState = {
             entry: retained,
-            previousOrder: retained.order
+            previousOrder: retained.order,
+            focusedPath: retained.path
           };
           return createEmptyResult();
         }
@@ -311,22 +341,41 @@ export function createInteractionController(): InteractionController {
         return createEmptyResult(false);
       }
 
-      if (isTabKey(event)) {
-        return isShiftTabKey(event) ? moveFocus(-1) : moveFocus(1);
-      }
-
       const focusedEntry = focusState.entry;
 
-      if (!focusedEntry?.handler) {
-        return createEmptyResult(false);
+      if (!focusedEntry) {
+        return runFallbackKeyAction(event);
       }
 
-      return createEmptyResult(
-        focusedEntry.handler(event, {
-          node: focusedEntry.node,
-          isFocused: true
-        }) === true
-      );
+      const keyEvent = createKeyEvent(event);
+      let handled = false;
+
+      for (const node of focusedEntry.path.slice(0, -1)) {
+        handled = dispatchTo(node, "capture", keyEvent) || handled;
+        if (keyEvent.propagationStopped) {
+          break;
+        }
+      }
+
+      if (!keyEvent.propagationStopped) {
+        handled =
+          dispatchTo(focusedEntry.node, "target", keyEvent) || handled;
+      }
+
+      if (!keyEvent.propagationStopped) {
+        for (const node of focusedEntry.path.slice(0, -1).reverse()) {
+          handled = dispatchTo(node, "bubble", keyEvent) || handled;
+          if (keyEvent.propagationStopped) {
+            break;
+          }
+        }
+      }
+
+      if (!handled) {
+        return runFallbackKeyAction(event);
+      }
+
+      return createEmptyResult(true);
     },
 
     onFocusChange(listener: InteractionFocusChangeListener): () => void {
@@ -396,7 +445,8 @@ export function createInteractionController(): InteractionController {
       entries = [];
       focusState = {
         entry: null,
-        previousOrder: null
+        previousOrder: null,
+        focusedPath: []
       };
     }
   };

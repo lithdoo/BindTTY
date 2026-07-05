@@ -26,6 +26,7 @@ export interface ButtonProps extends ButtonStyleProps {
   id?: BindingValue<string | number>;
   label?: BindingValue<string | number>;
   disabled?: BindingValue<boolean>;
+  focusable?: BindingValue<boolean>;
   onPress?: () => void;
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }
@@ -35,6 +36,7 @@ export function Button(props: ButtonProps): Template {
     "box",
     omitUndefined({
       id: props.id,
+      focusable: props.focusable ?? true,
       onKey: createButtonOnKey(props),
       onFocusChange: props.onFocusChange,
       border: props.border ?? true,

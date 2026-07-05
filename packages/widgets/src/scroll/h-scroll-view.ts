@@ -34,6 +34,7 @@ export interface HScrollViewProps extends HScrollViewStyleProps {
   width: BindingValue<number>;
   height?: BindingValue<number>;
   children?: TemplateChildren;
+  focusable?: BindingValue<boolean>;
   scrollOnArrow?: BindingValue<boolean>;
   stickToEnd?: BindingValue<boolean>;
   showScrollbar?: BindingValue<boolean>;
@@ -54,6 +55,7 @@ export function HScrollView(props: HScrollViewProps): Template {
     omitUndefined({
       id: props.id,
       ref: createHScrollViewRef(props, scrollState, layoutTick, scrollbarText),
+      focusable: props.focusable ?? true,
       onKey: createHScrollViewOnKey(props, scrollState),
       onFocusChange: props.onFocusChange,
       width: props.width,
