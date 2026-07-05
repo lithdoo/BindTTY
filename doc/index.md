@@ -2,40 +2,40 @@
 layout: home
 hero:
   name: BindTTY
-  text: MVVM signal-driven TUI for TypeScript/TSX
-  tagline: ViewModel binding, Yoga layout, terminal ANSI diff — not a React VDOM clone.
+  text: 面向 MVVM + signal 的 TypeScript/TSX 终端 UI 框架
+  tagline: 以 ViewModel binding 为核心，Yoga 布局 + 终端 ANSI diff，不是 React VDOM 复刻。
   actions:
     - theme: brand
-      text: Architecture
+      text: 架构设计
       link: /architecture/DESIGN
     - theme: alt
-      text: Full doc index
+      text: 文档索引
       link: /README
     - theme: alt
       text: GitHub
       link: https://github.com/lithdoo/BindTTY
 features:
-  - title: Signal-driven updates
-    details: Signal changes invalidate bindings; layout and paint patch only what changed.
-  - title: TSX-first
-    details: Intrinsic elements, show/for control flow, and widgets compose into terminal UI.
-  - title: Real terminal ready
-    details: createApp + createNodeTerminal for raw mode, focus, and keyboard dispatch.
+  - title: Signal 驱动更新
+    details: signal 变化触发 binding 失效，layout 与 paint 只 patch 变更部分。
+  - title: TSX 优先
+    details: 内置元素、show/for 控制流与 widgets 组合成终端 UI。
+  - title: 真实终端就绪
+    details: createApp + createNodeTerminal 支持 raw mode、焦点与键盘派发。
 ---
 
-## Install
+## 安装
 
 ```bash
 npm install bindtty @bindtty/widgets
 ```
 
-Real terminal apps also need `@bindtty/terminal`:
+真实终端应用还需 `@bindtty/terminal`：
 
 ```bash
 npm install @bindtty/terminal
 ```
 
-Use matching versions for `bindtty` and `@bindtty/widgets` (e.g. both `0.1.0-alpha.2`).
+`bindtty` 与 `@bindtty/widgets` 请使用匹配版本（例如均为 `0.1.0-alpha.2`）。
 
 ## tsconfig
 
@@ -48,7 +48,7 @@ Use matching versions for `bindtty` and `@bindtty/widgets` (e.g. both `0.1.0-alp
 }
 ```
 
-## Quick start
+## 快速开始
 
 ```tsx
 import { computed, createApp, createSignal } from "bindtty";
@@ -68,7 +68,7 @@ const app = createApp(
 app.start();
 ```
 
-## Terminal mode
+## 终端模式
 
 ```tsx
 import { createApp } from "bindtty";
@@ -85,24 +85,24 @@ const app = createApp(view, { terminal });
 app.start();
 ```
 
-## Migration (alpha.1 → alpha.2)
+## 迁移（alpha.1 → alpha.2）
 
-`bindtty` no longer re-exports widgets. Import controls from `@bindtty/widgets`:
+`bindtty` 不再 re-export widgets，控件从 `@bindtty/widgets` 导入：
 
 ```tsx
-// before
+// 之前
 import { createApp, Button } from "bindtty";
 
-// after
+// 之后
 import { createApp } from "bindtty";
 import { Button } from "@bindtty/widgets";
 ```
 
-ScrollView was renamed to `VScrollView`; see [widgets/SCROLL](/widgets/SCROLL).
+`ScrollView` 已重命名为 `VScrollView`，详见 [widgets/SCROLL](/widgets/SCROLL)。
 
-## Next steps
+## 下一步
 
-- [Architecture](/architecture/DESIGN) — four-layer view model
-- [bindtty createApp](/packages/APP) — app lifecycle
-- [Widgets overview](/widgets/README) — Button, TextInput, Select, scroll views
-- [Full documentation index](/README)
+- [架构设计](/architecture/DESIGN) — 四层视图模型
+- [bindtty createApp](/packages/APP) — 应用生命周期
+- [控件概览](/widgets/README) — Button、TextInput、Select、滚动视图
+- [完整文档索引](/README)
