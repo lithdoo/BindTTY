@@ -20,7 +20,8 @@
 | ✅ | 已支持，参与 layout |
 | ⛔ | 在 `futureLayoutProps` 中，使用会抛 `Unsupported layout prop` |
 | — | 不适用（该 tag 无此语义，或 prop 为 paint-only） |
-| 🚫 | `Unsupported layout element`（`button` / `input` 不可作为 layout 节点） |
+
+矩阵列仅含 **layout 参与 tag**（`screen` · `vstack` · `hstack` · `box` · `text` · `spacer`）。intrinsic `button` / `input` 不在此表：schema 仍保留类型，但 layout 遇之则抛 `Unsupported layout element`；控件请用 [@bindtty/widgets](../packages/WIDGETS.md)。
 
 **非 layout prop**（校验时跳过）：`id`、`ref`、`focusStyle`、`onKey`、`onFocusChange`。
 
@@ -36,39 +37,39 @@
 
 <!-- layout-props:matrix:yoga:start -->
 
-| prop | screen | vstack | hstack | box | text | spacer | button | input |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `width` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ | 🚫 | 🚫 |
-| `height` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ | 🚫 | 🚫 |
-| `minWidth` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `minHeight` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `maxWidth` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `maxHeight` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `padding` | — | — | — | ✅ | — | — | 🚫 | 🚫 |
-| `paddingX` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ | 🚫 | 🚫 |
-| `paddingY` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ | 🚫 | 🚫 |
-| `paddingTop` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ | 🚫 | 🚫 |
-| `paddingRight` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ | 🚫 | 🚫 |
-| `paddingBottom` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ | 🚫 | 🚫 |
-| `paddingLeft` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ | 🚫 | 🚫 |
-| `margin` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `marginX` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `marginY` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `marginTop` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `marginRight` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `marginBottom` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `marginLeft` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `border` | — | — | — | ✅ | — | — | 🚫 | 🚫 |
-| `overflow` | — | — | — | ✅ | — | — | 🚫 | 🚫 |
-| `scrollX` | — | — | — | ✅ | — | — | 🚫 | 🚫 |
-| `scrollY` | — | — | — | ✅ | — | — | 🚫 | 🚫 |
-| `gap` | ✅ | ✅ | ✅ | ✅ | ⛔ | ⛔ | 🚫 | 🚫 |
-| `flexWrap` | ✅ | ✅ | ✅ | ✅ | ⛔ | ⛔ | 🚫 | 🚫 |
-| `justifyContent` | ✅ | ✅ | ✅ | ✅ | ⛔ | ⛔ | 🚫 | 🚫 |
-| `alignItems` | ✅ | ✅ | ✅ | ✅ | ⛔ | ⛔ | 🚫 | 🚫 |
-| `flexGrow` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `flexShrink` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🚫 | 🚫 |
-| `flexDirection` | ⛔ | ⛔ | ⛔ | ⛔ | ⛔ | ⛔ | 🚫 | 🚫 |
+| prop | screen | vstack | hstack | box | text | spacer |
+| --- | --- | --- | --- | --- | --- | --- |
+| `width` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
+| `height` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
+| `minWidth` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `minHeight` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `maxWidth` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `maxHeight` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `padding` | — | — | — | ✅ | — | — |
+| `paddingX` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
+| `paddingY` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
+| `paddingTop` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
+| `paddingRight` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
+| `paddingBottom` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
+| `paddingLeft` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
+| `margin` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `marginX` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `marginY` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `marginTop` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `marginRight` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `marginBottom` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `marginLeft` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `border` | — | — | — | ✅ | — | — |
+| `overflow` | — | — | — | ✅ | — | — |
+| `scrollX` | — | — | — | ✅ | — | — |
+| `scrollY` | — | — | — | ✅ | — | — |
+| `gap` | ✅ | ✅ | ✅ | ✅ | ⛔ | ⛔ |
+| `flexWrap` | ✅ | ✅ | ✅ | ✅ | ⛔ | ⛔ |
+| `justifyContent` | ✅ | ✅ | ✅ | ✅ | ⛔ | ⛔ |
+| `alignItems` | ✅ | ✅ | ✅ | ✅ | ⛔ | ⛔ |
+| `flexGrow` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `flexShrink` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `flexDirection` | ⛔ | ⛔ | ⛔ | ⛔ | ⛔ | ⛔ |
 
 <!-- layout-props:matrix:yoga:end -->
 
@@ -78,13 +79,12 @@
 
 以下 props 不在 `matrixLayoutProps` 生成表中，但参与 layout 或 validator：
 
-| prop | screen | vstack | hstack | box | text | spacer | button | input |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `value` | — | — | — | — | ✅ | — | 🚫 | 🚫 |
-| `wrap` | — | — | — | — | ✅ | — | 🚫 | 🚫 |
-| `size` | — | — | — | — | — | ✅ | 🚫 | 🚫 |
-| `color` / `bold` | — | — | — | — | ✅¹ | — | 🚫 | 🚫 |
-| `disabled` / `placeholder` | — | — | — | — | — | — | 🚫 | 🚫 |
+| prop | screen | vstack | hstack | box | text | spacer |
+| --- | --- | --- | --- | --- | --- | --- |
+| `value` | — | — | — | — | ✅ | — |
+| `wrap` | — | — | — | — | ✅ | — |
+| `size` | — | — | — | — | — | ✅ |
+| `color` / `bold` | — | — | — | — | ✅¹ | — |
 
 ¹ `color` / `bold` 在 validator 中视为 layout prop 名称，但只影响 paint，不改变 Yoga 尺寸（除 `value` / `wrap` 外）。
 
@@ -104,8 +104,6 @@
 | `box` | `border`, `height`, `overflow`, `padding`, `scrollX`, `scrollY`, `width` |
 | `text` | `bold`, `color`, `value`, `wrap` |
 | `spacer` | `size` |
-| `button` | schema 有定义；layout 仍 🚫 |
-| `input` | schema 有定义；layout 仍 🚫 |
 
 <!-- layout-props:matrix:basic:end -->
 
@@ -195,7 +193,7 @@
 - `flexDirection` 开放（已有 tag 语义）
 - `alignSelf`、`alignContent`、`flexBasis`
 - 百分比尺寸、absolute positioning
-- `button` / `input` 作为 Yoga layout 节点
+- intrinsic `button` / `input` 作为 layout 节点（请用 widgets；见 §1）
 
 ---
 

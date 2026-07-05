@@ -22,7 +22,9 @@ const {
   getLayoutPropMatrixStatus
 } = await import(layoutPropsUrl);
 
-const tags = Object.keys(yogaSupportedPropsByTag);
+const tags = Object.keys(yogaSupportedPropsByTag).filter(
+  (tag) => !nonLayoutElementTags.has(tag)
+);
 const statusSymbol = { supported: "✅", future: "⛔", na: "—" };
 
 function matrixSymbol(tag, prop, engine) {
