@@ -26,12 +26,12 @@ BindTTY 在 **text → layout → renderer → ANSI** 全链路使用 **terminal
 
 | § | 章节 | § | 章节 |
 | --- | --- | --- | --- |
-| [1](#1-范围) | 范围 | [7](#7-layout-yoga-scrollview) | Layout/Yoga |
-| [2](#2-术语) | 术语 | [8](#8-已知限制) | 已知限制 |
-| [3](#3-数据流) | 数据流 | [9](#9-测试回归索引) | 测试回归 |
-| [4](#4-bindtty-text) | @bindtty/text | [10](#10-示例) | 示例 |
-| [5](#5-frame-cell) | Frame/Cell | [11](#11-未来方向) | 未来方向 |
-| [6](#6-renderer) | Renderer | [12](#12-文档迁移说明) | 迁移说明 |
+| [1](#_1-范围) | 范围 | [7](#_7-layout-yoga-scrollview) | Layout/Yoga |
+| [2](#_2-术语) | 术语 | [8](#_8-已知限制) | 已知限制 |
+| [3](#_3-数据流) | 数据流 | [9](#_9-测试回归索引) | 测试回归 |
+| [4](#_4-bindtty-text) | @bindtty/text | [10](#_10-示例) | 示例 |
+| [5](#_5-frame-cell) | Frame/Cell | [11](#_11-未来方向) | 未来方向 |
+| [6](#_6-renderer) | Renderer | [12](#_12-文档迁移说明) | 迁移说明 |
 
 :::
 

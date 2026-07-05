@@ -6,7 +6,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const docDir = path.join(root, "doc");
 const distDir = path.join(docDir, ".vitepress", "dist");
 
-const navBlockRe = /::: info 本章导航\n([\s\S]*?)\n:::/g;
+const navBlockRe = /::: info 本章导航\r?\n([\s\S]*?)\r?\n:::/g;
 const anchorRe = /\]\(#([^)]+)\)/g;
 
 function docPathToHtml(mdPath) {

@@ -12,13 +12,13 @@
 
 | 章节 | 内容 |
 | --- | --- |
-| [1. 目标与范围](#1-目标与范围) | E2E 目标 |
+| [1. 目标与范围](#_1-目标与范围) | E2E 目标 |
 | [为什么 fake stdout / stdin](#为什么-fake-stdout-stdin) | 测试 harness 选型 |
 | [包结构](#包结构) | mock / real 包结构 |
 | [当前测试场景](#当前测试场景) | 已有场景 |
 | [后续阶段](#后续阶段) | 规划阶段 |
 | [判断标准](#判断标准) | 通过标准 |
-| [5. Scroll / Viewport 场景](#5-scroll-viewport-场景) | Scroll 场景 |
+| [5. Scroll / Viewport 场景](#_5-scroll-viewport-场景) | Scroll 场景 |
 
 :::
 
