@@ -4,7 +4,7 @@
 
 ## 安装
 
-与 `bindtty` **分开安装**，版本号应对齐（如均为 `0.1.0-alpha.2`）：
+与 `bindtty` **分开安装**，版本号应对齐（如均为 `0.1.0-alpha.3`）：
 
 ```bash
 npm install bindtty @bindtty/widgets

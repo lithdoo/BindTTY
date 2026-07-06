@@ -37,7 +37,7 @@ npm install bindtty @bindtty/widgets
 npm install @bindtty/terminal
 ```
 
-`bindtty` 与 `@bindtty/widgets` 请使用匹配版本（例如均为 `0.1.0-alpha.2`）。
+`bindtty` 与 `@bindtty/widgets` 请使用匹配版本（例如均为 `0.1.0-alpha.3`）。
 
 ## tsconfig
 

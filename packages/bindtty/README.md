@@ -68,7 +68,7 @@ import { Button, TextInput } from "@bindtty/widgets";
 
 `@bindtty/signal` 为 **peer dependency**（同时保留在 `dependencies` 中，以便 `npm install bindtty` 自动安装）。全应用应只有**一份** `@bindtty/signal` 实例——应用与 widgets 内部 `createSignal` / `computed` 须解析到同一模块，否则可能出现 computed 不更新、订阅链断裂。
 
-推荐统一从 `bindtty` 导入 signal，勿单独安装另一版本的 `@bindtty/signal`。使用 widgets 时，`bindtty` 与 `@bindtty/widgets` 请保持**同版本号**发布（如均为 `0.1.0-alpha.2`）。
+推荐统一从 `bindtty` 导入 signal，勿单独安装另一版本的 `@bindtty/signal`。使用 widgets 时，`bindtty` 与 `@bindtty/widgets` 请保持**同版本号**发布（如均为 `0.1.0-alpha.3`）。
 
 **排障：**
 
@@ -79,7 +79,7 @@ import { Button, TextInput } from "@bindtty/widgets";
   1. 只从 bindtty 导入 createSignal / computed / effect
   2. npm uninstall @bindtty/signal（若单独装了冲突版本）
   3. npm dedupe && npm install
-  4. 应用 package.json overrides: { "@bindtty/signal": "0.1.0-alpha.2" }
+  4. 应用 package.json overrides: { "@bindtty/signal": "0.1.0-alpha.3" }
 ```
 
 ## 快速开始

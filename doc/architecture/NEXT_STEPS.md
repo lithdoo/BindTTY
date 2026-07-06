@@ -51,7 +51,7 @@ TSX → ViewTemplate → MountedNode → LayoutNode → Frame → ANSI Patch
 | M1–M7 主链路 | ✅ | [ROADMAP.md](./ROADMAP.md) |
 | TextInput display-column 输入窗口 | ✅ | [TEXT_INPUT.md](../widgets/TEXT_INPUT.md) §1.1、`packages/widgets/src/form/text-input.ts` |
 | display-width / CJK / emoji | ✅ | [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) |
-| npm 发布元数据 | ✅ | `LICENSE`、`publishConfig`、`scripts/publish-packages.mjs`，版本 `0.1.0-alpha.2` |
+| npm 发布元数据 | ✅ | `LICENSE`、`publishConfig`、`scripts/publish-packages.mjs`，版本 `0.1.0-alpha.3` |
 | `bindtty` JSX 转发 | ✅ | `packages/bindtty` 导出 `./jsx-runtime`、`./jsx-dev-runtime` |
 | `@bindtty/signal` peer 单实例 | ✅ | `bindtty` / `widgets`：`peerDependencies` + `dependencies` |
 | Yoga flex 基础 props | ✅ | `gap`、`flexWrap`、`alignItems`、`justifyContent`、`flexGrow`、`flexShrink` |
@@ -78,7 +78,7 @@ real PTY 专项 job（Windows / WSL）可后续单独添加，不阻塞主 CI。
 
 ### 3.2 npm 发布
 
-**已完成（2026-07）**：11 包 `0.1.0-alpha.2` 首版公开发布，tag `alpha`。
+**已完成（2026-07）**：11 包 `0.1.0-alpha.3` 首版公开发布，tag `alpha`。
 
 ```bash
 npm install bindtty@alpha
@@ -167,7 +167,7 @@ import { Button, List, TextInput } from "@bindtty/widgets";
 
 ## 6. 版本目标（修订）
 
-### 0.1.0-alpha.2（当前）
+### 0.1.0-alpha.3（当前）
 
 **已完成：**
 
