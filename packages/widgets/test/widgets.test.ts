@@ -51,6 +51,16 @@ function resolveSignal<T>(value: unknown): T {
   return (value as ReadableSignal<T>).get();
 }
 
+function readFocusable(template: ElementTemplate): boolean {
+  const focusable = template.props.focusable;
+
+  if (typeof focusable === "boolean") {
+    return focusable;
+  }
+
+  return resolveSignal<boolean>(focusable);
+}
+
 function key(name: string): BindTTYKeyEvent {
   const event: BindTTYKeyEvent = {
     input: "",
@@ -210,7 +220,7 @@ test("Button leaves unrelated keys unhandled", () => {
   assert.equal(presses, 0);
 });
 
-test("Button disabled maps onKey to false and dims the label", () => {
+test("Button disabled maps onKey to false, focusable to false, and dims the label", () => {
   const template = asElement(
     Button({
       label: "Disabled",
@@ -220,7 +230,20 @@ test("Button disabled maps onKey to false and dims the label", () => {
   const label = asElement(template.children[0]!);
 
   assert.equal(template.props.onKey, false);
+  assert.equal(readFocusable(template), false);
   assert.equal(label.props.dim, true);
+});
+
+test("Button disabled overrides explicit focusable true", () => {
+  const template = asElement(
+    Button({
+      label: "Disabled",
+      disabled: true,
+      focusable: true
+    })
+  );
+
+  assert.equal(readFocusable(template), false);
 });
 
 test("Button supports dynamic disabled values", () => {
@@ -234,11 +257,13 @@ test("Button supports dynamic disabled values", () => {
   const label = asElement(template.children[0]!);
 
   assert.equal(typeof resolveSignal<InteractionKeyBinding>(template.props.onKey), "function");
+  assert.equal(readFocusable(template), true);
   assert.equal(resolveSignal<boolean>(label.props.dim), false);
 
   disabled.set(true);
 
   assert.equal(resolveSignal<InteractionKeyBinding>(template.props.onKey), false);
+  assert.equal(readFocusable(template), false);
   assert.equal(resolveSignal<boolean>(label.props.dim), true);
 });
 

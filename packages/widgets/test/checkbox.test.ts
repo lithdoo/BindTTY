@@ -32,6 +32,16 @@ function resolveSignal<T>(value: unknown): T {
   return (value as ReadableSignal<T>).get();
 }
 
+function readFocusable(template: ElementTemplate): boolean {
+  const focusable = template.props.focusable;
+
+  if (typeof focusable === "boolean") {
+    return focusable;
+  }
+
+  return resolveSignal<boolean>(focusable);
+}
+
 function createKeyEvent(
   input: string,
   overrides: Partial<BindTTYKeyEvent> = {}
@@ -158,7 +168,7 @@ test("Checkbox leaves unrelated keys unhandled", () => {
   assert.equal(changes, 0);
 });
 
-test("Checkbox disabled maps onKey to false and dims the label", () => {
+test("Checkbox disabled maps onKey to false, focusable to false, and dims the label", () => {
   const template = asElement(
     Checkbox({
       label: "Disabled",
@@ -169,6 +179,7 @@ test("Checkbox disabled maps onKey to false and dims the label", () => {
   const label = asElement(asElement(template.children[0]!).children[1]!);
 
   assert.equal(template.props.onKey, false);
+  assert.equal(readFocusable(template), false);
   assert.equal(label.props.dim, true);
 });
 
@@ -184,11 +195,13 @@ test("Checkbox supports dynamic disabled values", () => {
   const label = asElement(asElement(template.children[0]!).children[1]!);
 
   assert.equal(typeof resolveSignal<InteractionKeyBinding>(template.props.onKey), "function");
+  assert.equal(readFocusable(template), true);
   assert.equal(resolveSignal<boolean>(label.props.dim), false);
 
   disabled.set(true);
 
   assert.equal(resolveSignal<InteractionKeyBinding>(template.props.onKey), false);
+  assert.equal(readFocusable(template), false);
   assert.equal(resolveSignal<boolean>(label.props.dim), true);
 });
 

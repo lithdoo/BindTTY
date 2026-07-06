@@ -14,6 +14,10 @@ import {
   type InteractionKeyHandler,
   type InteractionNodeFocusChangeEvent
 } from "@bindtty/interaction";
+import {
+  createDisabledDim,
+  createFocusableBinding
+} from "../shared/focusable.js";
 
 export interface TextInputStyleProps {
   color?: BindingValue<string>;
@@ -93,7 +97,7 @@ export function TextInput(props: TextInputProps): Template {
     omitUndefined({
       id: props.id,
       ref: createTextInputRef(contentWidth),
-      focusable: props.focusable ?? true,
+      focusable: createFocusableBinding(props.focusable, props.disabled),
       onKey: createTextInputOnKey(props, cursor),
       onFocusChange: createFocusChangeHandler(props, focused, cursor),
       focusStyle: "none",

@@ -204,6 +204,45 @@ test("focusable=false with onKey does not enter focus list", () => {
   assert.equal(controller.getFocusedId(), null);
 });
 
+test("Tab traversal skips non-focusable nodes", () => {
+  const controller = createInteractionController();
+  const first = createMountedElement("first", { focusable: true, onKey: true });
+  const disabled = createMountedElement("disabled", {
+    focusable: false,
+    onKey: false
+  });
+  const third = createMountedElement("third", { focusable: true, onKey: true });
+
+  controller.refresh(fragment([first, disabled, third]));
+  assert.equal(controller.getFocusedId(), "first");
+
+  controller.focusNext();
+  assert.equal(controller.getFocusedId(), "third");
+
+  controller.focusNext();
+  assert.equal(controller.getFocusedId(), "first");
+});
+
+test("refresh moves focus when focusable becomes false", () => {
+  const controller = createInteractionController();
+  const first = createMountedElement("first", { focusable: true, onKey: true });
+  const disabled = createMountedElement("disabled", {
+    focusable: true,
+    onKey: () => true
+  });
+
+  controller.refresh(fragment([first, disabled]));
+  controller.focus("disabled");
+
+  disabled.props.focusable = false;
+  disabled.props.onKey = false;
+
+  const result = controller.refresh(fragment([first, disabled]));
+
+  assert.equal(result.focusChange?.reason, "refresh");
+  assert.equal(controller.getFocusedId(), "first");
+});
+
 test("legacy onKey=function still enters focus list without focusable", () => {
   const controller = createInteractionController();
   const node = createMountedElement("node", { onKey: () => true });

@@ -49,6 +49,16 @@ function resolveSignal<T>(value: unknown): T {
   return (value as ReadableSignal<T>).get();
 }
 
+function readFocusable(template: ElementTemplate): boolean {
+  const focusable = template.props.focusable;
+
+  if (typeof focusable === "boolean") {
+    return focusable;
+  }
+
+  return resolveSignal<boolean>(focusable);
+}
+
 function key(name: string): BindTTYKeyEvent {
   const event: BindTTYKeyEvent = {
     input: "",
@@ -222,7 +232,7 @@ test("Select leaves unrelated keys unhandled", () => {
   assert.equal(changes, 0);
 });
 
-test("Select disabled maps onKey to false and dims option rows", () => {
+test("Select disabled maps onKey to false, focusable to false, and dims option rows", () => {
   const template = asElement(
     Select({
       options: sampleOptions,
@@ -233,6 +243,7 @@ test("Select disabled maps onKey to false and dims option rows", () => {
   const row = renderOptionRow(template, 0);
 
   assert.equal(template.props.onKey, false);
+  assert.equal(readFocusable(template), false);
   assert.equal(row.props.dim, true);
 });
 
@@ -248,11 +259,13 @@ test("Select supports dynamic disabled values", () => {
   const row = renderOptionRow(template, 0);
 
   assert.equal(typeof resolveSignal<InteractionKeyBinding>(template.props.onKey), "function");
+  assert.equal(readFocusable(template), true);
   assert.equal(resolveSignal<boolean>(row.props.dim), false);
 
   disabled.set(true);
 
   assert.equal(resolveSignal<InteractionKeyBinding>(template.props.onKey), false);
+  assert.equal(readFocusable(template), false);
   assert.equal(resolveSignal<boolean>(row.props.dim), true);
 });
 

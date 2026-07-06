@@ -11,6 +11,10 @@ import {
   type InteractionKeyHandler,
   type InteractionNodeFocusChangeEvent
 } from "@bindtty/interaction";
+import {
+  createDisabledDim,
+  createFocusableBinding
+} from "../shared/focusable.js";
 
 export interface ButtonStyleProps {
   color?: BindingValue<string>;
@@ -36,7 +40,7 @@ export function Button(props: ButtonProps): Template {
     "box",
     omitUndefined({
       id: props.id,
-      focusable: props.focusable ?? true,
+      focusable: createFocusableBinding(props.focusable, props.disabled),
       onKey: createButtonOnKey(props),
       onFocusChange: props.onFocusChange,
       border: props.border ?? true,
@@ -74,16 +78,6 @@ function createButtonOnKey(
   }
 
   return disabled === true ? false : handler;
-}
-
-function createDisabledDim(
-  disabled: BindingValue<boolean> | undefined
-): BindingValue<boolean> | undefined {
-  if (isReadableSignal<boolean>(disabled)) {
-    return computed(() => disabled.get());
-  }
-
-  return disabled === true ? true : undefined;
 }
 
 function omitUndefined(

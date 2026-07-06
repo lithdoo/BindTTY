@@ -171,29 +171,28 @@ widget custom props:
 
 ## 5. Focus 与 Disabled
 
-当前交互模型只有一个入口：
-
-```text
-onKey
-```
-
-因此 widgets 的 disabled 语义应映射为：
+官方 form widgets 通过 `focusable` 与 `onKey` 共同表达 disabled 语义：
 
 ```text
 disabled === true:
+  focusable = false
   onKey = false
   节点不进入 focus list
   如果原本 focused，runtime flush 后 interaction.refresh 会迁移 focus
 
 disabled === false:
+  focusable = props.focusable ?? true
   onKey = handler
   节点进入 focus list
 ```
+
+实现上使用共享 helper `createFocusableBinding(focusable, disabled)`；`disabled` 优先于显式 `focusable={true}`。
 
 Button 示例：
 
 ```tsx
 <box
+  focusable={!props.disabled}
   onKey={
     props.disabled
       ? false

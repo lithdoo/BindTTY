@@ -12,6 +12,10 @@ import {
   type InteractionNodeFocusChangeEvent
 } from "@bindtty/interaction";
 import { readNumberBindingValue } from "../shared/binding.js";
+import {
+  createDisabledDim,
+  createFocusableBinding
+} from "../shared/focusable.js";
 
 export interface SelectOption<T = string> {
   value: T;
@@ -69,7 +73,7 @@ export function Select<T = string>(props: SelectProps<T>): Template {
     "box",
     omitUndefined({
       id: props.id,
-      focusable: props.focusable ?? true,
+      focusable: createFocusableBinding(props.focusable, props.disabled),
       onKey: createSelectOnKey(props, scrollOffset),
       onFocusChange: props.onFocusChange,
       border: false,
@@ -283,16 +287,6 @@ function optionKey<T>(value: T): string | number {
   }
 
   return String(value);
-}
-
-function createDisabledDim(
-  disabled: BindingValue<boolean> | undefined
-): BindingValue<boolean> | undefined {
-  if (isReadableSignal<boolean>(disabled)) {
-    return computed(() => disabled.get());
-  }
-
-  return disabled === true ? true : undefined;
 }
 
 function omitUndefined(
