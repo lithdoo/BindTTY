@@ -139,25 +139,6 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
       bold: { dirty: "paint" }
     }
   },
-  button: {
-    acceptsChildren: false,
-    requiredProps: ["value"],
-    props: {
-      ...commonElementProps,
-      ...commonYogaItemProps,
-      value: { required: true, dirty: "layout" },
-      disabled: { dirty: "paint" }
-    }
-  },
-  input: {
-    acceptsChildren: false,
-    props: {
-      ...commonElementProps,
-      ...commonYogaItemProps,
-      value: { dirty: "paint" },
-      placeholder: { dirty: "paint" }
-    }
-  },
   spacer: {
     acceptsChildren: false,
     props: {

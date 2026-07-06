@@ -592,16 +592,6 @@ test("paintLayout supports small box border sizes", () => {
     "──── "
   ]);
 });
-
-test("paintLayout throws for unsupported interactive elements", () => {
-  const root = layout(element("input"), rect(0, 0, 1, 1));
-
-  assert.throws(
-    () => paintLayout(root, { viewport }),
-    /Unsupported paint element: input/
-  );
-});
-
 function assertFrameInvariant(frame: ReturnType<typeof paintLayout>): void {
   for (let y = 0; y < frame.height; y += 1) {
     for (let x = 0; x < frame.width; x += 1) {

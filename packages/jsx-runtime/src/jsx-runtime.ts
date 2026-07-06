@@ -284,19 +284,6 @@ export namespace JSX {
       children?: never;
     };
 
-    button: IntrinsicInteractionProps & IntrinsicYogaItemProps & {
-      value: BindingValue<string | number>;
-      disabled?: BindingValue<boolean>;
-      onPress?: () => void;
-      children?: never;
-    };
-
-    input: IntrinsicInteractionProps & IntrinsicYogaItemProps & {
-      value?: BindingValue<string>;
-      placeholder?: BindingValue<string>;
-      children?: never;
-    };
-
     spacer: IntrinsicInteractionProps &
       IntrinsicYogaItemProps &
       IntrinsicYogaSizeProps &

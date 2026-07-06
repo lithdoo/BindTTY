@@ -200,7 +200,7 @@ MountedForNode
 
 ```text
 MountedElementNode:
-  表示 intrinsic element 的运行时实例，例如 text、box、input、button。
+  表示 intrinsic element 的运行时实例，例如 text、box、spacer。
 
 MountedFragmentNode:
   表示透明结构节点，用于承载多个兄弟节点。
@@ -499,7 +499,7 @@ Runtime View Tree
 
 ```text
 1. Element runtime:
-   text / input / box / button 等 intrinsic element 的基础能力。
+   text / box / spacer 等 intrinsic element 的基础能力。
 
 2. Binding runtime:
    signal / computed / expression 的订阅和更新。

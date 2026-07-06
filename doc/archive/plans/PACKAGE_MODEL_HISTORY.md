@@ -65,14 +65,14 @@ bindtty
   负责 keyboard focus、onKey dispatch、focused state。
 
 @bindtty/widgets:
-  负责 button / input / select 等高层控件语义。
+  负责 Button / TextInput / Select 等高层控件语义。
 ```
 
 因此早期计划中「widgets 承载 focus / keyboard」应理解为：
 
 ```text
 focus / keyboard dispatch:  @bindtty/interaction
-button / input 业务语义:    @bindtty/widgets 或用户组件
+Widget 业务语义:              @bindtty/widgets 或用户组件
 ```
 
 ---

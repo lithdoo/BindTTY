@@ -500,18 +500,6 @@ test("treats invalid and negative spacer sizes as zero", () => {
   });
 });
 
-test("throws for unsupported layout elements", () => {
-  assert.throws(
-    () => layoutRoot(createMountedElement("button", { value: "Click" }), { viewport }),
-    /Unsupported layout element: button/
-  );
-
-  assert.throws(
-    () => layoutRoot(createMountedElement("input"), { viewport }),
-    /Unsupported layout element: input/
-  );
-});
-
 test("throws for unsupported future layout props and duplicate aliases", () => {
   assert.throws(
     () => layoutRoot(createMountedElement("box", { flexDirection: "row" }), { viewport }),
@@ -1571,16 +1559,7 @@ test("YogaLayoutEngine updates scroll metadata after runtime text shrink", async
   });
 });
 
-test("YogaLayoutEngine rejects unsupported layout elements and props", () => {
-  assert.throws(
-    () =>
-      layoutRoot(createMountedElement("button", { value: "Go" }), {
-        viewport,
-        engine: createYogaLayoutEngine()
-      }),
-    /Unsupported layout element: button/
-  );
-
+test("YogaLayoutEngine rejects unsupported layout props", () => {
   assert.throws(
     () =>
       layoutRoot(createMountedElement("box", { flexDirection: "row" }), {

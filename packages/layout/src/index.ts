@@ -6,7 +6,6 @@ export {
   futureLayoutProps,
   getLayoutPropMatrixStatus,
   matrixLayoutProps,
-  nonLayoutElementTags,
   resolveMargin,
   resolvePadding,
   yogaSupportedPropsByTag

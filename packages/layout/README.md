@@ -16,9 +16,7 @@ const layoutTree = layoutRoot(runtime.root, {
 
 ## 已支持的 intrinsic 布局
 
-`screen`、`box`、`vstack`、`hstack`、`text`、`spacer`，以及 `fragment` / `show` / `for` 结构节点。
-
-intrinsic `button` / `input` 在 schema 有定义，但 layout 会抛 `Unsupported layout element`；交互控件请使用 `@bindtty/widgets` 的组合实现。
+`screen`、`box`、`vstack`、`hstack`、`text`、`spacer`，以及 `fragment` / `show` / `for` 结构节点。交互控件请使用 `@bindtty/widgets` 的组合实现。
 
 高级 layout props 见 [doc/specs/LAYOUT_PROPS.md](../../doc/specs/LAYOUT_PROPS.md)（支持矩阵；运行 `npm run gen:layout-props` 同步文档）。默认 engine 为 `YogaLayoutEngine`。
 

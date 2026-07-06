@@ -64,8 +64,6 @@ export type IntrinsicElementTag =
   | "vstack"
   | "hstack"
   | "text"
-  | "button"
-  | "input"
   | "spacer";
 
 export type TemplateChild =

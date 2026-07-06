@@ -21,7 +21,7 @@
 | ⛔ | 在 `futureLayoutProps` 中，使用会抛 `Unsupported layout prop` |
 | — | 不适用（该 tag 无此语义，或 prop 为 paint-only） |
 
-矩阵列仅含 **layout 参与 tag**（`screen` · `vstack` · `hstack` · `box` · `text` · `spacer`）。intrinsic `button` / `input` 不在此表：schema 仍保留类型，但 layout 遇之则抛 `Unsupported layout element`；控件请用 [@bindtty/widgets](../packages/WIDGETS.md)。
+矩阵列含全部 layout 参与 tag（`screen` · `vstack` · `hstack` · `box` · `text` · `spacer`）。
 
 **非 layout prop**（校验时跳过）：`id`、`ref`、`focusStyle`、`focusable`、`onKeyCapture`、`onKey`、`onFocusChange`。
 
@@ -193,7 +193,6 @@
 - `flexDirection` 开放（已有 tag 语义）
 - `alignSelf`、`alignContent`、`flexBasis`
 - 百分比尺寸、absolute positioning
-- intrinsic `button` / `input` 作为 layout 节点（请用 widgets；见 §1）
 
 ---
 

@@ -110,7 +110,7 @@ onKey?: (event: BindTTYKeyEvent) => boolean | void
 4. ANSI frame diff。
 5. signal 依赖追踪。
 6. TSX 转换。
-7. 具体 button / input / select 语义。
+7. 具体 Button / TextInput / Select 等 widget 语义。
 8. IME preedit / 候选窗。
 ```
 
@@ -144,7 +144,7 @@ name: @bindtty/interaction
 1. keyboard focus 和 key dispatch 是独立运行时能力。
 2. 它不属于 terminal lifecycle。
 3. 它不属于 renderer。
-4. 它不应该知道 button / input / select 等具体控件。
+4. 它不应该知道 Button / TextInput / Select 等具体控件。
 5. interaction 可以作为独立运行时能力维护，避免耦合 terminal / renderer / widgets。
 ```
 
@@ -830,13 +830,13 @@ Tab / Shift+Tab 与其他键一样先走 capture → target → bubble。若 han
 具体控件行为属于 `@bindtty/widgets` 或用户扩展包：
 
 ```text
-button:
+Button:
   widgets 决定 Enter / Space 是否触发 onPress。
   widgets 决定 disabled 是否映射为 focusable=false 与 onKey=false。
 
-input:
+TextInput:
   widgets 决定字符输入、Backspace、光标和 onInput 语义。
-  input 是否可交互可以通过动态 onKey 控制。
+  是否可交互可以通过动态 onKey 控制。
 
 select / checkbox / radio / list:
   widgets 或业务组件把语义行为转换成 onKey handler。
@@ -1035,7 +1035,7 @@ interface InteractionElementProps {
 }
 ```
 
-然后让 `screen`、`box`、`vstack`、`hstack`、`text`、`button`、`input`、`spacer` 等元素都能接收这些字段。
+然后让 `screen`、`box`、`vstack`、`hstack`、`text`、`spacer` 等元素都能接收这些字段。
 
 注意：
 

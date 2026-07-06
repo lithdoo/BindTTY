@@ -89,12 +89,8 @@ export const yogaSupportedPropsByTag: Record<LayoutElementTag, ReadonlySet<strin
     "flexShrink",
     ...yogaLayoutItemTags
   ]),
-  spacer: new Set(["size", "flexGrow", "flexShrink", ...yogaLayoutItemTags]),
-  button: new Set(["value", "disabled", "flexGrow", "flexShrink"]),
-  input: new Set(["value", "placeholder", "flexGrow", "flexShrink"])
+  spacer: new Set(["size", "flexGrow", "flexShrink", ...yogaLayoutItemTags])
 };
-
-export const nonLayoutElementTags = new Set<LayoutElementTag>(["button", "input"]);
 
 export const basicSupportedPropsByTag: Record<LayoutElementTag, ReadonlySet<string>> = {
   screen: new Set(),
@@ -110,9 +106,7 @@ export const basicSupportedPropsByTag: Record<LayoutElementTag, ReadonlySet<stri
     "scrollY"
   ]),
   text: new Set(["value", "wrap", "color", "bold"]),
-  spacer: new Set(["size"]),
-  button: new Set(["value", "disabled"]),
-  input: new Set(["value", "placeholder"])
+  spacer: new Set(["size"])
 };
 
 export const futureLayoutProps = new Set<string>([

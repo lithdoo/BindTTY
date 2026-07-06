@@ -394,19 +394,6 @@ declare namespace JSX {
       children?: never;
     };
 
-    button: {
-      value: BindingValue<string | number>;
-      disabled?: BindingValue<boolean>;
-      onPress?: () => void;
-      children?: never;
-    };
-
-    input: {
-      value?: BindingValue<string>;
-      placeholder?: BindingValue<string>;
-      children?: never;
-    };
-
     spacer: {
       size?: BindingValue<number>;
       children?: never;

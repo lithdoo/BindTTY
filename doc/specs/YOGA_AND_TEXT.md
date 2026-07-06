@@ -55,7 +55,6 @@ app
 ### 1.2 不在范围内
 
 - percentage size、absolute position（Yoga 后续）
-- intrinsic button/input layout（仍 Unsupported）
 - RichText / ANSI in text value（见 DISPLAY_WIDTH §1.2）
 
 ### 1.3 术语

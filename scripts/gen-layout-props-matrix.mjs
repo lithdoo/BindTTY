@@ -18,20 +18,13 @@ const {
   yogaSupportedPropsByTag,
   basicSupportedPropsByTag,
   futureLayoutProps,
-  nonLayoutElementTags,
   getLayoutPropMatrixStatus
 } = await import(layoutPropsUrl);
 
-const tags = Object.keys(yogaSupportedPropsByTag).filter(
-  (tag) => !nonLayoutElementTags.has(tag)
-);
+const tags = Object.keys(yogaSupportedPropsByTag);
 const statusSymbol = { supported: "✅", future: "⛔", na: "—" };
 
 function matrixSymbol(tag, prop, engine) {
-  if (nonLayoutElementTags.has(tag)) {
-    return "🚫";
-  }
-
   return statusSymbol[getLayoutPropMatrixStatus(tag, prop, engine)];
 }
 
@@ -48,10 +41,6 @@ function yogaMatrixTable() {
 function basicMatrixTable() {
   const rows = tags.map((tag) => {
     const supported = basicSupportedPropsByTag[tag];
-
-    if (nonLayoutElementTags.has(tag)) {
-      return `| \`${tag}\` | schema 有定义；layout 仍 🚫 |`;
-    }
 
     if (supported.size === 0) {
       return `| \`${tag}\` | （无 layout props） |`;

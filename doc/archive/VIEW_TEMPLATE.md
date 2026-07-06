@@ -174,8 +174,6 @@ const view = null;
 <vstack />
 <hstack />
 <text value="Hello" />
-<button value="Save" />
-<input value={vm.name} />
 <spacer size={1} />
 ```
 
@@ -212,7 +210,7 @@ TextElementTemplate
 5. mount / layout / paint 可以根据 tag 分发。
 ```
 
-因此，即使是 `text`、`input`、`spacer` 这类 leaf-like element，也统一表示为：
+因此，即使是 `text`、`spacer` 这类 leaf-like element，也统一表示为：
 
 ```ts
 {
@@ -240,8 +238,6 @@ export type IntrinsicElementTag =
   | "vstack"
   | "hstack"
   | "text"
-  | "button"
-  | "input"
   | "spacer";
 ```
 
@@ -253,8 +249,6 @@ box: 基础容器
 vstack: 垂直布局容器
 hstack: 水平布局容器
 text: 文本显示
-button: 按钮
-input: 输入框
 spacer: 空白占位
 ```
 
@@ -468,7 +462,6 @@ children: Template[];
 ```tsx
 <box>
   <text value="Hello" />
-  <input value={vm.name} />
 </box>
 ```
 
@@ -806,13 +799,6 @@ const elementSchemas = {
     acceptsChildren: false,
     requiredProps: ["value"],
   },
-  button: {
-    acceptsChildren: false,
-    requiredProps: ["value"],
-  },
-  input: {
-    acceptsChildren: false,
-  },
   spacer: {
     acceptsChildren: false,
   },
@@ -850,12 +836,6 @@ declare namespace JSX {
       value: BindingValue<string | number>;
       color?: BindingValue<string>;
       bold?: BindingValue<boolean>;
-      children?: never;
-    };
-
-    input: {
-      value?: BindingValue<string>;
-      placeholder?: BindingValue<string>;
       children?: never;
     };
 
@@ -1363,8 +1343,6 @@ export type IntrinsicElementTag =
   | "vstack"
   | "hstack"
   | "text"
-  | "button"
-  | "input"
   | "spacer";
 
 export type BindingValue<T> =

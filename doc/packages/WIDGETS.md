@@ -25,13 +25,13 @@ TSX
 
 | § | 章节 | § | 章节 |
 | --- | --- | --- | --- |
-| [1](#_1-目标) | 目标 | [8](#_8-与-intrinsic-button-input-的关系) | vs intrinsic |
-| [2](#_2-包归属) | 包归属 | [9](#_9-包结构) | 包结构 |
-| [3](#_3-核心模型) | 核心模型 | [10](#_10-jsx-与导出方式) | JSX 导出 |
-| [4](#_4-props-分类) | Props | [11](#_11-测试计划) | 测试计划 |
-| [5](#_5-focus-与-disabled) | Focus | [12](#_12-分阶段落地) | 分阶段落地 |
-| [6](#_6-focused-样式) | Focused 样式 | [13](#_13-完成标准) | 完成标准 |
-| [7](#_7-第一批-widgets) | 第一批 Widgets | [14](#_14-后续方向) | 后续方向 |
+| [1](#_1-目标) | 目标 | [8](#_8-包结构) | 包结构 |
+| [2](#_2-包归属) | 包归属 | [9](#_9-jsx-与导出方式) | JSX 导出 |
+| [3](#_3-核心模型) | 核心模型 | [10](#_10-测试计划) | 测试计划 |
+| [4](#_4-props-分类) | Props | [11](#_11-分阶段落地) | 分阶段落地 |
+| [5](#_5-focus-与-disabled) | Focus | [12](#_12-完成标准) | 完成标准 |
+| [6](#_6-focused-样式) | Focused 样式 | [13](#_13-后续方向) | 后续方向 |
+| [7](#_7-第一批-widgets) | 第一批 Widgets | | |
 
 :::
 
@@ -77,7 +77,7 @@ name: @bindtty/widgets
 ```text
 1. widget 是用户可直接使用的高层 API。
 2. widget 依赖 interaction，但 interaction 不应该依赖 widget。
-3. button/input/select/list 等控件会持续演进，不应塞进 renderer 或 runtime。
+3. Button / TextInput / Select / List 等控件会持续演进，不应塞进 renderer 或 runtime。
 4. 业务也可以不使用官方 widgets，直接用 intrinsic element + onKey 自行封装。
 ```
 
@@ -255,44 +255,7 @@ MVP 建议：
 
 滚动引擎层契约见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md)。
 
-## 8. 与 Intrinsic button / input 的关系
-
-当前 `vnode` / `jsx-runtime` 已有 intrinsic tag：
-
-```text
-button
-input
-```
-
-但 layout / renderer 仍把它们视为未完成控件：
-
-```text
-Unsupported layout element: button
-Unsupported paint element: input
-```
-
-MVP 不建议立刻让 intrinsic `button` / `input` 具备完整行为。
-
-原因：
-
-```text
-1. intrinsic element 一旦开放，就暗示 layout、paint、interaction 行为稳定。
-2. Button 作为组件可以先复用 box/text，不需要扩展 layout/renderer。
-3. TextInput 行为复杂，先用组件实验 API 更稳。
-4. 未来如果组件模型稳定，再决定是否让 intrinsic button/input 成为内建基础元素。
-```
-
-因此第一阶段：
-
-```text
-@bindtty/widgets/Button
-  使用 box/text 组合实现。
-
-intrinsic <button>
-  保持占位，不推荐用户直接使用。
-```
-
-## 9. 包结构
+## 8. 包结构
 
 实际结构：
 
@@ -327,7 +290,7 @@ packages/widgets/
 
 ButtonProps / TextInputProps 等类型定义直接内联在各组件文件中（`form/button.ts`、`form/text-input.ts` 等），不使用独立的 types.ts。
 
-## 10. JSX 与导出方式
+## 9. JSX 与导出方式
 
 **Canonical 导入**：控件与类型一律从 `@bindtty/widgets` 导入；`bindtty` **不** re-export widgets。
 
@@ -340,7 +303,7 @@ import { Button } from "@bindtty/widgets";
 
 应用 `package.json` 须同时依赖 `bindtty` 与 `@bindtty/widgets`（版本号对齐，如均为 `0.1.0-alpha.2`）。
 
-## 11. 测试计划
+## 10. 测试计划
 
 ### 11.1 Button 单元测试
 
@@ -381,7 +344,7 @@ fake stdout shows updated label
 dispose prevents further Button press
 ```
 
-## 12. 分阶段落地
+## 11. 分阶段落地
 
 ### 阶段 1：文档与包骨架
 
@@ -487,14 +450,14 @@ npm test --workspace @bindtty/e2e
 npm test
 ```
 
-## 13. 完成标准
+## 12. 完成标准
 
 `@bindtty/widgets` 当前完成标准：
 
 ```text
 1. @bindtty/widgets 独立包可构建、可测试。
 2. Button 可从 @bindtty/widgets 导入。
-3. Button 使用现有 box/text/layout/renderer，不需要扩展 intrinsic button。
+3. Button 使用现有 box/text/layout/renderer，不扩展 layout / renderer 内建 tag。
 4. Button 可进入 interaction focus list。
 5. Button focused 状态可见。
 6. Enter / Space 触发 onPress。
@@ -513,7 +476,7 @@ npm test
 19. VScrollView `stickToBottom` 与 `showScrollbar`、HScrollView、ScrollView 双轴已覆盖（见 [SCROLL.md](../widgets/SCROLL.md)）。
 ```
 
-## 14. 后续方向
+## 13. 后续方向
 
 Button、TextInput、VScrollView 和 List 跑通后，下一步建议：
 

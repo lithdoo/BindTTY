@@ -291,7 +291,7 @@ interface ElementTemplate {
 }
 ~~~
 
-`text`、`button`、`input`、`spacer` 这类 leaf-like element 也统一使用 `ElementTemplate`。是否允许 children、是否要求 `value` prop、某个 prop 变化影响 layout 还是 paint，都由 element schema 或 JSX 类型约束表达，而不是通过拆分 Template 类型表达。
+`text`、`spacer` 这类 leaf-like element 也统一使用 `ElementTemplate`。是否允许 children、是否要求 `value` prop、某个 prop 变化影响 layout 还是 paint，都由 element schema 或 JSX 类型约束表达，而不是通过拆分 Template 类型表达。
 
 例如：
 
@@ -632,13 +632,6 @@ const elementSchemas = {
     acceptsChildren: false,
     requiredProps: ["value"],
   },
-  button: {
-    acceptsChildren: false,
-    requiredProps: ["value"],
-  },
-  input: {
-    acceptsChildren: false,
-  },
   spacer: {
     acceptsChildren: false,
   },
@@ -802,7 +795,7 @@ MountedForNode
 
 ~~~text
 MountedElementNode:
-  表示 intrinsic element 的运行时实例，例如 text、box、input、button。
+  表示 intrinsic element 的运行时实例，例如 text、box、spacer。
 
 MountedFragmentNode:
   表示透明结构节点，用于承载多个兄弟节点。
@@ -854,9 +847,6 @@ scheduler request render
 text element:
   负责文本测量、布局和绘制。
 
-input element:
-  负责焦点、键盘输入、光标、编辑状态和绘制。
-
 box element:
   负责边框、padding、背景和 children layout。
 
@@ -866,9 +856,11 @@ vstack element:
 hstack element:
   负责横向排列 children。
 
-button element:
-  负责 focus、按键触发和绘制。
+spacer element:
+  负责占位尺寸。
 ~~~
+
+Button、TextInput 等交互控件由 `@bindtty/widgets` 组合上述 primitive 与 `onKey` 实现。
 
 因此，`MountedElementNode` 应该理解为：
 
@@ -886,7 +878,7 @@ MountedElementNode 保存它当前的运行时状态。
 
 例如 `text` 不需要成为独立的 MountedNode 类型。`<text value={vm.title} />` 会被挂载成 `MountedElementNode(tag: "text")`，它的测量、布局、绘制由 text definition 提供。
 
-`input` 同理也是 `MountedElementNode(tag: "input")`，只是挂接了 input definition。输入事件的典型流程是：
+TextInput 等可编辑控件由 `@bindtty/widgets` 组合 primitive 实现；键盘输入的典型流程是：
 
 ~~~text
 keyboard event
@@ -895,9 +887,9 @@ InputSystem 接收事件
   ↓
 FocusManager 找到当前 focused node
   ↓
-调用该 node 的 element definition
+调用该 node 的 onKey
   ↓
-input local state 更新
+widget / 业务组件更新本地 state
   ↓
 触发绑定回调或用户事件
   ↓

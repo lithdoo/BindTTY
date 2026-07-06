@@ -18,11 +18,11 @@
 | [2](#_2-包位置) | 包位置 | [11](#_11-基础布局模型) | 基础布局模型 |
 | [3](#_3-输入与输出) | 输入与输出 | [12](#_12-measure-规则) | Measure 规则 |
 | [4](#_4-layoutnode-类型) | LayoutNode | [13](#_13-structure-node-规则) | Structure Node |
-| [5](#_5-与-runtime-renderer-app-的接口-contract) | 接口 contract | [14](#_14-unsupported-tag-策略) | Unsupported Tag |
-| [6](#_6-layoutengine-接口) | LayoutEngine | [15](#_15-dirty-与重新-layout) | Dirty / relayout |
-| [7](#_7-内建基础元素与控件边界) | 内建元素边界 | [16](#_16-测试计划) | 测试计划 |
-| [8](#_8-当前支持范围) | 支持范围 | [17](#_17-验收标准) | 验收标准 |
-| [9](#_9-盒模型与-flexbox-当前-vs-预留) | 盒模型 / Flex | [18](#_18-当前结论) | 当前结论 |
+| [5](#_5-与-runtime-renderer-app-的接口-contract) | 接口 contract | [14](#_14-dirty-与重新-layout) | Dirty / relayout |
+| [6](#_6-layoutengine-接口) | LayoutEngine | [15](#_15-测试计划) | 测试计划 |
+| [7](#_7-内建基础元素与控件边界) | 内建元素边界 | [16](#_16-验收标准) | 验收标准 |
+| [8](#_8-当前支持范围) | 支持范围 | [17](#_17-当前结论) | 当前结论 |
+| [9](#_9-盒模型与-flexbox-当前-vs-预留) | 盒模型 / Flex | | |
 
 :::
 
@@ -80,7 +80,6 @@ layout 负责回答：
   fragment / show / for structure layout
   第一批 Yoga flex props: gap / flexGrow / flexShrink / alignItems / justifyContent / flexWrap
   Yoga ScrollView 回归: wrapped content / resize rewrap / dynamic shrink / flexShrink scroll
-  unsupported intrinsic button / input 抛错
   renderer-terminal 对接
   createApp 组合 runtime / layout / renderer / interaction
   focusStyle / onKey / onFocusChange 作为非 layout prop 忽略
@@ -167,7 +166,7 @@ export function layoutRoot(
 
 `layoutRoot()` 是稳定入口。当前默认使用 `YogaLayoutEngine`；如需旧版轻量布局语义，可以显式传入 `createBasicLayoutEngine()`。上层 runtime / renderer 不需要改变调用方式。
 
-`YogaLayoutEngine` 已实现 screen、box、vstack、hstack、text、spacer 及 fragment/show/for 结构的 layout，并支持第一批 Yoga flex props。`BasicLayoutEngine` 作为 legacy fallback 保留，intrinsic `button` / `input` 仍会抛 `Unsupported layout element`。
+`YogaLayoutEngine` 已实现 screen、box、vstack、hstack、text、spacer 及 fragment/show/for 结构的 layout，并支持第一批 Yoga flex props。`BasicLayoutEngine` 作为 legacy fallback 保留。
 
 使用方式：
 
@@ -484,7 +483,7 @@ screen  是否占满 viewport
   定义 keyboard focus 与 onKey 派发
 
 @bindtty/widgets
-  定义高层控件语义，例如 button / input
+  定义高层控件语义，例如 Button / TextInput / ScrollView
 ```
 
 ## 8. 当前支持范围
@@ -502,7 +501,7 @@ YogaLayoutEngine 默认；第一批 flex props（gap、flexGrow 等，见 specs/
 unicode display width（见 specs/DISPLAY_WIDTH.md）
 ```
 
-**layout 层仍不支持**：percentage size、absolute position；intrinsic `button` / `input` layout（Unsupported）。
+**layout 层仍不支持**：percentage size、absolute position。
 
 **由 @bindtty/widgets 提供**：Button、TextInput、ScrollView、List 交互语义。
 
@@ -851,13 +850,9 @@ box scrollY:
 
 ### 10.5 Unsupported 策略
 
-MVP 明确抛错：
+MVP 对 **未定义的 intrinsic tag** 在 TypeScript 层即不可写；若运行时 mount 树出现未知 tag，layout 会抛 `Unsupported layout element`。
 
 ```text
-unsupported element tag:
-  button
-  input
-
 unsupported style prop:
   未来进入 vnode props 但 BasicLayoutEngine 尚未支持的 layout prop
 
@@ -1137,26 +1132,7 @@ for LayoutNode
 
 `for` 不自带方向。作为 root 时使用 column flow；否则递归向上继承最近明确 flow 父级的方向。
 
-## 14. Unsupported Tag 策略
-
-layout 遇到暂不支持的 element tag 时，建议直接抛错：
-
-```text
-Unsupported layout element: button
-Unsupported layout element: input
-```
-
-原因：
-
-```text
-1. button / input 的尺寸和交互语义还没定。
-2. 静默退化成 text-like 容易误导用户。
-3. 早期抛错能推动把控件语义设计清楚。
-```
-
-如果后续需要快速 demo，可以临时提供 compatibility 模式，但不作为默认行为。
-
-## 15. Dirty 与重新 layout
+## 14. Dirty 与重新 layout
 
 第一版 layout 是纯函数全量计算：
 
@@ -1202,7 +1178,7 @@ structure dirty:
 
 但这不进入 layout MVP。
 
-## 16. 测试计划
+## 15. 测试计划
 
 第一版测试覆盖：
 
@@ -1242,18 +1218,15 @@ structure dirty:
    layout 当前 items
    items 更新后重新 layout 反映新结构
 
-10. unsupported tag:
-   button / input 抛错
-
-11. runtime integration:
+10. runtime integration:
    RuntimeRoot flush 后可调用 layoutRoot(root, viewport)
 
-12. engine abstraction:
+11. engine abstraction:
    layoutRoot 默认使用 YogaLayoutEngine
    options.engine 可以替换 backend
    custom engine 收到 root 和 viewport
 
-13. BasicLayoutEngine legacy:
+12. BasicLayoutEngine legacy:
    只读取 MVP props
    camelCase / kebab-case alias 归一化为 camelCase
    duplicate alias 抛错
@@ -1270,7 +1243,7 @@ structure dirty:
    layout 不裁剪 viewport，renderer 负责裁剪
 ```
 
-## 17. 验收标准
+## 16. 验收标准
 
 `@bindtty/layout` 第一版完成后应满足：
 
@@ -1314,7 +1287,7 @@ LayoutNode
 
 下一阶段由 `@bindtty/renderer-terminal` 实现 paint / frame / ANSI diff。
 
-## 18. 当前结论
+## 17. 当前结论
 
 - **默认 engine**：`YogaLayoutEngine`；`createBasicLayoutEngine()` 为 legacy fallback。
 - **Scroll/clip**：`LayoutNode.clip` / `scrollOffset` / `contentSize` 见 [SCROLL_VIEWPORT.md](../specs/SCROLL_VIEWPORT.md)。

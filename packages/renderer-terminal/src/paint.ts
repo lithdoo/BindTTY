@@ -85,9 +85,6 @@ function paintNode(
     case "spacer":
       paintFocusedState(frame, node, options, context);
       return;
-    case "button":
-    case "input":
-      throw new Error(`Unsupported paint element: ${mounted.tag}`);
   }
 }
 

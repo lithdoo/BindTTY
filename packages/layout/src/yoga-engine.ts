@@ -159,9 +159,6 @@ function configureYogaElement(
     case "spacer":
       configureYogaSpacer(node, yogaNode, inheritedFlow);
       return;
-    case "button":
-    case "input":
-      throw new Error(`Unsupported layout element: ${node.tag}`);
   }
 }
 

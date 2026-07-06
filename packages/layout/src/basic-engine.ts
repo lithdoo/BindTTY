@@ -80,9 +80,6 @@ function measureElement(
       return measureFlowChildren(node.children, "row", constraint);
     case "box":
       return measureBox(node, constraint);
-    case "button":
-    case "input":
-      throw new Error(`Unsupported layout element: ${node.tag}`);
   }
 }
 
@@ -225,9 +222,6 @@ function arrangeElement(
     case "text":
     case "spacer":
       return createLeafLayout(node, rect);
-    case "button":
-    case "input":
-      throw new Error(`Unsupported layout element: ${node.tag}`);
   }
 }
 
