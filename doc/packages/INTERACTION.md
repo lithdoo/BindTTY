@@ -183,7 +183,7 @@ packages/interaction/
     keyboard.ts        # isTabKey / isEnterKey / isTextInputKey 等
     types.ts           # InteractionController、InteractionResult 等类型
   test/
-    interaction.test.ts  # 所有测试（30+）在一个文件中
+    interaction.test.ts  # 38 个测试在一个文件中
     tsconfig.json
   package.json
   tsconfig.json
@@ -196,7 +196,7 @@ types.ts
   InteractionController、InteractionResult、InteractionKeyHandler、InteractionKeyListener、focus change types。
 
 controller.ts
-  收集 key-focus targets、focus traversal、focus restore、key dispatch、InteractionController 实现。
+  收集 focusable targets、focus traversal、focus restore、key dispatch、InteractionController 实现。
 
 keyboard.ts
   判断 Tab / Shift+Tab / Enter / printable char / special key。
@@ -355,7 +355,7 @@ export interface InteractionController {
 - `focusNext()` / `focusPrevious()` 供 App 内部调用。
 - `clearFocus()` 清空当前 focus。
 - `getFocusedId()` 返回当前 focused entry id。
-- `getFocusedNode()` 返回当前 focused node。
+- `getFocusedNode()` 返回当前 focused node（controller 内部 API，不推荐应用层直接使用）。
 - `isFocused(node)` 给 renderer 查询 focused 状态。
 - `dispose()` 清理 focus state 和内部引用。
 
@@ -410,7 +410,7 @@ reason:
 
 ```text
 initial:
-  refresh 后首次选中第一个 key-focus target。
+  refresh 后首次选中第一个 focusable target。
 
 next:
   Tab / focusNext() 导致 focus 前进。
@@ -475,7 +475,8 @@ export interface InteractionResult {
 语义：
 
 - `handled` 表示事件是否被 interaction 消费。
-- `dirtyNodes` 包含 focus 变化或 key handler 需要 repaint 的节点。
+- `dirtyNodes` 在 focus 变化时包含 previous path 与 next path 的并集（去重），用于驱动 focused 样式 repaint。
+- `handleKey` 在 handler 返回 `true` 时通常 `dirtyNodes=[]`；App 应依据 `handled || dirtyNodes.length > 0` 决定是否 repaint。
 - `focusChange` 在本次操作改变 focus 时返回，同一事件也会通知 `onFocusChange` listeners。
 - 第一版 App 可以收到 dirty nodes 后直接 repaint。
 
@@ -587,8 +588,8 @@ MVP 规则：
 ```text
 1. refresh 后如果当前 focused node 仍有效，保留当前 focus。
 2. 只有当前没有有效 focus 时，才选择新 focus。
-3. 选择树序第一个 key-focus target。
-4. 没有 key-focus target 则 focused = null。
+3. 选择树序第一个 focusable target。
+4. 没有 focusable target 则 focused = null。
 ```
 
 ### 9.2 Tab
@@ -620,10 +621,12 @@ dirtyNodes = []
 如果 focus 发生变化：
 
 ```text
-dirtyNodes = [previousFocused, nextFocused]
+dirtyNodes = unique(previousPath ++ nextPath)
 focusChange.reason = "next" 或 "previous"
 notify onFocusChange listeners
 ```
+
+嵌套场景下 ancestors 也会进入 dirtyNodes（例如 parent/child 同时可聚焦时 Tab 切换会 dirty 整条 path）。
 
 ### 9.3 Programmatic Focus
 
@@ -652,7 +655,7 @@ focus(node):
 
 clearFocus():
   当前有 focus 时清空 focused node。
-  dirtyNodes 包含 previous focused node。
+  dirtyNodes 包含 previous focused path 上的节点。
   focusChange.reason = "clear"。
   当前无 focus 时 dirtyNodes=[]。
 ```
@@ -829,7 +832,7 @@ Tab / Shift+Tab 与其他键一样先走 capture → target → bubble。若 han
 ```text
 button:
   widgets 决定 Enter / Space 是否触发 onPress。
-  widgets 决定 disabled 是否让 onKey 变为 false。
+  widgets 决定 disabled 是否映射为 focusable=false 与 onKey=false。
 
 input:
   widgets 决定字符输入、Backspace、光标和 onInput 语义。
@@ -980,6 +983,7 @@ export interface IntrinsicStyleProps {
   color?: BindingValue<string>;
   background?: BindingValue<string>;
   bold?: BindingValue<boolean>;
+  focusStyle?: BindingValue<"inverse" | "none">;
 }
 ```
 
@@ -999,20 +1003,20 @@ onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void
 
 这些字段应作为通用 element props，而不是某个具体 tag 独有的 widget 行为。
 
-dirty 语义：
+dirty 语义（当前 schema 统一标记为 `paint` dirty，App flush 后调用 `interaction.refresh`）：
 
 ```text
 id:
-  interaction dirty。影响 focus(id) 和 focus restore，不影响 layout / paint。
+  影响 focus(id) 和 focus restore。
 
 focusable:
-  interaction dirty。动态值变化后需要 refresh focus list。
+  动态值变化后需要 refresh focus list。
 
 onKey / onKeyCapture:
-  interaction dirty。动态值变化后需要 refresh focus list（onKeyCapture 不影响 focus list 成员资格）。
+  动态值变化后需要 refresh（onKeyCapture 不影响 focus list 成员资格）。
 
 onFocusChange:
-  interaction dirty 或 paint dirty 均可。MVP 可以沿用未知 prop 默认 paint dirty，但 App 必须在 flush 后调用 interaction.refresh。
+  回调 prop；动态变化时 App 仍应在 flush 后 refresh interaction。
 ```
 
 现有 runtime 对未知 prop 的动态变化会默认标记 `paint`，所以第一版不用先扩展 `DirtyKind`。如果后续要避免无意义 repaint，可以再增加 `"interaction"` dirty kind。
@@ -1083,7 +1087,7 @@ renderer.render(layoutTree, {
 
 `isFocused` 是可选项。未提供时按全部未 focused 处理。
 
-MVP 默认 focused 样式为：renderer 对 focused mounted element 的 layout rect 内 cell 叠加 `inverse: true`。已有 foreground / background / bold 等 paint style 保留，只增加反显。这样 text、box、hstack、vstack 等可接收 `onKey` 的节点都有可见 focus 输出。
+MVP 默认 focused 样式为：renderer 对 focused mounted element 的 layout rect 内 cell 叠加 `inverse: true`（可通过 `focusStyle="none"` 关闭）。已有 foreground / background / bold 等 paint style 保留，只增加反显。
 
 ### 13.7 app
 
@@ -1153,7 +1157,7 @@ key：
 ```text
 function handleKey(event) {
   const result = interaction.handleKey(event);
-  if (result.dirtyNodes.length > 0) {
+  if (result.handled || result.dirtyNodes.length > 0) {
     render();
   }
 }
@@ -1278,7 +1282,7 @@ dispose clears references and ignores later key events
 terminal key events reach interaction
 Tab changes focused state and repaints
 Enter reaches focused node onKey
-dynamic onKey=false removes node from focus list after runtime flush
+dynamic focusable=false removes node from focus list after runtime flush
 stop unsubscribes terminal key listener
 restart restores key listener and focus refresh
 dispose removes key listener and interaction state
@@ -1287,11 +1291,12 @@ dispose removes key listener and interaction state
 ### 17.3 E2E 测试
 
 ```text
-TSX app has at least two nodes with onKey
-Tab switches focus
-Enter reaches second focused node onKey
-onKey callback updates signal
-signal update renders visible result
+TSX app with focusable widgets and onKey handlers
+Tab switches focus between targets
+Enter / Escape capture-bubble scenarios (Form, Modal)
+ScrollView focusable=false receives bubbled keys from TextInput
+onKeyCapture can intercept Tab before fallback
+onKey callback updates signal and repaints
 dispose prevents further key dispatch
 ```
 
@@ -1303,8 +1308,8 @@ dispose prevents further key dispatch
 1. 明确 style props / interaction props / component custom props 三类边界。
 2. 在 JSX intrinsic element 类型中引入共享 base props。
 3. vnode schema 接受通用 interaction props。
-4. layout 明确忽略 id / onKey / onFocusChange。
-5. renderer 明确忽略 id / onKey / onFocusChange，并为 isFocused option 预留类型。
+4. layout 明确忽略 id / focusable / onKeyCapture / onKey / onFocusChange。
+5. renderer 明确忽略 interaction props，并为 isFocused option 预留类型。
 6. 补充 TSX 类型测试和 layout / renderer 忽略 interaction props 的测试。
 ```
 

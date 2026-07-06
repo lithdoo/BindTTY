@@ -111,7 +111,7 @@ import { Button, List, TextInput } from "@bindtty/widgets";
 ### 3.5 文档漂移
 
 - ~~ROADMAP 早期 7 包 / 10 包叙述~~ → 已移入 [archive/plans/PACKAGE_MODEL_HISTORY.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/plans/PACKAGE_MODEL_HISTORY.md)；ROADMAP 仅描述现行 11 包模型。
-- 部分 archive 文档描述落地前状态；以根 README「当前完成状态」与各包 README 为准。
+- 部分 archive 文档描述落地前状态；以根 README「当前完成状态」与各包 README 为准（顶层 `bindtty` 不 re-export widgets）。
 
 ---
 
@@ -133,7 +133,7 @@ import { Button, List, TextInput } from "@bindtty/widgets";
 
 ### Phase C：组件生态（P2）
 
-推荐顺序：Checkbox → Select（单选）→ ~~ProgressBar~~ → Tabs（稍后）
+推荐顺序：~~Checkbox~~ → ~~Select~~ → ~~ProgressBar~~ → Tabs（稍后）
 
 暂缓：Modal / Overlay（需 overlay layer、z-index、focus trap）
 
@@ -175,14 +175,14 @@ import { Button, List, TextInput } from "@bindtty/widgets";
 - GitHub Actions CI
 - TextInput display-column 输入窗口
 - `bindtty` JSX runtime 转发；顶层 API 冻结（widgets 见 `@bindtty/widgets`）
-- ROADMAP / 文档去漂移（进行中）
+- ROADMAP / 文档去漂移（README、ROADMAP、NEXT_STEPS 已同步）
 
-### 0.1.0-beta.0
+### 0.1.0-beta.0（候选）
 
-- layout prop matrix 稳定（min/max、margin、edge padding）；文档 CI 同步（`check:layout-props`）
+- layout prop matrix 稳定（min/max、margin、edge padding）；文档 CI 同步（`check:layout-props`）— Phase 1–3 已落地
 - ~~ScrollView `stickToBottom`~~（已完成）
 - ~~ScrollView scrollbar~~（已完成）
-- Checkbox widget
+- ~~Checkbox / Select / ProgressBar widget~~（已完成）
 - changelog、稳定发布流程
 
 ---
@@ -224,16 +224,17 @@ API freeze → CI / release → layout prop matrix → Scroll/List → widgets e
 | Issue | 内容 | 状态 |
 | --- | --- | --- |
 | 1 | GitHub Actions CI | ✅ done |
-| 2 | 文档统一为 11 包模型 | 🔶 partial（ROADMAP 包模型已统一；其余 doc 漂移待清理） |
+| 2 | 文档统一为 11 包模型 | ✅ done |
 | 3 | `bindtty` 顶层 API 冻结 | ✅ done |
 | 4 | npm 发布元数据 | ✅ done |
 | 5 | TextInput display-column spec | ✅ done |
 | 6 | TextInput 水平滚动实现 | ✅ done |
-| 7 | layout roadmap 与 Yoga 对齐 | ⏳ open |
-| 8 | min/max layout props | ⏳ open |
-| 9 | edge padding / margin props | ⏳ open |
+| 7 | layout roadmap 与 Yoga 对齐 | 🔶 partial（min/max、margin、edge padding 已落地；`flexDirection` 等仍在 `futureLayoutProps`） |
+| 8 | min/max layout props | ✅ done |
+| 9 | edge padding / margin props | ✅ done |
 | 10 | ScrollView stickToBottom | ✅ done |
 | 10b | ScrollView scrollbar | ✅ done |
 | 10c | ScrollView 双轴（X+Y） | ✅ done |
 | 11 | ProgressBar widget | ✅ done |
-| 11 | Checkbox widget | ⏳ open |
+| 12 | Checkbox widget | ✅ done |
+| 13 | Select widget | ✅ done |

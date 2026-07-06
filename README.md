@@ -100,7 +100,7 @@ packages/widgets/
 @bindtty/renderer-terminal: LayoutNode → Frame → ANSI diff（含 focusStyle/clip/scrollOffset）
 @bindtty/terminal:          TerminalHost（alt screen/cursor/raw mode/resize/keypress）
 @bindtty/interaction:       keyboard focus、onKey dispatch、Tab/Shift+Tab traversal
-@bindtty/widgets:           Button、TextInput、VScrollView、HScrollView、List
+@bindtty/widgets:           Button、Checkbox、TextInput、Select、VScrollView、HScrollView、ScrollView、List、ProgressBar
 bindtty:                    createApp、createSignal/computed/effect、JSX 转发（widgets 见 @bindtty/widgets）
 ```
 

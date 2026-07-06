@@ -163,7 +163,7 @@ widget custom props:
 1. custom props 不自动进入 intrinsic element。
 2. widget 必须显式把 custom props 转换成 style / interaction props。
 3. disabled 不作为 interaction 通用 prop。
-4. disabled 由 widget 决定是否让 onKey 变为 false。
+4. disabled 由 widget 映射为 focusable=false 与 onKey=false。
 5. 官方 interactive widgets 暴露 `focusable?: BindingValue<boolean>`，默认 `true`；容器模式可设 `focusable={false}` 仅接收 bubble。
 6. focusStyle 是 renderer paint prop；复杂控件可用 focusStyle="none" 关闭默认 focused inverse。
 7. TextInput 当前不直接暴露 width；如需固定宽度可在外层布局中组合 `box width`，后续可再评估是否加入 TextInput 自身 props。
@@ -171,24 +171,24 @@ widget custom props:
 
 ## 5. Focus 与 Disabled
 
-官方 form widgets 通过 `focusable` 与 `onKey` 共同表达 disabled 语义：
+Tab focus 由 **`focusable`** 决定；按键处理由 **`onKey` / `onKeyCapture`** 决定。官方 form widgets 的 disabled 语义：
 
 ```text
 disabled === true:
-  focusable = false
+  focusable = false（优先于用户传入的 focusable）
   onKey = false
   节点不进入 focus list
   如果原本 focused，runtime flush 后 interaction.refresh 会迁移 focus
 
 disabled === false:
-  focusable = props.focusable ?? true
+  focusable 默认 true（可被 props.focusable 覆盖）
   onKey = handler
   节点进入 focus list
 ```
 
-实现上使用共享 helper `createFocusableBinding(focusable, disabled)`；`disabled` 优先于显式 `focusable={true}`。
+实现上使用 `createWidgetFocusable(focusable, disabled)`（见 `packages/widgets/src/shared/focusable.ts`）。
 
-Button 示例：
+Button 示例（概念）：
 
 ```tsx
 <box
@@ -207,7 +207,7 @@ Button 示例：
 />
 ```
 
-动态 disabled 应支持 `BindingValue<boolean>`。如果 disabled 是 signal / computed，runtime 会更新 mounted props，App 在 flush 后刷新 interaction focus list。
+动态 disabled 应支持 `BindingValue<boolean>`。disabled 为 signal 时 focusable 与 onKey 都应为 computed，flush 后 refresh interaction focus list。
 
 ## 6. Focused 样式
 
@@ -351,7 +351,7 @@ Button renders label as text value
 Button Enter triggers onPress
 Button Space triggers onPress
 Button other keys return handled=false
-Button disabled maps onKey=false
+Button disabled maps focusable=false and onKey=false
 Button disabled does not call onPress
 Button accepts dynamic disabled
 Button forwards onFocusChange
@@ -409,7 +409,7 @@ npm run build --workspace @bindtty/widgets
 1. 实现 Button 组件。
 2. Button 渲染为 box + text。
 3. Enter / Space 调用 onPress。
-4. disabled 映射为 onKey=false。
+4. disabled 映射为 focusable=false 与 onKey=false。
 5. 补单元测试。
 ```
 

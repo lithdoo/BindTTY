@@ -15,15 +15,9 @@
 
 - `label` / `id` / `disabled` binding
 - Enter / Space → `onPress`
-- disabled → `onKey=false`、dim 样式
+- disabled → `focusable=false`、`onKey=false`、dim 样式
 - renderer 默认 focused inverse 样式
 
-### 1.2 不在范围
-
-- intrinsic `<button>` 完整 layout/paint
-- 鼠标点击
-
----
 
 ## 2. 对外 API
 
@@ -71,11 +65,13 @@ Button
 
 ```text
 disabled=true:
+  focusable=false
   onKey=false
   dim=true 或 color="gray"
   不触发 onPress
 
 disabled=false:
+  focusable 默认 true
   onKey=handler
 ```
 

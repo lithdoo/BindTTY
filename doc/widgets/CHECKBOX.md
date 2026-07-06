@@ -16,7 +16,7 @@
 - 受控 `checked` + `onChange`
 - marker / label 分离渲染
 - Space / Enter → toggle
-- disabled → `onKey=false` + label dim
+- disabled → `focusable=false`、`onKey=false` + label dim
 
 ### 1.2 不在范围
 
@@ -61,7 +61,7 @@ box (onKey, border=false)
     text label
 ```
 
-按键：Space / Enter → `onChange(!checked)`；disabled → `onKey=false` + label dim。
+按键：Space / Enter → `onChange(!checked)`；disabled → `focusable=false`、`onKey=false` + label dim。
 
 ---
 

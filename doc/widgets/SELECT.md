@@ -74,7 +74,7 @@ box (onKey, border=false)
       for options -> text "> Label" | "  Label"
 ```
 
-按键：Up/Down 上一项/下一项；Home/End 首/末项；Enter/Space 不处理；disabled → `onKey=false` + dim。
+按键：Up/Down 上一项/下一项；Home/End 首/末项；Enter/Space 不处理；disabled → `focusable=false`、`onKey=false` + dim。
 
 ---
 

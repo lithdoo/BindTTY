@@ -421,7 +421,7 @@ const onKeyBinding = computed(() => {
 
 ```text
 disabled === true:
-  → onKey = false (通过 computed 返回)
+  → focusable = false, onKey = false (通过 computed 返回)
   → 节点退出 focus list
   → 如果原本 focused，interaction.refresh 后 focus 迁移
   → dim = true
@@ -528,7 +528,7 @@ Placeholder:
   unrelated keys return handled=false
 
 Disabled:
-  disabled → onKey=false
+  disabled → focusable=false, onKey=false
   disabled → dim=true on all three text nodes
   disabled → cursor not shown even if focused
 
@@ -597,7 +597,7 @@ dispose prevents further key dispatch
 6. focused 时拆分三 text 节点显示反显光标。
 7. blur 时光标隐藏，cursor 重置。
 8. placeholder 显示（未聚焦 + 空值）。
-9. disabled 映射为 onKey=false + dim。
+9. disabled 映射为 focusable=false、onKey=false + dim。
 10. onSubmit(value) 回调。
 11. 单元测试 + App 集成测试 + E2E 测试。
 ```

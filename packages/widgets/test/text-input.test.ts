@@ -31,16 +31,6 @@ function resolveSignal<T>(value: unknown): T {
   return (value as ReadableSignal<T>).get();
 }
 
-function readFocusable(template: ElementTemplate): boolean {
-  const focusable = template.props.focusable;
-
-  if (typeof focusable === "boolean") {
-    return focusable;
-  }
-
-  return resolveSignal<boolean>(focusable);
-}
-
 function readOnKey(template: ElementTemplate): InteractionKeyBinding {
   return template.props.onKey as InteractionKeyBinding;
 }
@@ -381,7 +371,7 @@ test("TextInput defaults focusable to true", () => {
   assert.equal(template.props.focusable, true);
 });
 
-test("TextInput disabled maps onKey to false, focusable to false, and hides cursor", () => {
+test("TextInput disabled maps onKey to false and hides cursor", () => {
   const template = asElement(
     TextInput({
       value: "Disabled",
@@ -395,7 +385,7 @@ test("TextInput disabled maps onKey to false, focusable to false, and hides curs
   );
 
   assert.equal(template.props.onKey, false);
-  assert.equal(readFocusable(template), false);
+  assert.equal(template.props.focusable, false);
   assert.equal(resolveSignal<boolean>(before.props.dim), true);
   assert.equal(resolveSignal<boolean>(cursor.props.dim), true);
   assert.equal(resolveSignal<boolean>(after.props.dim), true);
@@ -412,12 +402,12 @@ test("TextInput supports dynamic disabled values", () => {
   );
 
   assert.equal(typeof resolveSignal<InteractionKeyBinding>(template.props.onKey), "function");
-  assert.equal(readFocusable(template), true);
+  assert.equal(resolveSignal<boolean>(template.props.focusable), true);
 
   disabled.set(true);
 
   assert.equal(resolveSignal<InteractionKeyBinding>(template.props.onKey), false);
-  assert.equal(readFocusable(template), false);
+  assert.equal(resolveSignal<boolean>(template.props.focusable), false);
 });
 
 test("TextInput clamps cursor when controlled value shrinks externally", () => {

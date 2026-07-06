@@ -676,7 +676,7 @@ onKeyCapture: { dirty: "paint" }
 
 ```ts
 focusable?: BindingValue<boolean>;
-onKeyCapture?: BindingValue<InteractionKeyBinding>;
+onKeyCapture?: BindingValue<InteractionKeyListener>;
 ```
 
 ### 10.3 `@bindtty/layout`

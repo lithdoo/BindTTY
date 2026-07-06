@@ -11,10 +11,7 @@ import {
   type InteractionKeyHandler,
   type InteractionNodeFocusChangeEvent
 } from "@bindtty/interaction";
-import {
-  createDisabledDim,
-  createFocusableBinding
-} from "../shared/focusable.js";
+import { createWidgetFocusable } from "../shared/focusable.js";
 
 export interface CheckboxStyleProps {
   color?: BindingValue<string>;
@@ -41,7 +38,7 @@ export function Checkbox(props: CheckboxProps): Template {
     "box",
     omitUndefined({
       id: props.id,
-      focusable: createFocusableBinding(props.focusable, props.disabled),
+      focusable: createWidgetFocusable(props.focusable, props.disabled),
       onKey: createCheckboxOnKey(props),
       onFocusChange: props.onFocusChange,
       border: false,
@@ -108,6 +105,16 @@ function readChecked(checked: BindingValue<boolean>): boolean {
   }
 
   return checked === true;
+}
+
+function createDisabledDim(
+  disabled: BindingValue<boolean> | undefined
+): BindingValue<boolean> | undefined {
+  if (isReadableSignal<boolean>(disabled)) {
+    return computed(() => disabled.get());
+  }
+
+  return disabled === true ? true : undefined;
 }
 
 function omitUndefined(

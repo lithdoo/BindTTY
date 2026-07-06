@@ -23,7 +23,7 @@
 
 矩阵列仅含 **layout 参与 tag**（`screen` · `vstack` · `hstack` · `box` · `text` · `spacer`）。intrinsic `button` / `input` 不在此表：schema 仍保留类型，但 layout 遇之则抛 `Unsupported layout element`；控件请用 [@bindtty/widgets](../packages/WIDGETS.md)。
 
-**非 layout prop**（校验时跳过）：`id`、`ref`、`focusStyle`、`onKey`、`onFocusChange`。
+**非 layout prop**（校验时跳过）：`id`、`ref`、`focusStyle`、`focusable`、`onKeyCapture`、`onKey`、`onFocusChange`。
 
 **kebab-case**：所有带 alias 的 prop 同时支持 camelCase 与 kebab-case；重复传入会抛 `Duplicate layout prop`。
 

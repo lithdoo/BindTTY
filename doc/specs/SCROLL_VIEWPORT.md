@@ -455,7 +455,7 @@ if (event.name === "end") onOffsetChange(maxY)
 
 1. 识别并调用 `onOffsetChange` 时返回 `true`。
 2. 未识别的 key 返回 `false`。
-3. `scrollOnArrow === false` 或未提供 `onOffsetChange` 时，内部 `box` 使用 `onKey=false`，不进入 focus list。
+3. `scrollOnArrow === false` 或未提供 `onOffsetChange` 时，内部 `box` 使用 `onKey=false`（仍默认 `focusable=true`，可 Tab 聚焦但不响应箭头滚动键）。
 
 ### 8.4 Real PTY 覆盖
 

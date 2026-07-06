@@ -1,23 +1,24 @@
 import { computed } from "@bindtty/signal";
 import { isReadableSignal, type BindingValue } from "@bindtty/vnode";
+import { readBooleanBindingValue } from "./binding.js";
 
-export function createFocusableBinding(
+export function createWidgetFocusable(
   focusable: BindingValue<boolean> | undefined,
   disabled: BindingValue<boolean> | undefined,
   defaultFocusable = true
 ): BindingValue<boolean> {
-  const baseFocusable = focusable ?? defaultFocusable;
+  const base = focusable ?? defaultFocusable;
 
   if (disabled === undefined) {
-    return baseFocusable;
+    return base;
   }
 
   if (isReadableSignal<boolean>(disabled)) {
-    if (isReadableSignal<boolean>(baseFocusable)) {
-      return computed(() => baseFocusable.get() && !disabled.get());
+    if (isReadableSignal<boolean>(base)) {
+      return computed(() => base.get() && !disabled.get());
     }
 
-    if (baseFocusable === false) {
+    if (base === false) {
       return false;
     }
 
@@ -28,15 +29,11 @@ export function createFocusableBinding(
     return false;
   }
 
-  return baseFocusable;
+  return base;
 }
 
-export function createDisabledDim(
+export function isDisabledBinding(
   disabled: BindingValue<boolean> | undefined
-): BindingValue<boolean> | undefined {
-  if (isReadableSignal<boolean>(disabled)) {
-    return computed(() => disabled.get());
-  }
-
-  return disabled === true ? true : undefined;
+): boolean {
+  return readBooleanBindingValue(disabled, false);
 }
