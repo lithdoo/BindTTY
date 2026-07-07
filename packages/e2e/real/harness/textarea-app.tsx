@@ -1,7 +1,8 @@
 import fs from "node:fs";
 
-import { Button, Textarea, createApp, createSignal } from "bindtty";
+import { createApp, createSignal } from "bindtty";
 import { createNodeTerminal } from "@bindtty/terminal";
+import { Button, Textarea } from "@bindtty/widgets";
 
 import { ptyPlatformAdapter } from "./pty-platform.js";
 

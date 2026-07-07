@@ -70,6 +70,7 @@ export function parseInputChunk(
 export function createInputParser(options: ParseInputChunkOptions = {}): InputParser {
   const tokenizer = createInputTokenizer();
   const reverse = buildReverseKeymap(options.keymap?.fixed ?? defaultInputKeymap.fixed);
+  const dynamic = options.keymap?.dynamic ?? defaultInputKeymap.dynamic ?? [];
   const pasteMode = options.pasteMode ?? "text";
   const escapeFlushMode = options.escapeFlushMode ?? "unknown";
 
@@ -78,6 +79,7 @@ export function createInputParser(options: ParseInputChunkOptions = {}): InputPa
       return tokenizer.tokenize(chunk).flatMap((token) =>
         parseInputToken(token, {
           reverse,
+          dynamic,
           pasteMode,
           escapeFlushMode
         })
@@ -87,6 +89,7 @@ export function createInputParser(options: ParseInputChunkOptions = {}): InputPa
       return tokenizer.flush().flatMap((token) =>
         parseInputToken(token, {
           reverse,
+          dynamic,
           pasteMode,
           escapeFlushMode
         })

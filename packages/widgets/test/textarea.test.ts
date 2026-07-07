@@ -8,6 +8,7 @@ import {
   type TextareaStyleProps
 } from "@bindtty/widgets";
 import type {
+  BindTTYKeyEvent,
   InteractionKeyBinding,
   InteractionKeyHandler,
   InteractionNodeFocusChangeEvent
@@ -17,7 +18,6 @@ import type {
   ReadableSignal,
   Template
 } from "@bindtty/vnode";
-import type { TerminalKeyEvent } from "@bindtty/terminal";
 
 type TextareaRenderLine =
   | {
@@ -58,21 +58,27 @@ function readOnKeyHandler(template: ElementTemplate): InteractionKeyHandler {
 
 function key(
   input: string,
-  overrides: Partial<TerminalKeyEvent> = {}
-): TerminalKeyEvent {
-  return {
+  overrides: Partial<BindTTYKeyEvent> = {}
+): BindTTYKeyEvent {
+  const event: BindTTYKeyEvent = {
     input,
     ctrl: false,
     meta: false,
     shift: false,
+    phase: "target",
+    propagationStopped: false,
+    stopPropagation() {
+      event.propagationStopped = true;
+    },
     ...overrides
   };
+
+  return event;
 }
 
 function focusEvent(focused: boolean): InteractionNodeFocusChangeEvent {
   return {
     id: "textarea",
-    node: {} as never,
     focused,
     reason: "programmatic"
   };
@@ -80,12 +86,9 @@ function focusEvent(focused: boolean): InteractionNodeFocusChangeEvent {
 
 function callOnKey(
   handler: InteractionKeyHandler,
-  event: TerminalKeyEvent
+  event: BindTTYKeyEvent
 ): boolean | void {
-  return handler(event, {
-    node: {} as never,
-    isFocused: true
-  });
+  return handler(event);
 }
 
 function readRenderLines(template: ElementTemplate): readonly TextareaRenderLine[] {

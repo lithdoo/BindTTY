@@ -32,6 +32,7 @@ const packages = [
   { dir: "packages/runtime", scoped: true },
   { dir: "packages/layout", scoped: true },
   { dir: "packages/renderer-terminal", scoped: true },
+  { dir: "packages/input", scoped: true },
   { dir: "packages/terminal", scoped: true },
   { dir: "packages/interaction", scoped: true },
   { dir: "packages/widgets", scoped: true },

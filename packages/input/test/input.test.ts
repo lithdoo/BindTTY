@@ -110,6 +110,32 @@ test("parseInputChunk maps modifyOtherKeys printable input", () => {
   ]);
 });
 
+test("parseInputChunk applies custom dynamic keymap entries", () => {
+  assert.deepEqual(
+    [
+      ...parseInputChunk("\x1b[999~", {
+        keymap: {
+          fixed: [],
+          dynamic: [
+            {
+              starter: "\x1b[",
+              enders: ["~"],
+              parse(payload, sequence) {
+                return payload === "999"
+                  ? keyEvent("custom", "", sequence, true)
+                  : null;
+              }
+            }
+          ]
+        }
+      })
+    ],
+    [
+      keyEvent("custom", "", "\x1b[999~", true)
+    ]
+  );
+});
+
 test("parseInputChunk consumes unknown CSI sequences without leaking text input", () => {
   assert.deepEqual([...parseInputChunk("a\x1b[99;9~\x1b[99;9:1ub")], [
     textEvent("a"),
@@ -127,6 +153,12 @@ test("parseInputChunk treats bracketed paste content as text by default", () => 
     textEvent("A"),
     textEvent(" "),
     textEvent("b")
+  ]);
+});
+
+test("parseInputChunk keeps pasted emoji as one text event", () => {
+  assert.deepEqual([...parseInputChunk("\x1b[200~🙂\x1b[201~")], [
+    textEvent("🙂")
   ]);
 });
 

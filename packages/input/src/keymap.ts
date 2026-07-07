@@ -11,8 +11,6 @@ export interface FixedKeymapEntry {
 
 export interface ReverseKeymap {
   bySequence: Map<string, InputEvent>;
-  prefixes: Set<string>;
-  maxLength: number;
 }
 
 export const defaultFixedKeymap: readonly FixedKeymapEntry[] = [
@@ -50,8 +48,6 @@ export const defaultFixedKeymap: readonly FixedKeymapEntry[] = [
 
 export function buildReverseKeymap(entries: readonly FixedKeymapEntry[]): ReverseKeymap {
   const bySequence = new Map<string, InputEvent>();
-  const prefixes = new Set<string>();
-  let maxLength = 0;
 
   for (const entry of entries) {
     for (const sequence of entry.sequences) {
@@ -66,13 +62,8 @@ export function buildReverseKeymap(entries: readonly FixedKeymapEntry[]): Revers
           Boolean(entry.shift)
         )
       );
-
-      maxLength = Math.max(maxLength, sequence.length);
-      for (let length = 1; length < sequence.length; length += 1) {
-        prefixes.add(sequence.slice(0, length));
-      }
     }
   }
 
-  return { bySequence, prefixes, maxLength };
+  return { bySequence };
 }

@@ -2,12 +2,14 @@ import { keyEvent, pasteEvent, textEvent, unknownEvent, type InputEvent } from "
 import type { ReverseKeymap } from "./keymap.js";
 import { flagsToTuple, readXtermModifierFlags } from "./modifiers.js";
 import type { CsiToken, RawInputToken } from "./tokenizer.js";
+import type { DynamicKeymapEntry } from "./index.js";
 
 export type PasteMode = "text" | "event";
 export type EscapeFlushMode = "unknown" | "escape";
 
 export interface ParseTokenOptions {
   reverse: ReverseKeymap;
+  dynamic: readonly DynamicKeymapEntry[];
   pasteMode: PasteMode;
   escapeFlushMode: EscapeFlushMode;
 }
@@ -16,6 +18,11 @@ export function parseInputToken(token: RawInputToken, options: ParseTokenOptions
   const fixed = options.reverse.bySequence.get(token.sequence);
   if (fixed) {
     return [fixed];
+  }
+
+  const dynamic = parseDynamicToken(token, options.dynamic);
+  if (dynamic) {
+    return [dynamic];
   }
 
   switch (token.type) {
@@ -32,10 +39,47 @@ export function parseInputToken(token: RawInputToken, options: ParseTokenOptions
     case "paste":
       return options.pasteMode === "event"
         ? [pasteEvent(token.value, token.sequence)]
-        : [...token.value].map((input) => textEvent(input));
+        : Array.from(token.value).map((input) => textEvent(input));
     case "unknown":
       return [unknownEvent(token.sequence)];
   }
+}
+
+function parseDynamicToken(
+  token: RawInputToken,
+  entries: readonly DynamicKeymapEntry[]
+): InputEvent | null {
+  for (const entry of entries) {
+    if (!token.sequence.startsWith(entry.starter)) {
+      continue;
+    }
+
+    const ender = readMatchingEnder(token.sequence, entry.enders);
+    if (!ender) {
+      continue;
+    }
+
+    const payload = token.sequence.slice(
+      entry.starter.length,
+      token.sequence.length - ender.length
+    );
+    const event = entry.parse(payload, token.sequence);
+    if (event) {
+      return event;
+    }
+  }
+
+  return null;
+}
+
+function readMatchingEnder(sequence: string, enders: readonly string[]): string | null {
+  for (const ender of enders) {
+    if (sequence.endsWith(ender)) {
+      return ender;
+    }
+  }
+
+  return null;
 }
 
 function parseControlToken(sequence: string): InputEvent[] {
