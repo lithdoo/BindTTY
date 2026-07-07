@@ -50,6 +50,7 @@ import {
   readNumberBindingValue,
   readStringBindingValue
 } from "./binding.js";
+import { createWidgetFocusable } from "../shared/focusable.js";
 
 export interface TextareaStyleProps {
   color?: BindingValue<string>;
@@ -63,6 +64,7 @@ export interface TextareaProps extends TextareaStyleProps {
   value: BindingValue<string>;
   placeholder?: BindingValue<string>;
   disabled?: BindingValue<boolean>;
+  focusable?: BindingValue<boolean>;
   minRows?: BindingValue<number>;
   maxRows?: BindingValue<number>;
   width?: BindingValue<number>;
@@ -105,12 +107,6 @@ export function Textarea(props: TextareaProps): Template {
   const viewportRows = computed(() => readViewportRows(props, layout.get()));
 
   viewportRows.subscribe((rows) => {
-    const syncedState = syncStateToProps(state.get(), props, layout.get());
-    state.set(
-      readBooleanBindingValue(props.disabled, false)
-        ? withScrollableViewportRows(syncedState, layout.get(), rows)
-        : withViewportRows(syncedState, layout.get(), rows)
-    );
     props.onViewportRowsChange?.(rows);
   });
 
@@ -143,6 +139,7 @@ export function Textarea(props: TextareaProps): Template {
       ref: createTextareaRef(contentWidth),
       onKey: createTextareaOnKey(props, state, layout, viewportRows, lastResetToken),
       onFocusChange: createFocusChangeHandler(props, focused),
+      focusable: createWidgetFocusable(props.focusable, undefined),
       focusStyle: "none",
       overflow: "clip",
       flexGrow: props.width === undefined ? 1 : undefined,
@@ -151,6 +148,7 @@ export function Textarea(props: TextareaProps): Template {
       background: props.background
     }),
     renderTextareaViewport({
+      rows: readRenderRows(props),
       lines: renderLines,
       color: props.color,
       background: props.background,
@@ -506,6 +504,19 @@ function readViewportRows(props: TextareaProps, layout: TextareaLayout): number 
   const minRows = readMinRows(props);
   const maxRows = Math.max(minRows, readNumberBindingValue(props.maxRows, TEXTAREA_DEFAULT_MAX_ROWS));
   return Math.min(Math.max(layout.visualLines.length, minRows), maxRows);
+}
+
+function readRenderRows(props: TextareaProps): number {
+  const explicitHeight = readBindingValue(props.height);
+  if (typeof explicitHeight === "number" && Number.isFinite(explicitHeight)) {
+    return Math.max(1, Math.floor(explicitHeight));
+  }
+
+  const minRows = readMinRows(props);
+  return Math.max(
+    minRows,
+    readNumberBindingValue(props.maxRows, TEXTAREA_DEFAULT_MAX_ROWS)
+  );
 }
 
 function readMinRows(props: TextareaProps): number {

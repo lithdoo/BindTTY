@@ -144,10 +144,12 @@ test("Textarea renders as a borderless focusable box that fills horizontal space
   assert.equal(template.props.id, "notes");
   assert.equal(template.props.focusStyle, "none");
   assert.equal(template.props.overflow, "clip");
+  assert.equal(resolveSignal<boolean>(template.props.focusable), true);
   assert.equal(template.props.border, undefined);
   assert.equal(template.props.padding, undefined);
   assert.equal(template.props.flexGrow, 1);
   assert.equal(viewport.tag, "vstack");
+  assert.equal(viewport.children.length, 6);
   assert.deepEqual(readRenderLines(template), [
     {
       key: "line:0",
@@ -185,6 +187,7 @@ test("Textarea exposes the planned props types", () => {
     value: "Typed",
     placeholder: "Body",
     disabled: false,
+    focusable: false,
     minRows: 1,
     maxRows: 4,
     width: 20,
@@ -196,7 +199,11 @@ test("Textarea exposes the planned props types", () => {
     onViewportRowsChange() {}
   };
 
-  assert.equal(asElement(Textarea(props)).props.id, "typed");
+  const template = asElement(Textarea(props));
+
+  assert.equal(template.props.id, "typed");
+  assert.equal(resolveSignal<boolean>(template.props.focusable), false);
+  assert.equal(childElement(template, 0).children.length, 2);
 });
 
 test("Textarea edits controlled multiline value and submits with Ctrl Enter", () => {
@@ -216,6 +223,8 @@ test("Textarea edits controlled multiline value and submits with Ctrl Enter", ()
     })
   );
   const onKey = readOnKeyHandler(template);
+
+  assert.equal(resolveSignal<boolean>(template.props.focusable), true);
 
   (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
     focusEvent(true)

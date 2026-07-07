@@ -65,6 +65,7 @@ export interface TextareaProps extends TextareaStyleProps {
   value: BindingValue<string>;
   placeholder?: BindingValue<string>;
   disabled?: BindingValue<boolean>;
+  focusable?: BindingValue<boolean>;
 
   minRows?: BindingValue<number>;       // default: 1
   maxRows?: BindingValue<number>;       // default: 6
@@ -430,6 +431,7 @@ Textarea 外层是 focusable `box`：
   ref={layoutRef}
   onKey={onKey}
   onFocusChange={onFocusChange}
+  focusable={props.focusable ?? true}
   focusStyle="none"
   overflow="clip"
   flexGrow={props.width === undefined ? 1 : undefined}
@@ -450,6 +452,7 @@ Textarea 外层是 focusable `box`：
 6. Textarea 默认不设置 `border` / `padding`。需要边框、标题、提示文案、prompt 对齐时，由父级 `box` 或应用组件组合。
 7. `height` 必须稳定，不允许因 caret 或 placeholder 改变导致布局跳动。
 8. placeholder 只在 `value === "" && !focused` 时显示，不参与真实编辑。
+9. 渲染行槽位不能使用固定大常量；应按显式 `height` 或 `maxRows` 上限生成，避免 vnode content 高度超过真实 viewport。
 
 ## 9. 渲染策略
 
@@ -903,6 +906,7 @@ Textarea 必须遵循当前 widgets 包的实现习惯：
 6. `ref.onLayout` 只读取 layout 状态，不触发业务回调之外的副作用。
 7. `onKey` 返回值必须严格：处理了返回 `true`，交给外层返回 `false`。
 8. disabled 行为按控件自身语义决定，不照搬 Button 的 `onKey=false` 模型。
+9. `viewportRows` 变化可以通知 `onViewportRowsChange`，但不应在订阅回调中写编辑 state；渲染与按键处理各自读取最新布局并夹紧 viewport。
 
 ## 15. 与 TextInput 的关系
 

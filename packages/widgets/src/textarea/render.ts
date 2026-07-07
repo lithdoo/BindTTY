@@ -6,8 +6,6 @@ import {
 } from "@bindtty/vnode";
 import { omitUndefined } from "./binding.js";
 
-const TEXTAREA_RENDER_ROWS = 32;
-
 export type TextareaRenderLine =
   | {
       key: string;
@@ -23,6 +21,7 @@ export type TextareaRenderLine =
     };
 
 export interface RenderTextareaViewportInput {
+  rows: number;
   lines: BindingValue<readonly TextareaRenderLine[]>;
   color?: BindingValue<string>;
   background?: BindingValue<string>;
@@ -34,7 +33,7 @@ export function renderTextareaViewport(input: RenderTextareaViewportInput): Temp
   return elementTemplate(
     "vstack",
     {},
-    Array.from({ length: TEXTAREA_RENDER_ROWS }, (_value, index) =>
+    Array.from({ length: Math.max(1, Math.floor(input.rows)) }, (_value, index) =>
       renderTextareaLineAt(input, index)
     )
   );
