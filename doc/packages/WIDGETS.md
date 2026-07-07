@@ -312,7 +312,7 @@ import { Button } from "@bindtty/widgets";
 <Button label="Save" onPress={save} />
 ```
 
-应用 `package.json` 须同时依赖 `bindtty` 与 `@bindtty/widgets`（版本号对齐，如均为 `0.1.0-alpha.4`）。
+应用 `package.json` 须同时依赖 `bindtty` 与 `@bindtty/widgets`（版本号对齐，如均为 `0.1.0-alpha.5`）。
 
 ## 10. 测试计划
 

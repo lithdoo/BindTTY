@@ -10,7 +10,7 @@ export class Win32PlatformAdapter extends DefaultPlatformAdapter {
   override createStdinInput(
     options: CreateNodeTerminalOptions
   ): StdinInputAdapter {
-    if (options.stdin === processStdin) {
+    if (options.rawMode === true || options.stdin === processStdin) {
       return new RawStdinInput();
     }
 

@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 
-import { ANSI, createNodeTerminal, normalizeKeypressEvent, parseRawChunk, RawStdinInput } from "@bindtty/terminal";
+import { ANSI, createNodeTerminal, DefaultPlatformAdapter, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput } from "@bindtty/terminal";
 import type {
   CreateNodeTerminalOptions,
+  StdinInputAdapter,
   KeypressKey,
   KeypressListener,
   TerminalHost,
@@ -24,7 +25,10 @@ interface MockStdin extends TerminalStdin {
   rawModeCalls: boolean[];
   resumeCalls: number;
   listenerCount(): number;
+  keypressListenerCount(): number;
+  dataListenerCount(): number;
   emitKey(input?: string, key?: KeypressKey): void;
+  emitData(chunk: Buffer | string): void;
 }
 
 function createMockStdout(): MockStdout {
@@ -60,6 +64,7 @@ function createMockStdout(): MockStdout {
 
 function createMockStdin(): MockStdin {
   const keyListeners = new Set<KeypressListener>();
+  const dataListeners = new Set<(chunk: Buffer | string) => void>();
 
   return {
     isTTY: true,
@@ -73,22 +78,39 @@ function createMockStdin(): MockStdin {
     resume() {
       this.resumeCalls += 1;
     },
-    on(event: "keypress", listener: KeypressListener) {
+    on(event: "keypress" | "data", listener: KeypressListener | ((chunk: Buffer | string) => void)) {
       if (event === "keypress") {
-        keyListeners.add(listener);
+        keyListeners.add(listener as KeypressListener);
+      }
+      if (event === "data") {
+        dataListeners.add(listener as (chunk: Buffer | string) => void);
       }
     },
-    off(event: "keypress", listener: KeypressListener) {
+    off(event: "keypress" | "data", listener: KeypressListener | ((chunk: Buffer | string) => void)) {
       if (event === "keypress") {
-        keyListeners.delete(listener);
+        keyListeners.delete(listener as KeypressListener);
+      }
+      if (event === "data") {
+        dataListeners.delete(listener as (chunk: Buffer | string) => void);
       }
     },
     listenerCount() {
+      return keyListeners.size + dataListeners.size;
+    },
+    keypressListenerCount() {
       return keyListeners.size;
+    },
+    dataListenerCount() {
+      return dataListeners.size;
     },
     emitKey(input?: string, key?: KeypressKey) {
       for (const listener of [...keyListeners]) {
         listener(input, key);
+      }
+    },
+    emitData(chunk: Buffer | string) {
+      for (const listener of [...dataListeners]) {
+        listener(chunk);
       }
     }
   };
@@ -302,6 +324,8 @@ test("restart reapplies terminal lifecycle state", () => {
   assert.equal(stdin.resumeCalls, 2);
   assert.equal(stdout.listenerCount(), 1);
   assert.equal(stdin.listenerCount(), 1);
+  assert.equal(stdin.dataListenerCount(), 1);
+  assert.equal(stdin.keypressListenerCount(), 0);
 });
 
 test("stop restores raw mode cursor and alternate screen in order", () => {
@@ -689,6 +713,8 @@ test("onKey unsubscribe prevents future key notifications", () => {
 
   assert.equal(keyCount, 0);
   assert.equal(stdin.listenerCount(), 1);
+  assert.equal(stdin.keypressListenerCount(), 1);
+  assert.equal(stdin.dataListenerCount(), 0);
 });
 
 test("key listeners can unsubscribe while keypress is being dispatched", () => {
@@ -773,7 +799,7 @@ test("ctrl c disposes terminal when exitOnCtrlC is enabled", () => {
   });
 
   terminal.start();
-  stdin.emitKey("c", { name: "c", ctrl: true, sequence: "\x03" });
+  stdin.emitData("\x03");
   terminal.write("ignored");
 
   assert.equal(keyCount, 0);
@@ -1034,13 +1060,44 @@ test("parseRawChunk maps Windows console prefixed arrow keys", () => {
   ]);
 });
 
+test("default platform selects RawStdinInput when rawMode is enabled", () => {
+  const platform = new DefaultPlatformAdapter();
+  const stdout = createMockStdout();
+  assert.equal(platform.createStdinInput({ stdout, rawMode: true }).kind, "raw");
+  assert.ok(platform.createStdinInput({ stdout, rawMode: true }) instanceof RawStdinInput);
+});
+
+test("default platform keeps ReadlineStdinInput when rawMode is disabled", () => {
+  const platform = new DefaultPlatformAdapter();
+  const stdout = createMockStdout();
+  assert.equal(platform.createStdinInput({ stdout }).kind, "readline");
+  assert.ok(platform.createStdinInput({ stdout }) instanceof ReadlineStdinInput);
+});
+
+test("createNodeTerminal with rawMode uses raw stdin parser", () => {
+  const stdout = createMockStdout();
+  const stdin = createMockStdin();
+  const terminal = createNodeTerminal({ stdout, stdin, rawMode: true });
+  const events: TerminalKeyEvent[] = [];
+  terminal.onKey((event) => { events.push(event); });
+  terminal.start();
+  stdin.emitData("\x1b[A");
+  terminal.stop();
+  assert.deepEqual(events.map((event) => event.name), ["up"]);
+  assert.equal(stdin.dataListenerCount(), 0);
+});
 test("stdinInputAdapter injection selects a fixed stdin reader", () => {
   const stdout = createMockStdout();
   const stdin = createMockStdin();
+  const fixedStdinInput: StdinInputAdapter = {
+    kind: "readline",
+    prepare() {},
+    attach() { return () => {}; }
+  };
   const terminal = createNodeTerminal({
     stdout,
     stdin,
-    stdinInputAdapter: new RawStdinInput()
+    stdinInputAdapter: fixedStdinInput
   });
 
   terminal.start();

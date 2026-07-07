@@ -51,7 +51,7 @@ TSX → ViewTemplate → MountedNode → LayoutNode → Frame → ANSI Patch
 | M1–M7 主链路 | ✅ | [ROADMAP.md](./ROADMAP.md) |
 | TextInput display-column 输入窗口 | ✅ | [TEXT_INPUT.md](../widgets/TEXT_INPUT.md) §1.1、`packages/widgets/src/form/text-input.ts` |
 | display-width / CJK / emoji | ✅ | [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) |
-| npm 发布元数据 | ✅ | `LICENSE`、`publishConfig`、`scripts/publish-packages.mjs`，版本 `0.1.0-alpha.4` |
+| npm 发布元数据 | ✅ | `LICENSE`、`publishConfig`、`scripts/publish-packages.mjs`，版本 `0.1.0-alpha.5` |
 | `@bindtty/input` raw keyboard parser | ✅ | [INPUT.md](../packages/INPUT.md) |
 | Textarea 多行编辑 widget | ✅ | [TEXTAREA.md](../../packages/widgets/TEXTAREA.md) |
 | `bindtty` JSX 转发 | ✅ | `packages/bindtty` 导出 `./jsx-runtime`、`./jsx-dev-runtime` |
@@ -80,14 +80,14 @@ real PTY 专项 job（Windows / WSL）可后续单独添加，不阻塞主 CI。
 
 ### 3.2 npm 发布
 
-**已完成（2026-07）**：12 包 `0.1.0-alpha.4` 公开发布，tag `alpha`（含 `@bindtty/input` 与 Textarea）。
+**已完成（2026-07）**：12 包 `0.1.0-alpha.5` 公开发布，tag `alpha`（含 `@bindtty/input` 与 Textarea）。
 
 ```bash
 npm install bindtty@alpha @bindtty/widgets@alpha
 # 真实终端另需：npm install @bindtty/terminal@alpha
 ```
 
-`0.1.0-alpha.3` 为 11 包首版；`alpha.4` 起包含 `@bindtty/input` 与 `Textarea`。后续版本：`npm run publish:packages`（或 bump 版本后重跑）。`latest` 仍可能指向旧占位时，请显式安装 `@alpha`。
+`0.1.0-alpha.3` 为 11 包首版；`alpha.5` 起包含 `@bindtty/input` 与 `Textarea`。后续版本：`npm run publish:packages`（或 bump 版本后重跑）。`latest` 仍可能指向旧占位时，请显式安装 `@alpha`。
 
 ### 3.3 顶层 API（alpha 冻结）
 
@@ -169,7 +169,7 @@ import { Button, List, TextInput, Textarea } from "@bindtty/widgets";
 
 ## 6. 版本目标（修订）
 
-### 0.1.0-alpha.4（当前）
+### 0.1.0-alpha.5（当前）
 
 **已完成：**
 

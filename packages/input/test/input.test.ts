@@ -162,6 +162,21 @@ test("parseInputChunk keeps pasted emoji as one text event", () => {
   ]);
 });
 
+test("parseInputChunk keeps pasted ZWJ emoji sequences as one text event", () => {
+  const sequence = "👨‍👩‍👧";
+  assert.deepEqual([...parseInputChunk(`\x1b[200~${sequence}\x1b[201~`)], [
+    textEvent(sequence)
+  ]);
+});
+
+test("parseInputChunk splits pasted graphemes for mixed text", () => {
+  assert.deepEqual([...parseInputChunk("\x1b[200~A中🙂\x1b[201~")], [
+    textEvent("A"),
+    textEvent("中"),
+    textEvent("🙂")
+  ]);
+});
+
 test("parseInputChunk can emit bracketed paste as one event", () => {
   assert.deepEqual(
     [...parseInputChunk("\x1b[200~hello\x1b[201~", { pasteMode: "event" })],

@@ -138,9 +138,9 @@ parseInputChunk("\x1b[200~hello\x1b[201~", {
 });
 ```
 
-`pasteMode: "text"` 时按 **Unicode code point**（`Array.from`）拆分粘贴内容，单个 emoji 可正确展开；**ZWJ 组合 emoji**（如 👨‍👩‍👧‍👦）仍可能被拆成多个输入事件。Textarea 编辑层按 grapheme 边界处理，与粘贴路径尚未完全对齐；后续可改用 `@bindtty/text` 的 grapheme 分段。
+`pasteMode: "text"` 时按 **grapheme**（`@bindtty/text` 的 `segmentText`）拆分粘贴内容，与 TextInput/Textarea 编辑语义一致；ZWJ 组合 emoji 会作为单个 text event 展开。
 
-`ReadlineStdinInput`（Node readline 路径）不经过本包；完整 CSI / Kitty / bracketed paste 支持仅在 raw stdin 模式（`RawStdinInput`）下可用。
+`rawMode: true` 时 `@bindtty/terminal` 的 `DefaultPlatformAdapter` 与 Win32 平台均使用 `RawStdinInput`，完整走本包 parser。未开 raw mode 的兼容路径仍使用 Node readline 的 `ReadlineStdinInput`。
 
 ## 与 terminal 的关系
 

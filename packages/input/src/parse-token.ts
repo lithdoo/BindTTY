@@ -1,3 +1,5 @@
+import { segmentText } from "@bindtty/text";
+
 import { keyEvent, pasteEvent, textEvent, unknownEvent, type InputEvent } from "./events.js";
 import type { ReverseKeymap } from "./keymap.js";
 import { flagsToTuple, readXtermModifierFlags } from "./modifiers.js";
@@ -39,7 +41,7 @@ export function parseInputToken(token: RawInputToken, options: ParseTokenOptions
     case "paste":
       return options.pasteMode === "event"
         ? [pasteEvent(token.value, token.sequence)]
-        : Array.from(token.value).map((input) => textEvent(input));
+        : segmentText(token.value).map((segment) => textEvent(segment.text));
     case "unknown":
       return [unknownEvent(token.sequence)];
   }

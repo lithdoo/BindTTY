@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/example-yoga-dashboard",
-  "version": "0.1.0-alpha.4",
+  "version": "0.1.0-alpha.5",
   "private": true,
   "type": "module",
   "description": "BindTTY Yoga dashboard example with live runtime stats.",
@@ -10,12 +10,12 @@
     "start": "npm run build && node dist/main.js"
   },
   "dependencies": {
-    "@bindtty/terminal": "0.1.0-alpha.4",
-    "@bindtty/widgets": "0.1.0-alpha.4",
-    "bindtty": "0.1.0-alpha.4"
+    "@bindtty/terminal": "0.1.0-alpha.5",
+    "@bindtty/widgets": "0.1.0-alpha.5",
+    "bindtty": "0.1.0-alpha.5"
   },
   "devDependencies": {
-    "@bindtty/jsx-runtime": "0.1.0-alpha.4",
+    "@bindtty/jsx-runtime": "0.1.0-alpha.5",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },

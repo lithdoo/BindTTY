@@ -25,6 +25,7 @@ interface FakeStdin extends TerminalStdin {
   rawModeCalls: boolean[];
   resumeCalls: number;
   emitKey(input?: string, key?: KeypressKey): void;
+  emitData(chunk: Buffer | string): void;
   listenerCount(): number;
 }
 
@@ -33,6 +34,63 @@ interface Item {
   label: string;
 }
 
+
+function encodeXtermModifier(key?: KeypressKey): number {
+  let mask = 0;
+  if (key?.shift) {
+    mask |= 1;
+  }
+  if (key?.meta) {
+    mask |= 2;
+  }
+  if (key?.ctrl) {
+    mask |= 4;
+  }
+  return mask + 1;
+}
+
+function keypressToRawChunk(input?: string, key?: KeypressKey): string {
+  if (key?.sequence) {
+    return key.sequence;
+  }
+  if (input) {
+    return input;
+  }
+
+  const modifier = encodeXtermModifier(key);
+  const hasModifier = modifier > 1;
+
+  switch (key?.name) {
+    case "return":
+      return hasModifier ? `\x1b[13;${modifier}u` : "\r";
+    case "tab":
+      return hasModifier ? `\x1b[9;${modifier}u` : "\t";
+    case "escape":
+      return "\x1b[27u";
+    case "backspace":
+      return hasModifier ? `\x1b[127;${modifier}u` : "\x7f";
+    case "space":
+      return " ";
+    case "up":
+      return hasModifier ? `\x1b[1;${modifier}A` : "\x1b[A";
+    case "down":
+      return hasModifier ? `\x1b[1;${modifier}B` : "\x1b[B";
+    case "left":
+      return hasModifier ? `\x1b[1;${modifier}D` : "\x1b[D";
+    case "right":
+      return hasModifier ? `\x1b[1;${modifier}C` : "\x1b[C";
+    case "home":
+      return "\x1b[H";
+    case "end":
+      return "\x1b[F";
+    case "pageup":
+      return "\x1b[5~";
+    case "pagedown":
+      return "\x1b[6~";
+    default:
+      return key?.name ?? "";
+  }
+}
 function createFakeStdout(columns: number, rows: number): FakeStdout {
   const resizeListeners = new Set<() => void>();
 
@@ -66,6 +124,7 @@ function createFakeStdout(columns: number, rows: number): FakeStdout {
 
 function createFakeStdin(): FakeStdin {
   const keyListeners = new Set<KeypressListener>();
+  const dataListeners = new Set<(chunk: Buffer | string) => void>();
 
   return {
     isTTY: true,
@@ -79,23 +138,37 @@ function createFakeStdin(): FakeStdin {
     resume() {
       this.resumeCalls += 1;
     },
-    on(event: "keypress", listener: KeypressListener) {
+    on(event: "keypress" | "data", listener: KeypressListener | ((chunk: Buffer | string) => void)) {
       if (event === "keypress") {
-        keyListeners.add(listener);
+        keyListeners.add(listener as KeypressListener);
+      }
+      if (event === "data") {
+        dataListeners.add(listener as (chunk: Buffer | string) => void);
       }
     },
-    off(event: "keypress", listener: KeypressListener) {
+    off(event: "keypress" | "data", listener: KeypressListener | ((chunk: Buffer | string) => void)) {
       if (event === "keypress") {
-        keyListeners.delete(listener);
+        keyListeners.delete(listener as KeypressListener);
+      }
+      if (event === "data") {
+        dataListeners.delete(listener as (chunk: Buffer | string) => void);
       }
     },
     emitKey(input?: string, key?: KeypressKey) {
       for (const listener of [...keyListeners]) {
         listener(input, key);
       }
+      if (dataListeners.size > 0) {
+        this.emitData(keypressToRawChunk(input, key));
+      }
+    },
+    emitData(chunk: Buffer | string) {
+      for (const listener of [...dataListeners]) {
+        listener(chunk);
+      }
     },
     listenerCount() {
-      return keyListeners.size;
+      return keyListeners.size + dataListeners.size;
     }
   };
 }
