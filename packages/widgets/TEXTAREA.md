@@ -1,9 +1,10 @@
 # Textarea 功能规格
 
 > **类型**：widget
-> **状态**：planned
+> **状态**：implemented
+> **最后核对**：2026-07
 > **目标入口**：`@bindtty/widgets` / `bindtty`
-> **建议代码入口**：`packages/widgets/src/textarea.ts`
+> **代码入口**：`packages/widgets/src/textarea/`
 > **相关**：`README.md`、`../../doc/specs/TEXT_INPUT.md`、`../../doc/specs/SCROLL_VIEWPORT.md`
 
 本文档定义 `Textarea` 的功能边界与验收标准。当前目标不是修补某个应用侧 Textarea，而是在 `@bindtty/widgets` 中提供一个可复用、可测试、行为稳定的多行文本输入控件。

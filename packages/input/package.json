@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/input",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.4",
   "type": "module",
   "description": "Terminal keyboard input parsing primitives for BindTTY.",
   "main": "./dist/index.js",

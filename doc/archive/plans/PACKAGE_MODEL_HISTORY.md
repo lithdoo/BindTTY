@@ -5,7 +5,7 @@
 > **最后核对**：2026-07  
 > **现行模型**：根 [README.md](../../../README.md) · [ROADMAP.md](../../architecture/ROADMAP.md) §Monorepo 包结构
 
-本文档保存早期 **7 包** 与过渡 **10 包** 规划，仅供追溯。当前正式模型为 **11 个可发布包** + 私有 `packages/e2e`。
+本文档保存早期 **7 包** 与过渡 **10 包** / **11 包** 规划，仅供追溯。当前正式模型为 **12 个可发布包** + 私有 `packages/e2e`（见 [ROADMAP.md](../../architecture/ROADMAP.md)）。
 
 ---
 
@@ -77,9 +77,9 @@ Widget 业务语义:              @bindtty/widgets 或用户组件
 
 ---
 
-## 3. 现行 11 包模型（2026-07）
+## 3. 过渡 11 包模型（2026-07）
 
-在 10 包基础上，terminal text measurement 独立为 `@bindtty/text`（display-width / grapheme / wrapping / truncation），形成当前正式模型：
+在 10 包基础上，terminal text measurement 独立为 `@bindtty/text`（display-width / grapheme / wrapping / truncation）：
 
 ```text
 @bindtty/signal
@@ -95,10 +95,29 @@ Widget 业务语义:              @bindtty/widgets 或用户组件
 bindtty
 ```
 
+## 4. 现行 12 包模型（2026-07，alpha.4+）
+
+在 11 包基础上，raw keyboard input parsing 独立为 `@bindtty/input`：
+
+```text
+@bindtty/signal
+@bindtty/vnode
+@bindtty/jsx-runtime
+@bindtty/runtime
+@bindtty/text
+@bindtty/layout
+@bindtty/renderer-terminal
+@bindtty/input             ← 自 11 包模型新增
+@bindtty/terminal
+@bindtty/interaction
+@bindtty/widgets
+bindtty
+```
+
 私有 workspace：`packages/e2e`（mock + real PTY 测试，不发布）。
 
 ---
 
-## 4. 为何不再在 ROADMAP 中并列叙述
+## 5. 为何不再在 ROADMAP 中并列叙述
 
-7 包 / 10 包表述与现行 11 包事实并存时，新读者容易误判当前架构。历史模型保留于本 archive 文档；活跃路线图只描述现行结构。
+7 包 / 10 包 / 11 包表述与现行 12 包事实并存时，新读者容易误判当前架构。历史模型保留于本 archive 文档；活跃路线图只描述现行结构。

@@ -138,6 +138,10 @@ parseInputChunk("\x1b[200~hello\x1b[201~", {
 });
 ```
 
+`pasteMode: "text"` 时按 **Unicode code point**（`Array.from`）拆分粘贴内容，单个 emoji 可正确展开；**ZWJ 组合 emoji**（如 👨‍👩‍👧‍👦）仍可能被拆成多个输入事件。Textarea 编辑层按 grapheme 边界处理，与粘贴路径尚未完全对齐；后续可改用 `@bindtty/text` 的 grapheme 分段。
+
+`ReadlineStdinInput`（Node readline 路径）不经过本包；完整 CSI / Kitty / bracketed paste 支持仅在 raw stdin 模式（`RawStdinInput`）下可用。
+
 ## 与 terminal 的关系
 
 `@bindtty/terminal` 的 `RawStdinInput` 持有 `createInputParser()`。terminal 仍负责：

@@ -51,7 +51,9 @@ TSX → ViewTemplate → MountedNode → LayoutNode → Frame → ANSI Patch
 | M1–M7 主链路 | ✅ | [ROADMAP.md](./ROADMAP.md) |
 | TextInput display-column 输入窗口 | ✅ | [TEXT_INPUT.md](../widgets/TEXT_INPUT.md) §1.1、`packages/widgets/src/form/text-input.ts` |
 | display-width / CJK / emoji | ✅ | [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) |
-| npm 发布元数据 | ✅ | `LICENSE`、`publishConfig`、`scripts/publish-packages.mjs`，版本 `0.1.0-alpha.3` |
+| npm 发布元数据 | ✅ | `LICENSE`、`publishConfig`、`scripts/publish-packages.mjs`，版本 `0.1.0-alpha.4` |
+| `@bindtty/input` raw keyboard parser | ✅ | [INPUT.md](../packages/INPUT.md) |
+| Textarea 多行编辑 widget | ✅ | [TEXTAREA.md](../../packages/widgets/TEXTAREA.md) |
 | `bindtty` JSX 转发 | ✅ | `packages/bindtty` 导出 `./jsx-runtime`、`./jsx-dev-runtime` |
 | `@bindtty/signal` peer 单实例 | ✅ | `bindtty` / `widgets`：`peerDependencies` + `dependencies` |
 | Yoga flex 基础 props | ✅ | `gap`、`flexWrap`、`alignItems`、`justifyContent`、`flexGrow`、`flexShrink` |
@@ -78,14 +80,14 @@ real PTY 专项 job（Windows / WSL）可后续单独添加，不阻塞主 CI。
 
 ### 3.2 npm 发布
 
-**已完成（2026-07）**：11 包 `0.1.0-alpha.3` 首版公开发布，tag `alpha`。
+**已完成（2026-07）**：12 包 `0.1.0-alpha.4` 公开发布，tag `alpha`（含 `@bindtty/input` 与 Textarea）。
 
 ```bash
-npm install bindtty@alpha
+npm install bindtty@alpha @bindtty/widgets@alpha
 # 真实终端另需：npm install @bindtty/terminal@alpha
 ```
 
-后续版本：`npm run publish:packages`（或 bump 版本后重跑）。`latest` 仍指向旧占位 `0.1.0-alpha.0` 时，请显式安装 `@alpha`。
+`0.1.0-alpha.3` 为 11 包首版；`alpha.4` 起包含 `@bindtty/input` 与 `Textarea`。后续版本：`npm run publish:packages`（或 bump 版本后重跑）。`latest` 仍可能指向旧占位时，请显式安装 `@alpha`。
 
 ### 3.3 顶层 API（alpha 冻结）
 
@@ -93,7 +95,7 @@ npm install bindtty@alpha
 
 ```ts
 import { computed, createApp, createSignal, effect } from "bindtty";
-import { Button, List, TextInput } from "@bindtty/widgets";
+import { Button, List, TextInput, Textarea } from "@bindtty/widgets";
 ```
 
 真实终端另引 `@bindtty/terminal` 的 `createNodeTerminal`。不导出 `runtime` / `vnode` / `layout` / `renderer-terminal`。
@@ -110,7 +112,7 @@ import { Button, List, TextInput } from "@bindtty/widgets";
 
 ### 3.5 文档漂移
 
-- ~~ROADMAP 早期 7 包 / 10 包叙述~~ → 已移入 [archive/plans/PACKAGE_MODEL_HISTORY.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/plans/PACKAGE_MODEL_HISTORY.md)；ROADMAP 仅描述现行 11 包模型。
+- ~~ROADMAP 早期 7 包 / 10 包叙述~~ → 已移入 [archive/plans/PACKAGE_MODEL_HISTORY.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/plans/PACKAGE_MODEL_HISTORY.md)；ROADMAP 描述现行 **12 包**模型。
 - 部分 archive 文档描述落地前状态；以根 README「当前完成状态」与各包 README 为准（顶层 `bindtty` 不 re-export widgets）。
 
 ---
@@ -122,7 +124,7 @@ import { Button, List, TextInput } from "@bindtty/widgets";
 1. ~~GitHub Actions CI~~（已完成）
 2. `npm run publish:packages`
 3. 冻结 `bindtty` 顶层导出并更新 quick start（已完成）
-4. 文档统一为 11 包模型（ROADMAP 已完成；见 [archive/plans/PACKAGE_MODEL_HISTORY.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/plans/PACKAGE_MODEL_HISTORY.md)）
+4. 文档统一为 12 包模型（ROADMAP 已完成；见 [archive/plans/PACKAGE_MODEL_HISTORY.md（GitHub）](https://github.com/lithdoo/BindTTY/blob/main/doc/archive/plans/PACKAGE_MODEL_HISTORY.md)）
 
 ### Phase B：Layout 与 Scroll（P1）
 
@@ -167,7 +169,16 @@ import { Button, List, TextInput } from "@bindtty/widgets";
 
 ## 6. 版本目标（修订）
 
-### 0.1.0-alpha.3（当前）
+### 0.1.0-alpha.4（当前）
+
+**已完成：**
+
+- `@bindtty/input` 独立包：tokenizer / parser、dynamic keymap、bracketed paste、Kitty / modifyOtherKeys
+- `Textarea` widget：受控多行编辑、视觉换行、Ctrl+Enter submit、`disabled` 时保留焦点与滚动导航
+- 构建与发布脚本接入 `@bindtty/input`（`build:packages`、`publish-packages.mjs`）
+- Textarea 渲染语义：`readRenderRows()` 按 `height` / `maxRows` 分配槽位（默认 6，非固定 32）
+
+### 0.1.0-alpha.3
 
 **已完成：**
 
@@ -224,7 +235,7 @@ API freeze → CI / release → layout prop matrix → Scroll/List → widgets e
 | Issue | 内容 | 状态 |
 | --- | --- | --- |
 | 1 | GitHub Actions CI | ✅ done |
-| 2 | 文档统一为 11 包模型 | ✅ done |
+| 2 | 文档统一为 12 包模型 | ✅ done |
 | 3 | `bindtty` 顶层 API 冻结 | ✅ done |
 | 4 | npm 发布元数据 | ✅ done |
 | 5 | TextInput display-column spec | ✅ done |
@@ -238,3 +249,5 @@ API freeze → CI / release → layout prop matrix → Scroll/List → widgets e
 | 11 | ProgressBar widget | ✅ done |
 | 12 | Checkbox widget | ✅ done |
 | 13 | Select widget | ✅ done |
+| 14 | `@bindtty/input` 包与 terminal 接入 | ✅ done |
+| 15 | Textarea widget | ✅ done |
