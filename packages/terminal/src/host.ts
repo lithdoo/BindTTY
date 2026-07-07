@@ -150,6 +150,11 @@ export function createNodeTerminal(
         write(ANSI.enterAltScreen);
       }
 
+      if (options.enhancedKeyboard === true) {
+        write(ANSI.enableKittyKeyboard);
+        write(ANSI.enableModifyOtherKeys);
+      }
+
       if (options.hideCursor === true) {
         write(ANSI.hideCursor);
       }
@@ -188,6 +193,11 @@ export function createNodeTerminal(
 
       if (options.rawMode === true && options.stdin?.setRawMode) {
         options.stdin.setRawMode(false);
+      }
+
+      if (options.enhancedKeyboard === true) {
+        write(ANSI.disableModifyOtherKeys);
+        write(ANSI.disableKittyKeyboard);
       }
 
       if (options.hideCursor === true) {

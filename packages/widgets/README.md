@@ -1,6 +1,6 @@
 # @bindtty/widgets
 
-高层 TUI 控件：`Button`、`Checkbox`、`Select`、`ProgressBar`、`TextInput`、`ScrollView`、`VScrollView`、`HScrollView`、`List`。
+高层 TUI 控件：`Button`、`Checkbox`、`Select`、`ProgressBar`、`TextInput`、`Textarea`、`ScrollView`、`VScrollView`、`HScrollView`、`List`。
 
 ## 安装
 
@@ -19,7 +19,7 @@ import { Button, VScrollView } from "@bindtty/widgets";
 
 ## 导出
 
-- `Button` / `Checkbox` / `Select` / `TextInput`
+- `Button` / `Checkbox` / `Select` / `TextInput` / `Textarea`
 - `ProgressBar` — 纯展示进度条（`value` / `max`、`label`、`showPercent`）
 - `ScrollView` — 双轴 X+Y 滚动（`stickToBottom` / `stickToEnd`、`showScrollbar`）
 - `VScrollView` — 垂直滚动（`stickToBottom`、`showScrollbar`）
@@ -56,6 +56,8 @@ const scrollY = createSignal(0);
 ## 规范
 
 - [doc/specs/SCROLL_VIEWPORT.md](../../doc/specs/SCROLL_VIEWPORT.md) — clip / scroll 引擎
+- [doc/packages/INPUT.md](../../doc/packages/INPUT.md) — raw keyboard input parser
 - [doc/widgets/SCROLL.md](../../doc/widgets/SCROLL.md) — ScrollView / VScrollView / HScrollView / List
 - [doc/widgets/TEXT_INPUT.md](../../doc/widgets/TEXT_INPUT.md) — TextInput
+- [TEXTAREA.md](./TEXTAREA.md) — Textarea
 - [doc/widgets/PROGRESS_BAR.md](../../doc/widgets/PROGRESS_BAR.md) — ProgressBar

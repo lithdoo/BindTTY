@@ -15,6 +15,7 @@ TSX
 相关文档：
 
 - [INTERACTION.md](./INTERACTION.md) — keyboard focus、`onKey` dispatch、focused state
+- [INPUT.md](./INPUT.md) — raw keyboard input tokenizer / parser
 - [APP.md](./APP.md) — createApp 组合 runtime / layout / renderer / terminal / interaction
 - [LAYOUT.md](./LAYOUT.md) — MountedNode → LayoutNode
 - [RENDERER.md](./RENDERER.md) — LayoutNode → Frame → ANSI Patch
@@ -42,7 +43,7 @@ TSX
 它负责：
 
 ```text
-1. 提供 Button / TextInput / Checkbox / Select / ProgressBar / ScrollView / VScrollView / HScrollView / List 等高层组件。
+1. 提供 Button / TextInput / Textarea / Checkbox / Select / ProgressBar / ScrollView / VScrollView / HScrollView / List 等高层组件。
 2. 把业务 props 转换成 intrinsic element 的 style props / interaction props。
 3. 把 keyboard event 转换成控件语义，例如 onPress、onInput、onChange。
 4. 通过 signal-friendly props 支持受控组件。
@@ -61,7 +62,7 @@ TSX
 7. IME preedit / 复杂输入法候选窗。
 ```
 
-这些能力分别属于 `@bindtty/interaction`、`@bindtty/terminal`、`@bindtty/layout`、`@bindtty/renderer-terminal` 和 `@bindtty/runtime`。
+这些能力分别属于 `@bindtty/interaction`、`@bindtty/terminal`、`@bindtty/input`、`@bindtty/layout`、`@bindtty/renderer-terminal` 和 `@bindtty/runtime`。
 
 ## 2. 包归属
 
@@ -248,6 +249,7 @@ MVP 建议：
 | --- | --- | --- |
 | Button | [BUTTON.md](../widgets/BUTTON.md) | implemented |
 | TextInput | [TEXT_INPUT.md](../widgets/TEXT_INPUT.md) | implemented |
+| Textarea | [../../packages/widgets/TEXTAREA.md](../../packages/widgets/TEXTAREA.md) | implemented |
 | Checkbox | [CHECKBOX.md](../widgets/CHECKBOX.md) | implemented |
 | Select | [SELECT.md](../widgets/SELECT.md) | implemented |
 | ProgressBar | [PROGRESS_BAR.md](../widgets/PROGRESS_BAR.md) | implemented |
@@ -278,12 +280,21 @@ packages/widgets/
       checkbox.ts
       text-input.ts
       select.ts
+    textarea.ts
+    textarea/
+      binding.ts
+      constants.ts
+      edit.ts
+      layout.ts
+      render.ts
+      textarea.ts
     display/
       progress-bar.ts
   test/
     widgets.test.ts
     checkbox.test.ts
     select.test.ts
+    textarea.test.ts
     text-input.test.ts
     tsconfig.json
 ```
@@ -471,14 +482,15 @@ npm test
 14. TextInput placeholder / disabled / focus 生命周期。
 15. TextInput 单元测试 + App 集成 + E2E 全覆盖。
 16. 应用显式安装 @bindtty/widgets 并从该包导入。
-17. VScrollView 受控 offset、clip、键盘滚动已覆盖。
-18. List 作为 VScrollView + forTemplate 语法糖已覆盖。
-19. VScrollView `stickToBottom` 与 `showScrollbar`、HScrollView、ScrollView 双轴已覆盖（见 [SCROLL.md](../widgets/SCROLL.md)）。
+17. Textarea 受控多行编辑、视觉换行、Ctrl+Enter submit、disabled scroll 已覆盖。
+18. VScrollView 受控 offset、clip、键盘滚动已覆盖。
+19. List 作为 VScrollView + forTemplate 语法糖已覆盖。
+20. VScrollView `stickToBottom` 与 `showScrollbar`、HScrollView、ScrollView 双轴已覆盖（见 [SCROLL.md](../widgets/SCROLL.md)）。
 ```
 
 ## 13. 后续方向
 
-Button、TextInput、VScrollView 和 List 跑通后，下一步建议：
+Button、TextInput、Textarea、VScrollView 和 List 跑通后，下一步建议：
 
 ```text
 如果目标是验证更多交互组件模式：
@@ -493,4 +505,4 @@ Button、TextInput、VScrollView 和 List 跑通后，下一步建议：
 
 Checkbox 已实现（§7.3）；Select 已实现（§7.4）。下一项可考虑 Tabs 或 TextInput 增强。
 
-VScrollView / List API 与行为见 [SCROLL.md](../widgets/SCROLL.md)；TextInput 见 [TEXT_INPUT.md](../widgets/TEXT_INPUT.md)。
+VScrollView / List API 与行为见 [SCROLL.md](../widgets/SCROLL.md)；TextInput 见 [TEXT_INPUT.md](../widgets/TEXT_INPUT.md)；Textarea 见 [../../packages/widgets/TEXTAREA.md](../../packages/widgets/TEXTAREA.md)。

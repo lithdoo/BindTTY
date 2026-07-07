@@ -10,6 +10,7 @@ export {
 export { Select } from "./form/select.js";
 export { ScrollView } from "./scroll/scroll-view.js";
 export { TextInput } from "./form/text-input.js";
+export { Textarea } from "./textarea.js";
 export {
   VScrollView,
   computeScrollbarThumb,
@@ -46,3 +47,8 @@ export type {
   ScrollbarAxisFlags
 } from "./scroll/axis-shared.js";
 export type { TextInputProps, TextInputStyleProps } from "./form/text-input.js";
+export type {
+  TextareaProps,
+  TextareaStyleProps,
+  TextareaSubmitKey
+} from "./textarea.js";

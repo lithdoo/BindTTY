@@ -1,8 +1,8 @@
 {
-  "name": "@bindtty/widgets",
+  "name": "@bindtty/input",
   "version": "0.1.0-alpha.3",
   "type": "module",
-  "description": "Reusable interactive widgets for BindTTY.",
+  "description": "Terminal keyboard input parsing primitives for BindTTY.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -14,26 +14,12 @@
   "files": [
     "dist",
     "README.md",
-    "TEXTAREA.md"
+    "PLAN.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepublishOnly": "npm run build",
-    "test": "npm run build --workspace @bindtty/text && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
-  },
-  "dependencies": {
-    "@bindtty/interaction": "0.1.0-alpha.3",
-    "@bindtty/signal": "0.1.0-alpha.3",
-    "@bindtty/text": "0.1.0-alpha.3",
-    "@bindtty/vnode": "0.1.0-alpha.3"
-  },
-  "peerDependencies": {
-    "@bindtty/signal": "0.1.0-alpha.3"
-  },
-  "peerDependenciesMeta": {
-    "@bindtty/signal": {
-      "optional": false
-    }
+    "test": "npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -49,10 +35,10 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lithdoo/BindTTY.git",
-    "directory": "packages/widgets"
+    "directory": "packages/input"
   },
   "bugs": {
     "url": "https://github.com/lithdoo/BindTTY/issues"
   },
-  "homepage": "https://github.com/lithdoo/BindTTY/tree/main/packages/widgets#readme"
+  "homepage": "https://github.com/lithdoo/BindTTY/tree/main/packages/input#readme"
 }

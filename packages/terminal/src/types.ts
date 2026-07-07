@@ -76,6 +76,7 @@ export interface CreateNodeTerminalOptions {
   hideCursor?: boolean;
   rawMode?: boolean;
   exitOnCtrlC?: boolean;
+  enhancedKeyboard?: boolean;
   platformAdapter?: PlatformTerminalAdapter;
   stdinInputAdapter?: StdinInputAdapter;
   /**

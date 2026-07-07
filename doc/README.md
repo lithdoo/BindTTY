@@ -42,6 +42,7 @@
 | [RUNTIME.md](./packages/RUNTIME.md) | @bindtty/runtime |
 | [LAYOUT.md](./packages/LAYOUT.md) | @bindtty/layout |
 | [RENDERER.md](./packages/RENDERER.md) | @bindtty/renderer-terminal |
+| [INPUT.md](./packages/INPUT.md) | @bindtty/input |
 | [TERMINAL.md](./packages/TERMINAL.md) | @bindtty/terminal |
 | [INTERACTION.md](./packages/INTERACTION.md) | @bindtty/interaction |
 | [WIDGETS.md](./packages/WIDGETS.md) | @bindtty/widgets |

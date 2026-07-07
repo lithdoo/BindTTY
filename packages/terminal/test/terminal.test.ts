@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { PassThrough } from "node:stream";
 import test from "node:test";
 
 import { ANSI, createNodeTerminal, normalizeKeypressEvent, parseRawChunk, RawStdinInput } from "@bindtty/terminal";
@@ -99,6 +100,10 @@ test("exports terminal ANSI lifecycle constants", () => {
     exitAltScreen: "\x1b[?1049l",
     hideCursor: "\x1b[?25l",
     showCursor: "\x1b[?25h",
+    enableKittyKeyboard: "\x1b[>1u",
+    disableKittyKeyboard: "\x1b[<u",
+    enableModifyOtherKeys: "\x1b[>4;2m",
+    disableModifyOtherKeys: "\x1b[>4;0m",
     reset: "\x1b[0m"
   });
 });
@@ -132,7 +137,8 @@ test("exports terminal host contract types", () => {
     useAltScreen: true,
     hideCursor: true,
     rawMode: true,
-    exitOnCtrlC: true
+    exitOnCtrlC: true,
+    enhancedKeyboard: true
   };
   const host: TerminalHost = {
     viewport,
@@ -199,6 +205,33 @@ test("start applies alternate screen cursor and raw mode lifecycle", () => {
   ]);
   assert.deepEqual(stdin.rawModeCalls, [true]);
   assert.equal(stdin.resumeCalls, 1);
+});
+
+test("start and stop apply enhanced keyboard protocol when requested", () => {
+  const stdout = createMockStdout();
+  const stdin = createMockStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    useAltScreen: true,
+    hideCursor: true,
+    rawMode: true,
+    enhancedKeyboard: true
+  });
+
+  terminal.start();
+  terminal.stop();
+
+  assert.deepEqual(stdout.writes, [
+    ANSI.enterAltScreen,
+    ANSI.enableKittyKeyboard,
+    ANSI.enableModifyOtherKeys,
+    ANSI.hideCursor,
+    ANSI.disableModifyOtherKeys,
+    ANSI.disableKittyKeyboard,
+    ANSI.showCursor,
+    ANSI.exitAltScreen
+  ]);
 });
 
 test("start tolerates streams without optional lifecycle APIs", () => {
@@ -808,6 +841,27 @@ test("parseRawChunk maps printable characters without name for text input", () =
   assert.ok(events[0] !== undefined && !("name" in events[0]));
 });
 
+test("parseRawChunk maps non-BMP printable characters as one input event", () => {
+  const events = [...parseRawChunk("中🙂")];
+
+  assert.deepEqual(events, [
+    {
+      input: "中",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: "中"
+    },
+    {
+      input: "🙂",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: "🙂"
+    }
+  ]);
+});
+
 test("parseRawChunk maps control keys used by raw stdin adapter", () => {
   const events = [...parseRawChunk("\r\x7f\x03\t ")];
 
@@ -878,6 +932,95 @@ test("parseRawChunk maps CSI and SS3 navigation keys", () => {
   );
 });
 
+test("parseRawChunk maps common modified Enter sequences", () => {
+  assert.deepEqual(
+    [
+      ...parseRawChunk("\x1b[13;5u"),
+      ...parseRawChunk("\x1b[10;5u"),
+      ...parseRawChunk("\x1b[13;5:3u"),
+      ...parseRawChunk("\x1b[27;5;13~"),
+      ...parseRawChunk("\x1b[13;5~")
+    ],
+    [
+      {
+        input: "\r",
+        name: "return",
+        ctrl: true,
+        meta: false,
+        shift: false,
+        sequence: "\x1b[13;5u"
+      },
+      {
+        input: "\r",
+        name: "return",
+        ctrl: true,
+        meta: false,
+        shift: false,
+        sequence: "\x1b[10;5u"
+      },
+      {
+        input: "\r",
+        name: "return",
+        ctrl: true,
+        meta: false,
+        shift: false,
+        sequence: "\x1b[13;5:3u"
+      },
+      {
+        input: "\r",
+        name: "return",
+        ctrl: true,
+        meta: false,
+        shift: false,
+        sequence: "\x1b[27;5;13~"
+      },
+      {
+        input: "\r",
+        name: "return",
+        ctrl: true,
+        meta: false,
+        shift: false,
+        sequence: "\x1b[13;5~"
+      }
+    ]
+  );
+});
+
+test("parseRawChunk consumes unknown CSI sequences without leaking text input", () => {
+  assert.deepEqual([...parseRawChunk("a\x1b[99;9~\x1b[99;9:1ub")], [
+    {
+      input: "a",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: "a"
+    },
+    {
+      input: "",
+      name: "unknown",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: "\x1b[99;9~"
+    },
+    {
+      input: "",
+      name: "unknown",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: "\x1b[99;9:1u"
+    },
+    {
+      input: "b",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: "b"
+    }
+  ]);
+});
+
 test("parseRawChunk maps Windows console prefixed arrow keys", () => {
   const events = [...parseRawChunk("\xE0H\xE0P\xE0M\xE0K\x00I\x00Q")];
 
@@ -903,4 +1046,28 @@ test("stdinInputAdapter injection selects a fixed stdin reader", () => {
   terminal.start();
 
   assert.equal(stdin.listenerCount(), 0);
+});
+
+test("RawStdinInput preserves split raw input sequences", () => {
+  const stdin = new PassThrough();
+  const adapter = new RawStdinInput();
+  const events: TerminalKeyEvent[] = [];
+  const detach = adapter.attach(stdin, (event) => {
+    events.push(event);
+  });
+
+  stdin.write("\x1b[13;");
+  stdin.write("5u");
+  detach();
+
+  assert.deepEqual(events, [
+    {
+      input: "\r",
+      name: "return",
+      ctrl: true,
+      meta: false,
+      shift: false,
+      sequence: "\x1b[13;5u"
+    }
+  ]);
 });

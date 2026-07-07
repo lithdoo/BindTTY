@@ -20,6 +20,9 @@
     "prepublishOnly": "npm run build",
     "test": "npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
   },
+  "dependencies": {
+    "@bindtty/input": "0.1.0-alpha.3"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"

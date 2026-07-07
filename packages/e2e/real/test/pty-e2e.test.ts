@@ -200,6 +200,112 @@ test("real PTY: TextInput backspace edits before submit", { concurrency: false }
   }
 });
 
+test("real PTY: Textarea edits wide multiline text and commits through focus traversal", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("textarea");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("textarea-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 80,
+    rows: 24
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await delay(200);
+
+    session.write("A");
+    await delay(50);
+    session.write("中");
+    await delay(50);
+    session.write("🙂");
+    await delay(50);
+    session.write("B");
+
+    await marker.waitFor("VALUE:\"A中🙂B\"", { timeoutMs: 8_000 });
+
+    session.write("\x1b[D");
+    await delay(50);
+    session.write("\x7f");
+
+    await marker.waitFor("VALUE:\"A中B\"", { timeoutMs: 8_000 });
+
+    session.write("\x1b[F");
+    await delay(50);
+    session.write("\r");
+    await delay(50);
+    session.write("下");
+
+    await marker.waitFor("VALUE:\"A中B\\n下\"", { timeoutMs: 8_000 });
+
+    session.write("\t");
+    await delay(100);
+    session.write("\r");
+
+    await marker.waitFor("COMMITTED:\"A中B\\n下\"", { timeoutMs: 8_000 });
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(result.markers.includes("PASS"));
+    assert.ok(result.markers.includes("VALUE:\"A中🙂B\""));
+    assert.ok(result.markers.includes("VALUE:\"A中B\""));
+    assert.ok(result.markers.includes("VALUE:\"A中B\\n下\""));
+    assert.ok(result.markers.includes("COMMITTED:\"A中B\\n下\""));
+    assert.match(result.visibleOutput, /A中B/);
+  } finally {
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
+test("real PTY: disabled Textarea blocks edits but scrolls with arrow keys", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("textarea-disabled");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("textarea-disabled-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 80,
+    rows: 24
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await delay(300);
+
+    session.write("X");
+    await delay(100);
+    session.write("\x1b[B");
+    await delay(200);
+    session.write("\t");
+    await delay(100);
+    session.write("\r");
+
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(result.markers.includes("PASS"));
+    assert.match(result.visibleOutput, /two/);
+    assert.doesNotMatch(result.visibleOutput, /X/);
+  } finally {
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
 test("real PTY: ScrollView scrolls with down arrow", { concurrency: false }, async (t) => {
   if (skipUnlessPty(t)) {
     return;

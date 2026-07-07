@@ -70,6 +70,8 @@ npm run test:e2e:real:wsl
 | `interaction-app.tsx` | TextInput 输入 + Enter 提交 |
 | `focus-app.tsx` | Tab 切换 Button focus + Enter |
 | `textedit-app.tsx` | TextInput Backspace 后提交 |
+| `textarea-app.tsx` | Textarea 真实终端输入、宽字符/emoji、换行、Backspace、Tab 提交确认 |
+| `textarea-disabled-app.tsx` | disabled Textarea 阻止编辑但允许方向键滚动 |
 | `scroll-app.tsx` | ScrollView Down 键滚动 |
 | `scroll-clamp-app.tsx` | ScrollView 受控 offset 超界时只 clamp 画面，按键后基于 applied offset 更新 |
 | `list-app.tsx` | List Down 键滚动 |

@@ -2,7 +2,7 @@
 
 BindTTY 的用户入口包。组合 runtime、layout、renderer、terminal、interaction，提供 **alpha 冻结的公共 API**：`createApp`、signal 原语与 JSX runtime 转发。
 
-高层控件（Button、TextInput、Select 等）请单独安装 [`@bindtty/widgets`](../widgets/README.md)。
+高层控件（Button、TextInput、Textarea、Select 等）请单独安装 [`@bindtty/widgets`](../widgets/README.md)。
 
 ## 安装
 
@@ -43,7 +43,7 @@ npm install bindtty @bindtty/widgets
 
 ```ts
 import { computed, createApp, createSignal } from "bindtty";
-import { Button, TextInput } from "@bindtty/widgets";
+import { Button, TextInput, Textarea } from "@bindtty/widgets";
 ```
 
 ### 子路径
@@ -57,8 +57,9 @@ import { Button, TextInput } from "@bindtty/widgets";
 
 | 包 | 典型用途 |
 | --- | --- |
-| `@bindtty/widgets` | Button、TextInput、Select、ScrollView、List 等控件 |
+| `@bindtty/widgets` | Button、TextInput、Textarea、Select、ScrollView、List 等控件 |
 | `@bindtty/terminal` | `createNodeTerminal`、真实 TTY lifecycle |
+| `@bindtty/input` | raw keyboard input parser；一般由 terminal 使用，应用通常无需直接引用 |
 | `@bindtty/signal` | 与 `bindtty` 相同 API；可独立用于无 TUI 的 signal 逻辑 |
 | `@bindtty/runtime`、`@bindtty/vnode`、`@bindtty/layout` 等 | 高级扩展、测试、框架内部 |
 
