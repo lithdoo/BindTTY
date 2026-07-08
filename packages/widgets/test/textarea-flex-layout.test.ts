@@ -257,3 +257,68 @@ test("Yoga remaining width stays available even with long unwrapped content chil
   assert.ok(grow);
   assert.equal(grow.contentRect.width, 78);
 });
+
+test("Yoga empty Textarea rows keep height 1 after consecutive Enter", () => {
+  const value = createSignal("hello");
+  const textarea = Textarea({
+    id: "ta-enter",
+    value,
+    minRows: 2,
+    maxRows: 8,
+    onChange(next) {
+      value.set(next);
+    }
+  });
+  assert.equal(textarea.kind, "element");
+
+  const onKey = (textarea as { props: { onKey?: unknown } }).props.onKey as
+    | ((event: {
+        input: string;
+        name: string;
+        ctrl: boolean;
+        meta: boolean;
+        shift: boolean;
+        phase: "target";
+        propagationStopped: boolean;
+        stopPropagation(): void;
+      }) => boolean)
+    | undefined;
+  assert.equal(typeof onKey, "function");
+
+  const enter = () => {
+    const event = {
+      input: "\r",
+      name: "return",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      phase: "target" as const,
+      propagationStopped: false,
+      stopPropagation() {
+        event.propagationStopped = true;
+      }
+    };
+    assert.equal(onKey?.(event), true);
+  };
+
+  enter();
+  enter();
+  enter();
+  assert.equal(value.get(), "hello\n\n\n");
+
+  const runtime = createRuntimeRoot(
+    elementTemplate("screen", {}, [textarea])
+  );
+  let layout = layoutYoga(runtime.root);
+  dispatchLayout(layout);
+  layout = layoutYoga(runtime.root);
+
+  const node = findElementById(layout, "ta-enter");
+  assert.ok(node);
+  assert.ok(node.rect.height >= 4);
+
+  const viewport = node.children[0];
+  assert.ok(viewport);
+  const rowHeights = viewport.children.slice(0, 4).map((row) => row.rect.height);
+  assert.deepEqual(rowHeights, [1, 1, 1, 1]);
+});

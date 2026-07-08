@@ -9,7 +9,7 @@
   "scripts": {
     "build:packages": "npm run build --workspace @bindtty/signal && npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/vnode && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build --workspace @bindtty/input && npm run build --workspace @bindtty/terminal && npm run build --workspace @bindtty/interaction && npm run build --workspace @bindtty/widgets && npm run build --workspace bindtty",
     "build": "npm run build:packages && npm run build --workspace @bindtty/e2e --if-present",
-    "build:examples": "npm run build --workspace @bindtty/example-counter && npm run build --workspace @bindtty/example-form && npm run build --workspace @bindtty/example-log-viewer && npm run build --workspace @bindtty/example-yoga-dashboard && npm run build --workspace @bindtty/example-wide-text",
+    "build:examples": "npm run build --workspace @bindtty/example-counter && npm run build --workspace @bindtty/example-form && npm run build --workspace @bindtty/example-textarea && npm run build --workspace @bindtty/example-log-viewer && npm run build --workspace @bindtty/example-yoga-dashboard && npm run build --workspace @bindtty/example-wide-text",
     "pack:dry-run": "node scripts/publish-packages.mjs --dry-run",
     "publish:packages": "node scripts/publish-packages.mjs",
     "test": "npm run test --workspaces --if-present",

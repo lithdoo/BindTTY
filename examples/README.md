@@ -14,6 +14,7 @@ npm run build
 ```bash
 npm start --workspace @bindtty/example-counter
 npm start --workspace @bindtty/example-form
+npm start --workspace @bindtty/example-textarea
 npm start --workspace @bindtty/example-log-viewer
 npm start --workspace @bindtty/example-yoga-dashboard
 npm start --workspace @bindtty/example-wide-text
@@ -23,6 +24,7 @@ npm start --workspace @bindtty/example-wide-text
 | --- | --- |
 | [counter](./counter/) | Signal + `Button` 计数器 |
 | [form](./form/) | `TextInput` 输入与提交 |
+| [textarea](./textarea/) | `Textarea` soft wrap / caret 手动 playground |
 | [log-viewer](./log-viewer/) | `List` / `ScrollView` 长列表滚动 |
 | [yoga-dashboard](./yoga-dashboard/) | Yoga layout + 真实 runtime stats dashboard |
 | [wide-text](./wide-text/) | CJK / emoji / combining mark 宽字符渲染 |

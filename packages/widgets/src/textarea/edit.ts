@@ -5,6 +5,7 @@ import {
   ensureCursorVisible,
   findCursorVisualPosition,
   findLogicalLineForOffset,
+  scrollableRowCount,
   visualPositionToCursor,
   type TextareaCursor,
   type TextareaLayout
@@ -166,6 +167,7 @@ export function moveVertical(
 ): TextareaEditState {
   const position = findCursorVisualPosition(layout, state.cursor);
   const targetRow = direction === "up" ? position.visualRow - 1 : position.visualRow + 1;
+
   if (targetRow < 0 || targetRow >= layout.visualLines.length) {
     return state;
   }
@@ -192,7 +194,7 @@ export function pageScroll(
     state.scrollRow + delta,
     findCursorVisualPosition(layout, state.cursor).visualRow,
     state.viewportRows,
-    layout.visualLines.length
+    scrollableRowCount(layout, findCursorVisualPosition(layout, state.cursor).visualRow)
   );
 
   if (!moveCursor) {
@@ -230,7 +232,7 @@ export function withViewportRows(
   return {
     ...state,
     viewportRows: rows,
-    scrollRow: ensureCursorVisible(state.scrollRow, cursorRow, rows, layout.visualLines.length)
+    scrollRow: ensureCursorVisible(state.scrollRow, cursorRow, rows, scrollableRowCount(layout, cursorRow))
   };
 }
 
@@ -258,7 +260,7 @@ function withCursorVisible(state: TextareaEditState, layout: TextareaLayout): Te
       state.scrollRow,
       cursorRow,
       state.viewportRows,
-      layout.visualLines.length
+      scrollableRowCount(layout, cursorRow)
     )
   };
 }

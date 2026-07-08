@@ -4,6 +4,10 @@ export {
   findCursorVisualPosition,
   readEffectiveLayoutWidth
 } from "./textarea/layout.js";
+export {
+  createTextareaEditState,
+  moveVertical
+} from "./textarea/edit.js";
 export type {
   TextareaProps,
   TextareaStyleProps,

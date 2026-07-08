@@ -13,7 +13,9 @@ export { TextInput } from "./form/text-input.js";
 export {
   Textarea,
   buildTextareaLayout,
+  createTextareaEditState,
   findCursorVisualPosition,
+  moveVertical,
   readEffectiveLayoutWidth
 } from "./textarea.js";
 export {

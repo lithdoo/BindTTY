@@ -63,6 +63,7 @@ export function buildTextareaLayout(
   const visualLines = logicalLines.flatMap((line) =>
     wrap === "off" ? [visualLineFromSegments(line, line.segments)] : wrapLogicalLine(line, normalizedWidth)
   );
+  const lines = ensureTrailingCaretRow(visualLines, normalizedWidth, wrap);
   const boundaries = buildBoundaries(value, segments);
 
   return {
@@ -70,7 +71,7 @@ export function buildTextareaLayout(
     width: normalizedWidth,
     segments,
     logicalLines,
-    visualLines,
+    visualLines: lines,
     boundaries
   };
 }
@@ -82,9 +83,11 @@ export function findCursorVisualPosition(
   const offset = clampCursorOffset(layout, cursor.offset);
   const visualRow = findVisualRowForOffset(layout, offset);
   const line = layout.visualLines[visualRow] ?? createEmptyVisualLine();
+  const column = measureSegmentsUntil(line.segments, offset);
+
   return {
     visualRow,
-    column: measureSegmentsUntil(line.segments, offset)
+    column
   };
 }
 
@@ -143,6 +146,47 @@ export function clampScrollRow(
   return clamp(scrollRow, 0, maxScroll);
 }
 
+/**
+ * Rows that participate in scroll extent. Soft-wrap trailing caret rows are
+ * excluded unless the caret is actually on that row (so arrow navigation does
+ * not reveal a permanent blank line).
+ */
+export function scrollableRowCount(layout: TextareaLayout, cursorRow: number): number {
+  const contentRows = contentVisualLineCount(layout);
+  if (cursorRow >= contentRows) {
+    return Math.max(layout.visualLines.length, cursorRow + 1);
+  }
+  return contentRows;
+}
+
+/**
+ * Soft-wrap may append an empty trailing caret row when the last wrap fills the
+ * width. That row must stay in `visualLines` for navigation, but it should not
+ * inflate auto height — otherwise the viewport always shows a blank line.
+ */
+export function contentVisualLineCount(layout: TextareaLayout): number {
+  return isSoftWrapTrailingCaretRow(layout)
+    ? Math.max(0, layout.visualLines.length - 1)
+    : layout.visualLines.length;
+}
+
+export function isSoftWrapTrailingCaretRow(layout: TextareaLayout): boolean {
+  if (layout.width === null || layout.width <= 0 || layout.visualLines.length < 2) {
+    return false;
+  }
+
+  const last = layout.visualLines[layout.visualLines.length - 1];
+  const previous = layout.visualLines[layout.visualLines.length - 2];
+  return (
+    !!last &&
+    !!previous &&
+    last.width === 0 &&
+    last.segments.length === 0 &&
+    last.startOffset === previous.endOffset &&
+    previous.width === layout.width
+  );
+}
+
 export function ensureCursorVisible(
   scrollRow: number,
   cursorRow: number,
@@ -195,12 +239,29 @@ export function findLogicalLineForOffset(layout: TextareaLayout, offset: number)
 
 export function findVisualRowForOffset(layout: TextareaLayout, offset: number): number {
   const normalized = clampCursorOffset(layout, offset);
-  const row = layout.visualLines.findIndex((line, index) => {
-    const isLast = index === layout.visualLines.length - 1;
-    return normalized >= line.startOffset && (normalized < line.endOffset || normalized === line.endOffset || isLast);
-  });
 
-  return row >= 0 ? row : Math.max(0, layout.visualLines.length - 1);
+  for (let index = 0; index < layout.visualLines.length; index += 1) {
+    const line = layout.visualLines[index];
+    if (!line || normalized < line.startOffset) {
+      continue;
+    }
+
+    if (normalized < line.endOffset) {
+      return index;
+    }
+
+    if (normalized === line.endOffset) {
+      const next = layout.visualLines[index + 1];
+      // Soft-wrap boundary shares end/start offset — prefer the next visual row
+      // so "end of full wrap line" lands on the trailing caret row / next wrap.
+      if (next && next.startOffset === normalized) {
+        continue;
+      }
+      return index;
+    }
+  }
+
+  return Math.max(0, layout.visualLines.length - 1);
 }
 
 export function measureLineColumnToOffset(layout: TextareaLayout, line: LogicalLine, offset: number): number {
@@ -286,6 +347,37 @@ function wrapLogicalLine(line: LogicalLine, width: number | null): VisualLine[] 
   }
 
   return lines.map((segments) => visualLineFromSegments(line, segments));
+}
+
+/**
+ * Soft wrap can end exactly on the wrap width. Keep a real empty visual row so
+ * the caret can sit at column 0 (visible, navigable) without a virtual row that
+ * cannot scroll into the viewport or be reached with ↓.
+ */
+function ensureTrailingCaretRow(
+  visualLines: VisualLine[],
+  width: number | null,
+  wrap: "soft" | "off"
+): VisualLine[] {
+  if (wrap === "off" || width === null || width <= 0 || visualLines.length === 0) {
+    return visualLines;
+  }
+
+  const last = visualLines[visualLines.length - 1];
+  if (!last || last.width < width) {
+    return visualLines;
+  }
+
+  return [
+    ...visualLines,
+    {
+      logicalLine: last.logicalLine,
+      startOffset: last.endOffset,
+      endOffset: last.endOffset,
+      segments: [],
+      width: 0
+    }
+  ];
 }
 
 function visualLineFromSegments(line: LogicalLine, segments: TextareaSegment[]): VisualLine {

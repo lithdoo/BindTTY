@@ -297,6 +297,40 @@ test("Textarea focused soft-wrapped caret stays on the first viewport row", () =
   }
 });
 
+test("Textarea caret inverse uses TextInput-compatible colors", () => {
+  const template = asElement(
+    Textarea({
+      value: "A"
+    })
+  );
+  applyTextareaLayoutWidth(template, 10);
+  (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
+    focusEvent(true)
+  );
+
+  const viewport = childElement(template, 0);
+  const row = asElement(viewport.children[0]!);
+  const cursorNode = childElement(row, 1);
+
+  assert.equal(resolveSignal<string>(cursorNode.props.color), "white");
+  assert.equal(resolveSignal<string>(cursorNode.props.background), "black");
+});
+
+test("Textarea row hstack is width-constrained after layout so caret space cannot grow flex", () => {
+  const template = asElement(
+    Textarea({
+      value: "hi"
+    })
+  );
+  applyTextareaLayoutWidth(template, 12);
+
+  const viewport = childElement(template, 0);
+  const row = asElement(viewport.children[0]!);
+
+  assert.equal(resolveSignal<number | undefined>(row.props.maxWidth), 12);
+  assert.equal(row.props.minHeight, 1);
+});
+
 test("Textarea exposes the planned props types", () => {
   const style: TextareaStyleProps = {
     color: "green",

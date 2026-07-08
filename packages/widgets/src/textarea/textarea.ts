@@ -37,6 +37,8 @@ import {
   clampScrollRow,
   ensureCursorVisible,
   findCursorVisualPosition,
+  contentVisualLineCount,
+  scrollableRowCount,
   visualLineText,
   type TextareaLayout
 } from "./layout.js";
@@ -153,6 +155,7 @@ export function Textarea(props: TextareaProps): Template {
     renderTextareaViewport({
       rows: readRenderRows(props),
       lines: renderLines,
+      width: contentWidth,
       color: props.color,
       background: props.background,
       bold: props.bold,
@@ -295,7 +298,7 @@ function reconcileStateAfterLayoutWidth(
     current.scrollRow,
     cursorRow,
     rows,
-    nextLayout.visualLines.length
+    scrollableRowCount(nextLayout, cursorRow)
   );
 
   if (scrollRow === current.scrollRow && rows === current.viewportRows) {
@@ -417,7 +420,7 @@ function handleDisabledNavigation(
       state.set({
         ...currentState,
         scrollRow: Math.min(
-          Math.max(0, layout.visualLines.length - currentState.viewportRows),
+          Math.max(0, scrollableRowCount(layout, 0) - currentState.viewportRows),
           currentState.scrollRow + 1
         )
       });
@@ -437,7 +440,7 @@ function handleDisabledNavigation(
     case "end":
       state.set({
         ...currentState,
-        scrollRow: Math.max(0, layout.visualLines.length - currentState.viewportRows)
+        scrollRow: Math.max(0, scrollableRowCount(layout, 0) - currentState.viewportRows)
       });
       return true;
     default:
@@ -474,7 +477,7 @@ function syncStateToProps(
     },
     scrollRow: Math.min(
       state.scrollRow,
-      Math.max(0, layout.visualLines.length - state.viewportRows)
+      Math.max(0, contentVisualLineCount(layout) - state.viewportRows)
     )
   };
 }
@@ -523,10 +526,11 @@ function withScrollableViewportRows(
   viewportRows: number
 ): TextareaEditState {
   const rows = Math.max(1, Math.floor(viewportRows));
+  const cursorRow = findCursorVisualPosition(layout, state.cursor).visualRow;
   return {
     ...state,
     viewportRows: rows,
-    scrollRow: clampScrollRow(state.scrollRow, 0, rows, layout.visualLines.length)
+    scrollRow: clampScrollRow(state.scrollRow, cursorRow, rows, scrollableRowCount(layout, cursorRow))
   };
 }
 
@@ -538,7 +542,7 @@ function readViewportRows(props: TextareaProps, layout: TextareaLayout): number 
 
   const minRows = readMinRows(props);
   const maxRows = Math.max(minRows, readNumberBindingValue(props.maxRows, TEXTAREA_DEFAULT_MAX_ROWS));
-  return Math.min(Math.max(layout.visualLines.length, minRows), maxRows);
+  return Math.min(Math.max(contentVisualLineCount(layout), minRows), maxRows);
 }
 
 function readRenderRows(props: TextareaProps): number {
