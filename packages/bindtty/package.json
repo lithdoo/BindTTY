@@ -1,6 +1,6 @@
 {
   "name": "bindtty",
-  "version": "0.1.0-alpha.5",
+  "version": "0.1.0-alpha.6",
   "type": "module",
   "description": "MVVM signal-driven TUI framework for TypeScript/TSX.",
   "main": "./dist/index.js",
@@ -29,17 +29,17 @@
     "test": "npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/terminal && npm run build --workspace @bindtty/interaction && npm run build --workspace @bindtty/widgets && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
   },
   "dependencies": {
-    "@bindtty/interaction": "0.1.0-alpha.5",
-    "@bindtty/jsx-runtime": "0.1.0-alpha.5",
-    "@bindtty/layout": "0.1.0-alpha.5",
-    "@bindtty/renderer-terminal": "0.1.0-alpha.5",
-    "@bindtty/runtime": "0.1.0-alpha.5",
-    "@bindtty/signal": "0.1.0-alpha.5",
-    "@bindtty/terminal": "0.1.0-alpha.5",
-    "@bindtty/vnode": "0.1.0-alpha.5"
+    "@bindtty/interaction": "0.1.0-alpha.6",
+    "@bindtty/jsx-runtime": "0.1.0-alpha.6",
+    "@bindtty/layout": "0.1.0-alpha.6",
+    "@bindtty/renderer-terminal": "0.1.0-alpha.6",
+    "@bindtty/runtime": "0.1.0-alpha.6",
+    "@bindtty/signal": "0.1.0-alpha.6",
+    "@bindtty/terminal": "0.1.0-alpha.6",
+    "@bindtty/vnode": "0.1.0-alpha.6"
   },
   "peerDependencies": {
-    "@bindtty/signal": "0.1.0-alpha.5"
+    "@bindtty/signal": "0.1.0-alpha.6"
   },
   "peerDependenciesMeta": {
     "@bindtty/signal": {
@@ -47,7 +47,7 @@
     }
   },
   "devDependencies": {
-    "@bindtty/widgets": "0.1.0-alpha.5",
+    "@bindtty/widgets": "0.1.0-alpha.6",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },

@@ -56,7 +56,7 @@ export function buildTextareaLayout(
   width: number | null,
   options: BuildTextareaLayoutOptions = {}
 ): TextareaLayout {
-  const normalizedWidth = normalizeWidth(width);
+  const normalizedWidth = readEffectiveLayoutWidth(width);
   const wrap = options.wrap ?? "soft";
   const logicalLines = buildLogicalLines(value);
   const segments = logicalLines.flatMap((line) => line.segments);
@@ -331,6 +331,16 @@ function measureSegmentsUntil(segments: TextareaSegment[], offset: number): numb
   }
 
   return width;
+}
+
+/**
+ * Soft-wrap width from layout.
+ * - `null`: width unknown (before first onLayout); do not wrap.
+ * - `0`: invalid/zero content width; do not wrap, but later positive layout must correct it.
+ * - `>= 1`: effective wrap width.
+ */
+export function readEffectiveLayoutWidth(width: number | null): number | null {
+  return normalizeWidth(width);
 }
 
 function normalizeWidth(width: number | null): number | null {

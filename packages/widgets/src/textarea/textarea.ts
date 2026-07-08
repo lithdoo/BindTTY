@@ -35,6 +35,7 @@ import {
 import {
   buildTextareaLayout,
   clampScrollRow,
+  ensureCursorVisible,
   findCursorVisualPosition,
   visualLineText,
   type TextareaLayout
@@ -136,13 +137,15 @@ export function Textarea(props: TextareaProps): Template {
     "box",
     omitUndefined({
       id: props.id,
-      ref: createTextareaRef(contentWidth),
+      ref: createTextareaRef(props, contentWidth, state),
       onKey: createTextareaOnKey(props, state, layout, viewportRows, lastResetToken),
       onFocusChange: createFocusChangeHandler(props, focused),
       focusable: createWidgetFocusable(props.focusable, undefined),
       focusStyle: "none",
       overflow: "clip",
       flexGrow: props.width === undefined ? 1 : undefined,
+      flexShrink: props.width === undefined ? 1 : undefined,
+      minWidth: props.width === undefined ? 0 : undefined,
       width: props.width,
       height: props.height ?? viewportRows,
       background: props.background
@@ -256,22 +259,54 @@ function renderCursorLine(
 }
 
 function createTextareaRef(
-  contentWidth: ReturnType<typeof createSignal<number | null>>
+  props: TextareaProps,
+  contentWidth: ReturnType<typeof createSignal<number | null>>,
+  state: ReturnType<typeof createSignal<TextareaEditState>>
 ): (api: MountedElementApi) => void {
   return (api) => {
     api.onLayout = (layout) => {
       const width = (layout as TextareaLayoutState).contentRect?.width;
-      contentWidth.set(
+      const nextWidth =
         typeof width === "number" && Number.isFinite(width)
           ? Math.max(0, Math.floor(width))
-          : null
-      );
+          : null;
+      contentWidth.set(nextWidth);
+      reconcileStateAfterLayoutWidth(props, state, nextWidth);
     };
 
     api.onUnmount = () => {
       contentWidth.set(null);
     };
   };
+}
+
+function reconcileStateAfterLayoutWidth(
+  props: TextareaProps,
+  state: ReturnType<typeof createSignal<TextareaEditState>>,
+  width: number | null
+): void {
+  const current = state.get();
+  const nextLayout = buildTextareaLayout(readStringBindingValue(props.value), width, {
+    wrap: readBindingValue(props.wrap) ?? "soft"
+  });
+  const rows = readViewportRows(props, nextLayout);
+  const cursorRow = findCursorVisualPosition(nextLayout, current.cursor).visualRow;
+  const scrollRow = ensureCursorVisible(
+    current.scrollRow,
+    cursorRow,
+    rows,
+    nextLayout.visualLines.length
+  );
+
+  if (scrollRow === current.scrollRow && rows === current.viewportRows) {
+    return;
+  }
+
+  state.set({
+    ...current,
+    viewportRows: rows,
+    scrollRow
+  });
 }
 
 function createTextareaOnKey(

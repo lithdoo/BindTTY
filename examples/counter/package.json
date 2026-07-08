@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/example-counter",
-  "version": "0.1.0-alpha.5",
+  "version": "0.1.0-alpha.6",
   "private": true,
   "type": "module",
   "description": "BindTTY counter example with Button and signals.",
@@ -10,12 +10,12 @@
     "start": "npm run build && node dist/main.js"
   },
   "dependencies": {
-    "@bindtty/terminal": "0.1.0-alpha.5",
-    "@bindtty/widgets": "0.1.0-alpha.5",
-    "bindtty": "0.1.0-alpha.5"
+    "@bindtty/terminal": "0.1.0-alpha.6",
+    "@bindtty/widgets": "0.1.0-alpha.6",
+    "bindtty": "0.1.0-alpha.6"
   },
   "devDependencies": {
-    "@bindtty/jsx-runtime": "0.1.0-alpha.5",
+    "@bindtty/jsx-runtime": "0.1.0-alpha.6",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },

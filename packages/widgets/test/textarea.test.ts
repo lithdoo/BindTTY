@@ -148,6 +148,8 @@ test("Textarea renders as a borderless focusable box that fills horizontal space
   assert.equal(template.props.border, undefined);
   assert.equal(template.props.padding, undefined);
   assert.equal(template.props.flexGrow, 1);
+  assert.equal(template.props.flexShrink, 1);
+  assert.equal(template.props.minWidth, 0);
   assert.equal(viewport.tag, "vstack");
   assert.equal(viewport.children.length, 6);
   assert.deepEqual(readRenderLines(template), [
@@ -172,6 +174,127 @@ test("Textarea renders as a borderless focusable box that fills horizontal space
       after: ""
     }
   ]);
+});
+
+test("Textarea with explicit width disables flexGrow hardening", () => {
+  const template = asElement(
+    Textarea({
+      value: "hello",
+      width: 30
+    })
+  );
+
+  assert.equal(template.props.width, 30);
+  assert.equal(template.props.flexGrow, undefined);
+  assert.equal(template.props.flexShrink, undefined);
+  assert.equal(template.props.minWidth, undefined);
+});
+
+function applyTextareaLayoutWidth(
+  template: ElementTemplate,
+  width: number
+): { onUnmount?: () => void; onLayout?: (layout: unknown) => void } {
+  const ref = template.props.ref;
+  assert.equal(typeof ref, "function");
+
+  interface TestApi {
+    onLayout?: (layout: unknown) => void;
+    onUnmount?: () => void;
+  }
+
+  const api: TestApi = {};
+  (ref as (api: TestApi) => void)(api);
+  api.onLayout?.({
+    contentRect: {
+      width
+    }
+  });
+
+  return api;
+}
+
+test("Textarea keeps a single visual line before onLayout soft-wrap width arrives", () => {
+  const value = createSignal("abcdefghijklmnopqrstuvwxyz");
+  const template = asElement(
+    Textarea({
+      value,
+      maxRows: 8
+    })
+  );
+
+  assert.deepEqual(readRenderLines(template), [
+    {
+      key: "line:0",
+      kind: "text",
+      text: "abcdefghijklmnopqrstuvwxyz"
+    }
+  ]);
+});
+
+test("Textarea soft-wraps a long line after onLayout provides content width", () => {
+  const value = createSignal("abcdefghijklmnopqrstuvwxyz");
+  const template = asElement(
+    Textarea({
+      value,
+      maxRows: 8
+    })
+  );
+
+  applyTextareaLayoutWidth(template, 10);
+
+  const lines = readRenderLines(template);
+  assert.ok(lines.length > 1);
+  assert.equal(lines[0]?.kind, "text");
+  if (lines[0]?.kind === "text") {
+    assert.equal(lines[0].text, "abcdefghij");
+  }
+});
+
+test("Textarea focused empty value shows a visible space caret after layout", () => {
+  const template = asElement(
+    Textarea({
+      value: "",
+      placeholder: "Type here"
+    })
+  );
+
+  applyTextareaLayoutWidth(template, 10);
+  (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
+    focusEvent(true)
+  );
+
+  assert.deepEqual(readRenderLines(template), [
+    {
+      key: "line:0",
+      kind: "cursor",
+      before: "",
+      cursor: " ",
+      after: ""
+    }
+  ]);
+});
+
+test("Textarea focused soft-wrapped caret stays on the first viewport row", () => {
+  const value = createSignal("abcdefghijklmnopqrstuvwxyz");
+  const template = asElement(
+    Textarea({
+      value,
+      height: 2,
+      maxRows: 2
+    })
+  );
+
+  applyTextareaLayoutWidth(template, 10);
+  (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
+    focusEvent(true)
+  );
+
+  const lines = readRenderLines(template);
+  assert.equal(lines.length, 2);
+  assert.equal(lines[1]?.kind, "cursor");
+  if (lines[1]?.kind === "cursor") {
+    assert.ok(lines[1].before.length + lines[1].cursor.length <= 10);
+  }
 });
 
 test("Textarea exposes the planned props types", () => {

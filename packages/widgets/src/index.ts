@@ -10,7 +10,12 @@ export {
 export { Select } from "./form/select.js";
 export { ScrollView } from "./scroll/scroll-view.js";
 export { TextInput } from "./form/text-input.js";
-export { Textarea } from "./textarea.js";
+export {
+  Textarea,
+  buildTextareaLayout,
+  findCursorVisualPosition,
+  readEffectiveLayoutWidth
+} from "./textarea.js";
 export {
   VScrollView,
   computeScrollbarThumb,
@@ -48,7 +53,10 @@ export type {
 } from "./scroll/axis-shared.js";
 export type { TextInputProps, TextInputStyleProps } from "./form/text-input.js";
 export type {
+  TextareaCursor,
+  TextareaLayout,
   TextareaProps,
   TextareaStyleProps,
-  TextareaSubmitKey
+  TextareaSubmitKey,
+  VisualPosition
 } from "./textarea.js";

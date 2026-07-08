@@ -482,7 +482,7 @@ npm test
 14. TextInput placeholder / disabled / focus 生命周期。
 15. TextInput 单元测试 + App 集成 + E2E 全覆盖。
 16. 应用显式安装 @bindtty/widgets 并从该包导入。
-17. Textarea 受控多行编辑、视觉换行、Ctrl+Enter submit、disabled scroll 已覆盖。
+17. Textarea 受控多行编辑、视觉换行、Ctrl+Enter submit、disabled scroll 已覆盖；Flex 剩余宽度 soft wrap 见 [TEXTAREA.md](../../packages/widgets/TEXTAREA.md) §8.1。
 18. VScrollView 受控 offset、clip、键盘滚动已覆盖。
 19. List 作为 VScrollView + forTemplate 语法糖已覆盖。
 20. VScrollView `stickToBottom` 与 `showScrollbar`、HScrollView、ScrollView 双轴已覆盖（见 [SCROLL.md](../widgets/SCROLL.md)）。

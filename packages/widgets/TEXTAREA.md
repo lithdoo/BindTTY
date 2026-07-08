@@ -436,6 +436,8 @@ Textarea 外层是 focusable `box`：
   focusStyle="none"
   overflow="clip"
   flexGrow={props.width === undefined ? 1 : undefined}
+  flexShrink={props.width === undefined ? 1 : undefined}
+  minWidth={props.width === undefined ? 0 : undefined}
   width={props.width}
   height={props.height ?? viewportRows}
 >
@@ -447,13 +449,45 @@ Textarea 外层是 focusable `box`：
 
 1. `contentRect.width` 来自 layout callback。
 2. soft wrap 必须使用 `contentRect.width`。
-3. 未显式设置 `width` 时，Textarea 必须横向填充父元素；实现层通过 `flexGrow: 1` 或等价布局语义完成。
-4. width 未知时可以按不换行或 fallback width 处理，但首次 layout 后必须重算。
+3. 未显式设置 `width` 时，Textarea 必须横向填充父元素；实现层通过 `flexGrow: 1`、`flexShrink: 1`、`minWidth: 0` 完成（打断 Yoga 内容 min-size 撑破剩余宽）。
+4. width 未知（`null`）或异常 `0` 时可以按不换行处理，但首次收到有效正宽 layout 后必须重算 soft wrap、`scrollRow` 与 caret 可见性。
 5. 未显式设置 `height` 时，由 `viewportRows` 决定高度；显式设置 `height` 时以调用方指定高度为准，并在内部滚动。
 6. Textarea 默认不设置 `border` / `padding`。需要边框、标题、提示文案、prompt 对齐时，由父级 `box` 或应用组件组合。
 7. `height` 必须稳定，不允许因 caret 或 placeholder 改变导致布局跳动。
 8. placeholder 只在 `value === "" && !focused` 时显示，不参与真实编辑。
 9. 渲染行槽位不能使用固定大常量；应按显式 `height` 或 `maxRows` 上限生成，避免 vnode content 高度超过真实 viewport。
+
+### 8.1 Flex 剩余宽度接入
+
+典型写法（推荐，**不要**手算 `viewportWidth - promptWidth`）：
+
+```tsx
+{/* 场景 A：Textarea 自身 flexGrow */}
+<hstack gap={0}>
+  <text value={prompt} />
+  <Textarea value={value} onChange={onChange} wrap="soft" />
+</hstack>
+
+{/* 场景 B：外层 flexGrow box 包住 Textarea（等价） */}
+<hstack gap={0}>
+  <text value={prompt} />
+  <box flexGrow={1} flexShrink={1} minWidth={0}>
+    <Textarea value={value} onChange={onChange} wrap="soft" />
+  </box>
+</hstack>
+```
+
+时序：
+
+1. 首帧 `contentWidth === null` 时可能暂时不 soft wrap。
+2. Yoga layout 完成后 `ref.onLayout` 写入 `contentRect.width`。
+3. 同一次渲染周期后必须按该宽度 soft wrap，并 clamp scroll / caret。
+
+边界：
+
+- **Yoga `flexWrap` ≠ 文本 soft wrap。** flex 只分配盒子宽度；文本折行由 `buildTextareaLayout` 消费 `contentRect.width` 完成。
+- `vstack` 父级下横向填充靠 stretch，不靠 `flexGrow`（`flexGrow` 在 column 中吃的是剩余高度）。
+- 显式 `width={N}` 关闭上述 flex 硬化 props，作为覆盖手段。
 
 ## 9. 渲染策略
 
@@ -576,6 +610,9 @@ Textarea 重构完成需要同时满足：
 - focused Textarea 不使用整块反色；caret 是当前 grapheme 或行尾空格的局部反色。
 - 宽字符、emoji、combining mark 不出现半字符删除、半字符光标落点或上下键列错位。
 - 应用层无需再自研 Textarea。
+- `hstack` + 固定宽 prompt + Textarea（场景 A）与外层 `flexGrow` box（场景 B）在首次 layout 后 soft wrap。
+- 聚焦且 hideCursor 场景下，caret 落在 `[0, contentRect.width)`；空值聚焦显示行尾空格 caret。
+- layout harness（`textarea-flex-layout.test.ts`）覆盖场景 A/B/C/D。
 
 ## 13. 具体落地计划
 
@@ -729,6 +766,8 @@ elementTemplate("box", omitUndefined({
   focusStyle: "none",
   overflow: "clip",
   flexGrow: props.width === undefined ? 1 : undefined,
+  flexShrink: props.width === undefined ? 1 : undefined,
+  minWidth: props.width === undefined ? 0 : undefined,
   width: props.width,
   height: computed(() => readHeightOrViewportRows(...)),
   background: props.background
@@ -748,7 +787,8 @@ elementTemplate("box", omitUndefined({
 - Template root 是 `box`。
 - `focusStyle === "none"`。
 - 默认无 `border` / `padding`。
-- 未传 width 时有横向填充语义。
+- 未传 width 时有横向填充语义（`flexGrow` / `flexShrink` / `minWidth: 0`）。
+- 显式 width 时关闭上述 flex 硬化 props。
 - disabled 时 `onKey` 仍是函数。
 - `onFocusChange` 转发给调用方。
 
@@ -839,6 +879,8 @@ api.onUnmount = () => {
 - maxRows 限制 viewport。
 - height prop 覆盖动态 viewport。
 - onUnmount 清理 width fallback。
+- Flex 场景 A/B：剩余宽度 layout harness 断言 `contentRect.width` 与 soft wrap。
+- 聚焦空值与 soft wrap 后 caret 落在 clip 内。
 
 ### Phase 7 — 真实 PTY E2E
 
