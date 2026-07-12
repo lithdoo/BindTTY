@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/vnode",
-  "version": "0.1.0-alpha.7",
+  "version": "0.1.0-alpha.8",
   "type": "module",
   "description": "VNode data model and design notes for BindTTY.",
   "main": "./dist/index.js",

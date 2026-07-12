@@ -42,7 +42,8 @@ BindTTY 在 **text → layout → renderer → ANSI** 全链路使用 **terminal
 ```text
 @bindtty/text
   segmentText()、measureTextWidth()、layoutText()
-  wrap / hard / truncate 按 display width，不切断 grapheme
+  wrap（空白 + CJK/宽 grapheme 软断 + 脚本边界）/ hard / truncate
+  按 display width，不切断 grapheme；非 UAX #14
 
 @bindtty/layout
   BasicLayoutEngine / YogaLayoutEngine 通过 layoutText() 测量
@@ -136,6 +137,8 @@ sliceTextByWidth(text: string, startColumn: number, endColumn: number): string;
 - **测量**：`layoutText` / wrap / truncate / slice 在 segment 级别工作，不返回半个 grapheme。
 - **单行超长 grapheme**：若 grapheme display width 大于目标行宽，layout 允许该行超出目标 width；renderer clip 时整 grapheme 跳过，不画半个。
 - **换行**：`\n` 由 `layoutText` 分行处理，不在单行 `segmentText` 内切分。
+- **`wrap: "wrap"`**：空白优先软断；CJK / 宽 grapheme（含常见全角标点、宽 emoji）按列宽可在 grapheme 间软断；拉丁 ↔ CJK/宽 脚本边界优先于切开拉丁词；超长拉丁词回退为按 grapheme 硬切。不是完整 UAX #14，也不是中文分词。
+- **`wrap: "hard"`**：仅按 display width 切分，不考虑空白或脚本边界。
 - **实现位置**：`packages/text/src/{segment,width,measure,layout,wrap,truncate}.ts`
 
 ---

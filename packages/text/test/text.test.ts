@@ -7,7 +7,8 @@ import {
   measureTextWidth,
   readTextWrapMode,
   segmentText,
-  sliceTextByWidth
+  sliceTextByWidth,
+  wordWrapLine
 } from "@bindtty/text";
 
 test("measureTextWidth measures ASCII length", () => {
@@ -199,6 +200,175 @@ test("layoutText word wrap mode wraps CJK tokens by display width", () => {
     height: 2,
     lines: ["你好", "世界"]
   });
+});
+
+test("layoutText wrap keeps Latin whitespace breaks and hard-cuts long Latin tokens", () => {
+  assert.deepEqual(layoutText("hello world", { width: 5, wrap: "wrap" }), {
+    width: 5,
+    height: 2,
+    lines: ["hello", "world"]
+  });
+  assert.deepEqual(layoutText("abcdef", { width: 3, wrap: "wrap" }), {
+    width: 3,
+    height: 2,
+    lines: ["abc", "def"]
+  });
+  assert.deepEqual(layoutText("🙂", { width: 1, wrap: "wrap" }), {
+    width: 2,
+    height: 1,
+    lines: ["🙂"]
+  });
+  assert.deepEqual(layoutText("a\nbc", { wrap: "wrap" }), {
+    width: 2,
+    height: 2,
+    lines: ["a", "bc"]
+  });
+  assert.deepEqual(layoutText("abc", { width: 0, wrap: "wrap" }), {
+    width: 0,
+    height: 0,
+    lines: []
+  });
+});
+
+test("layoutText wrap soft-wraps CJK without whitespace", () => {
+  assert.deepEqual(layoutText("你好世界你好", { width: 4, wrap: "wrap" }), {
+    width: 4,
+    height: 3,
+    lines: ["你好", "世界", "你好"]
+  });
+  assert.deepEqual(layoutText("中中中", { width: 4, wrap: "wrap" }), {
+    width: 4,
+    height: 2,
+    lines: ["中中", "中"]
+  });
+  assert.deepEqual(layoutText("中中中中", { width: 2, wrap: "wrap" }), {
+    width: 2,
+    height: 4,
+    lines: ["中", "中", "中", "中"]
+  });
+  assert.deepEqual(layoutText("中中中", { width: 3, wrap: "wrap" }), {
+    width: 2,
+    height: 3,
+    lines: ["中", "中", "中"]
+  });
+  assert.deepEqual(layoutText("中", { width: 1, wrap: "wrap" }), {
+    width: 2,
+    height: 1,
+    lines: ["中"]
+  });
+  assert.deepEqual(layoutText("。！？", { width: 4, wrap: "wrap" }), {
+    width: 4,
+    height: 2,
+    lines: ["。！", "？"]
+  });
+});
+
+test("layoutText wrap prefers script boundaries for mixed Latin and CJK", () => {
+  assert.deepEqual(layoutText("hello世界world", { width: 7, wrap: "wrap" }), {
+    width: 5,
+    height: 3,
+    lines: ["hello", "世界", "world"]
+  });
+  assert.deepEqual(layoutText("hello世界world", { width: 5, wrap: "wrap" }), {
+    width: 5,
+    height: 3,
+    lines: ["hello", "世界", "world"]
+  });
+  assert.deepEqual(layoutText("hello世界world", { width: 10, wrap: "wrap" }), {
+    width: 9,
+    height: 2,
+    lines: ["hello世界", "world"]
+  });
+  assert.deepEqual(layoutText("A中B", { width: 3, wrap: "wrap" }), {
+    width: 3,
+    height: 2,
+    lines: ["A中", "B"]
+  });
+  assert.deepEqual(layoutText("中A中", { width: 3, wrap: "wrap" }), {
+    width: 3,
+    height: 2,
+    lines: ["中A", "中"]
+  });
+  assert.deepEqual(layoutText("hi 你好", { width: 4, wrap: "wrap" }), {
+    width: 4,
+    height: 2,
+    lines: ["hi", "你好"]
+  });
+  assert.deepEqual(layoutText("你好hi世界", { width: 6, wrap: "wrap" }), {
+    width: 6,
+    height: 2,
+    lines: ["你好hi", "世界"]
+  });
+});
+
+test("layoutText wrap handles spaces, emoji, and multiline edges", () => {
+  assert.deepEqual(layoutText("hello  world", { width: 5, wrap: "wrap" }), {
+    width: 5,
+    height: 2,
+    lines: ["hello", "world"]
+  });
+  assert.deepEqual(layoutText("abc ", { width: 3, wrap: "wrap" }), {
+    width: 3,
+    height: 1,
+    lines: ["abc"]
+  });
+  assert.deepEqual(layoutText("  abc", { width: 3, wrap: "wrap" }), {
+    width: 3,
+    height: 2,
+    lines: ["  a", "bc"]
+  });
+  assert.deepEqual(layoutText("a b c", { width: 3, wrap: "wrap" }), {
+    width: 3,
+    height: 2,
+    lines: ["a b", "c"]
+  });
+  assert.deepEqual(layoutText("🙂🙂🙂", { width: 4, wrap: "wrap" }), {
+    width: 4,
+    height: 2,
+    lines: ["🙂🙂", "🙂"]
+  });
+  assert.deepEqual(layoutText("🙂🙂", { width: 2, wrap: "wrap" }), {
+    width: 2,
+    height: 2,
+    lines: ["🙂", "🙂"]
+  });
+  assert.deepEqual(layoutText("a🙂b", { width: 3, wrap: "wrap" }), {
+    width: 3,
+    height: 2,
+    lines: ["a🙂", "b"]
+  });
+
+  const zwj = "👨‍👩‍👧";
+  assert.deepEqual(layoutText(zwj, { width: 1, wrap: "wrap" }), {
+    width: 2,
+    height: 1,
+    lines: [zwj]
+  });
+
+  assert.deepEqual(layoutText("你好\n世界", { width: 2, wrap: "wrap" }), {
+    width: 2,
+    height: 4,
+    lines: ["你", "好", "世", "界"]
+  });
+  assert.deepEqual(wordWrapLine("", 4), [""]);
+  assert.deepEqual(wordWrapLine("   ", 2), [""]);
+  assert.deepEqual(wordWrapLine("abcdef", 3), ["abc", "def"]);
+});
+
+test("layoutText wrap and hard agree on spaceless CJK but differ on spaced Latin", () => {
+  assert.deepEqual(
+    layoutText("中中中", { width: 4, wrap: "wrap" }).lines,
+    layoutText("中中中", { width: 4, wrap: "hard" }).lines
+  );
+  assert.deepEqual(layoutText("hello world", { width: 5, wrap: "wrap" }).lines, [
+    "hello",
+    "world"
+  ]);
+  assert.deepEqual(layoutText("hello world", { width: 5, wrap: "hard" }).lines, [
+    "hello",
+    " worl",
+    "d"
+  ]);
 });
 
 test("measureText measures multiline CJK and emoji by display width", () => {
