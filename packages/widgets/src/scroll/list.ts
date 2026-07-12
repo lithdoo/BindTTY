@@ -38,6 +38,7 @@ export function List<T = unknown>(props: ListProps<T>): Template {
     borderColor: props.borderColor,
     padding: props.padding,
     border: props.border,
+    focusStyle: props.focusStyle,
     children: forTemplate({
       each: props.items,
       key: props.getKey,

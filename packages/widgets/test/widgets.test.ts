@@ -94,23 +94,30 @@ interface TestScrollApi {
 }
 
 function connectVScrollViewRef(template: ElementTemplate): TestScrollApi {
-  let scrollBox = template;
-
-  if (template.tag === "box" && template.children[0]?.kind === "element") {
-    const firstChild = asElement(template.children[0] as Template);
-    if (firstChild.tag === "hstack" && firstChild.children[0]?.kind === "element") {
-      scrollBox = asElement(firstChild.children[0] as Template);
-    }
-  } else if (template.tag === "hstack" && template.children[0]?.kind === "element") {
-    scrollBox = asElement(template.children[0] as Template);
-  }
-
+  const scrollBox = getVScrollViewScrollBox(template);
   const ref = scrollBox.props.ref;
   assert.equal(typeof ref, "function");
 
   const api: TestScrollApi = {};
   (ref as (api: TestScrollApi) => void)(api);
   return api;
+}
+
+function getVScrollViewScrollBox(template: ElementTemplate): ElementTemplate {
+  if (hasOwn(template.props, "scrollY") || hasOwn(template.props, "scrollX")) {
+    return template;
+  }
+
+  if (template.tag === "box" && template.children[0]?.kind === "element") {
+    const firstChild = asElement(template.children[0] as Template);
+    if (firstChild.tag === "hstack" && firstChild.children[0]?.kind === "element") {
+      return asElement(firstChild.children[0] as Template);
+    }
+  } else if (template.tag === "hstack" && template.children[0]?.kind === "element") {
+    return asElement(template.children[0] as Template);
+  }
+
+  return template;
 }
 
 function layoutPayload(
@@ -321,7 +328,8 @@ test("VScrollView exposes the planned props types", () => {
     background: "blue",
     borderColor: "cyan",
     padding: 1,
-    border: true
+    border: true,
+    focusStyle: "none"
   };
   const props: VScrollViewProps = {
     ...style,
@@ -333,7 +341,71 @@ test("VScrollView exposes the planned props types", () => {
     onOffsetChange() {}
   };
 
-  assert.equal(asElement(VScrollView(props)).props.id, "typed");
+  const template = asElement(VScrollView(props));
+  assert.equal(template.props.id, "typed");
+  assert.equal(template.props.focusStyle, "none");
+});
+
+test("VScrollView forwards focusStyle to the focusable scroll box", () => {
+  const none = asElement(
+    VScrollView({
+      height: 3,
+      focusStyle: "none",
+      onOffsetChange() {}
+    })
+  );
+  const inverse = asElement(
+    VScrollView({
+      height: 3,
+      focusStyle: "inverse",
+      onOffsetChange() {}
+    })
+  );
+  const unset = asElement(
+    VScrollView({
+      height: 3,
+      onOffsetChange() {}
+    })
+  );
+
+  assert.equal(none.props.focusStyle, "none");
+  assert.equal(inverse.props.focusStyle, "inverse");
+  assert.equal(unset.props.focusStyle, undefined);
+});
+
+test("VScrollView with showScrollbar keeps focusStyle on the inner scroll box", () => {
+  const template = asElement(
+    VScrollView({
+      height: 3,
+      showScrollbar: true,
+      focusStyle: "none",
+      border: true,
+      onOffsetChange() {}
+    })
+  );
+  const scrollBox = getVScrollViewScrollBox(template);
+
+  assert.notEqual(template, scrollBox);
+  assert.equal(template.props.focusStyle, undefined);
+  assert.equal(template.props.focusable, undefined);
+  assert.equal(scrollBox.props.focusStyle, "none");
+  assert.equal(scrollBox.props.focusable, true);
+});
+
+test("VScrollView supports dynamic focusStyle signals", () => {
+  const focusStyle = createSignal<"inverse" | "none">("none");
+  const template = asElement(
+    VScrollView({
+      height: 3,
+      focusStyle,
+      onOffsetChange() {}
+    })
+  );
+
+  assert.equal(template.props.focusStyle, focusStyle);
+  assert.equal(resolveSignal<"inverse" | "none">(template.props.focusStyle), "none");
+  focusStyle.set("inverse");
+  assert.equal(resolveSignal<"inverse" | "none">(template.props.focusStyle), "inverse");
 });
 
 test("VScrollView emits offset intents for scroll keys", () => {
@@ -478,6 +550,48 @@ test("List renders as VScrollView with an internal for template", () => {
     },
     children: []
   });
+});
+
+test("List forwards focusStyle to the focusable VScrollView box", () => {
+  const template = asElement(
+    List({
+      height: 3,
+      focusStyle: "none",
+      items: [{ id: 1 }],
+      getKey: (item) => item.id,
+      render: () => ({
+        kind: "element",
+        tag: "text",
+        props: { value: "row" },
+        children: []
+      })
+    })
+  );
+
+  assert.equal(template.props.focusStyle, "none");
+});
+
+test("List with showScrollbar keeps focusStyle on the inner scroll box", () => {
+  const template = asElement(
+    List({
+      height: 3,
+      showScrollbar: true,
+      focusStyle: "none",
+      items: [{ id: 1 }],
+      getKey: (item) => item.id,
+      render: () => ({
+        kind: "element",
+        tag: "text",
+        props: { value: "row" },
+        children: []
+      })
+    })
+  );
+  const scrollBox = getVScrollViewScrollBox(template);
+
+  assert.notEqual(template, scrollBox);
+  assert.equal(template.props.focusStyle, undefined);
+  assert.equal(scrollBox.props.focusStyle, "none");
 });
 
 test("List exposes the planned props types", () => {
@@ -683,21 +797,28 @@ test("VScrollView with showScrollbar renders an hstack wrapper", () => {
 });
 
 function connectHScrollViewRef(template: ElementTemplate): TestScrollApi {
-  let scrollBox = template;
-
-  if (template.tag === "box" && template.children[0]?.kind === "element") {
-    const firstChild = asElement(template.children[0] as Template);
-    if (firstChild.tag === "vstack" && firstChild.children[0]?.kind === "element") {
-      scrollBox = asElement(firstChild.children[0] as Template);
-    }
-  }
-
+  const scrollBox = getHScrollViewScrollBox(template);
   const ref = scrollBox.props.ref;
   assert.equal(typeof ref, "function");
 
   const api: TestScrollApi = {};
   (ref as (api: TestScrollApi) => void)(api);
   return api;
+}
+
+function getHScrollViewScrollBox(template: ElementTemplate): ElementTemplate {
+  if (hasOwn(template.props, "scrollX") || hasOwn(template.props, "scrollY")) {
+    return template;
+  }
+
+  if (template.tag === "box" && template.children[0]?.kind === "element") {
+    const firstChild = asElement(template.children[0] as Template);
+    if (firstChild.tag === "vstack" && firstChild.children[0]?.kind === "element") {
+      return asElement(firstChild.children[0] as Template);
+    }
+  }
+
+  return template;
 }
 
 function layoutPayloadX(
@@ -792,6 +913,68 @@ test("HScrollView with showScrollbar renders a vstack wrapper", () => {
   assert.equal(asElement(column.children[1] as Template).props.height, 1);
 });
 
+test("HScrollView forwards focusStyle to the focusable scroll box", () => {
+  const none = asElement(
+    HScrollView({
+      width: 6,
+      focusStyle: "none",
+      onOffsetChange() {}
+    })
+  );
+  const inverse = asElement(
+    HScrollView({
+      width: 6,
+      focusStyle: "inverse",
+      onOffsetChange() {}
+    })
+  );
+  const unset = asElement(
+    HScrollView({
+      width: 6,
+      onOffsetChange() {}
+    })
+  );
+
+  assert.equal(none.props.focusStyle, "none");
+  assert.equal(inverse.props.focusStyle, "inverse");
+  assert.equal(unset.props.focusStyle, undefined);
+});
+
+test("HScrollView with showScrollbar keeps focusStyle on the inner scroll box", () => {
+  const template = asElement(
+    HScrollView({
+      width: 6,
+      showScrollbar: true,
+      focusStyle: "none",
+      border: true,
+      onOffsetChange() {}
+    })
+  );
+  const scrollBox = getHScrollViewScrollBox(template);
+
+  assert.notEqual(template, scrollBox);
+  assert.equal(template.props.focusStyle, undefined);
+  assert.equal(template.props.focusable, undefined);
+  assert.equal(scrollBox.props.focusStyle, "none");
+  assert.equal(scrollBox.props.focusable, true);
+});
+
+test("HScrollView supports dynamic focusStyle signals", () => {
+  const focusStyle = createSignal<"inverse" | "none">("inverse");
+  const template = asElement(
+    HScrollView({
+      width: 6,
+      focusStyle,
+      onOffsetChange() {}
+    })
+  );
+
+  assert.equal(template.props.focusStyle, focusStyle);
+  assert.equal(resolveSignal<"inverse" | "none">(template.props.focusStyle), "inverse");
+  focusStyle.set("none");
+  assert.equal(resolveSignal<"inverse" | "none">(template.props.focusStyle), "none");
+});
+
 function connectScrollViewRef(template: ElementTemplate): TestScrollApi {
   const scrollBox = getScrollViewScrollBox(template);
   const ref = scrollBox.props.ref;
@@ -871,12 +1054,87 @@ test("ScrollView exposes the planned props types", () => {
     height: 8,
     offsetX: 0,
     offsetY: 0,
+    focusStyle: "none",
     showScrollbar: { vertical: true, horizontal: false },
     onOffsetXChange() {},
     onOffsetYChange() {}
   };
 
-  assert.equal(asElement(ScrollView(props)).props.width, 10);
+  const template = asElement(ScrollView(props));
+  assert.equal(template.props.width, 10);
+  assert.equal(getScrollViewScrollBox(template).props.focusStyle, "none");
+});
+
+test("ScrollView forwards focusStyle to the focusable scroll box", () => {
+  const none = asElement(
+    ScrollView({
+      width: 10,
+      height: 8,
+      focusStyle: "none",
+      onOffsetXChange() {},
+      onOffsetYChange() {}
+    })
+  );
+  const inverse = asElement(
+    ScrollView({
+      width: 10,
+      height: 8,
+      focusStyle: "inverse",
+      onOffsetXChange() {},
+      onOffsetYChange() {}
+    })
+  );
+  const unset = asElement(
+    ScrollView({
+      width: 10,
+      height: 8,
+      onOffsetXChange() {},
+      onOffsetYChange() {}
+    })
+  );
+
+  assert.equal(none.props.focusStyle, "none");
+  assert.equal(inverse.props.focusStyle, "inverse");
+  assert.equal(unset.props.focusStyle, undefined);
+});
+
+test("ScrollView with showScrollbar keeps focusStyle on the inner scroll box", () => {
+  const template = asElement(
+    ScrollView({
+      width: 10,
+      height: 8,
+      showScrollbar: true,
+      focusStyle: "none",
+      border: true,
+      onOffsetXChange() {},
+      onOffsetYChange() {}
+    })
+  );
+  const scrollBox = getScrollViewScrollBox(template);
+
+  assert.notEqual(template, scrollBox);
+  assert.equal(template.props.focusStyle, undefined);
+  assert.equal(template.props.focusable, undefined);
+  assert.equal(scrollBox.props.focusStyle, "none");
+  assert.equal(scrollBox.props.focusable, true);
+});
+
+test("ScrollView supports dynamic focusStyle signals", () => {
+  const focusStyle = createSignal<"inverse" | "none">("none");
+  const template = asElement(
+    ScrollView({
+      width: 10,
+      height: 8,
+      focusStyle,
+      onOffsetXChange() {},
+      onOffsetYChange() {}
+    })
+  );
+
+  assert.equal(template.props.focusStyle, focusStyle);
+  assert.equal(resolveSignal<"inverse" | "none">(template.props.focusStyle), "none");
+  focusStyle.set("inverse");
+  assert.equal(resolveSignal<"inverse" | "none">(template.props.focusStyle), "inverse");
 });
 
 test("ScrollView vertical keys change only Y offset", () => {

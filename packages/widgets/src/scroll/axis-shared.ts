@@ -5,6 +5,8 @@ export interface ScrollAxisStyleProps {
   borderColor?: BindingValue<string>;
   padding?: BindingValue<number>;
   border?: BindingValue<boolean | number>;
+  /** Paint-only. Omit for renderer default focused inverse; `"none"` disables it. */
+  focusStyle?: BindingValue<"inverse" | "none">;
 }
 
 export interface ScrollAxisAppliedState {

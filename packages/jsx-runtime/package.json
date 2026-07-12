@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/jsx-runtime",
-  "version": "0.1.0-alpha.6",
+  "version": "0.1.0-alpha.7",
   "type": "module",
   "description": "JSX runtime for BindTTY ViewTemplate.",
   "main": "./dist/index.js",
@@ -29,8 +29,8 @@
     "test": "npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/vnode && npm run build && tsc -p test/tsconfig.json && tsc -p test/tsconfig.runtime.json && node --test test/dist/*.test.js"
   },
   "dependencies": {
-    "@bindtty/text": "0.1.0-alpha.6",
-    "@bindtty/vnode": "0.1.0-alpha.6"
+    "@bindtty/text": "0.1.0-alpha.7",
+    "@bindtty/vnode": "0.1.0-alpha.7"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

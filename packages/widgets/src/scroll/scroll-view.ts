@@ -93,7 +93,8 @@ export function ScrollView(props: ScrollViewProps): Template {
       border: usesScrollbar ? undefined : props.border,
       padding: usesScrollbar ? undefined : props.padding,
       background: usesScrollbar ? undefined : props.background,
-      borderColor: usesScrollbar ? undefined : props.borderColor
+      borderColor: usesScrollbar ? undefined : props.borderColor,
+      focusStyle: props.focusStyle
     }),
     props.children
   );
