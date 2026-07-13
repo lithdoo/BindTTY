@@ -98,6 +98,62 @@ test("parseInputChunk maps modifier combinations for Kitty Enter", () => {
   ]);
 });
 
+test("parseInputChunk maps F1-F12 from SS3, CSI tilde, Win32, and Kitty", () => {
+  assert.deepEqual(
+    [
+      ...parseInputChunk("\x1bOP\x1bOQ\x1bOR\x1bOS"),
+      ...parseInputChunk(
+        "\x1b[11~\x1b[12~\x1b[13~\x1b[14~\x1b[15~\x1b[17~\x1b[18~\x1b[19~\x1b[20~\x1b[21~\x1b[23~\x1b[24~"
+      ),
+      ...parseInputChunk("\x00;"),
+      ...parseInputChunk("\x1b[15;2~\x1b[11;5~"),
+      ...parseInputChunk("\x1b[1;2P"),
+      ...parseInputChunk("\x1b[57364;5u\x1b[57375u")
+    ].map((event) => ({
+      name: event.name,
+      ctrl: event.ctrl,
+      meta: event.meta,
+      shift: event.shift,
+      input: event.input
+    })),
+    [
+      { name: "f1", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f2", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f3", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f4", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f1", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f2", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f3", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f4", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f5", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f6", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f7", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f8", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f9", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f10", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f11", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f12", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f1", ctrl: false, meta: false, shift: false, input: "" },
+      { name: "f5", ctrl: false, meta: false, shift: true, input: "" },
+      { name: "f1", ctrl: true, meta: false, shift: false, input: "" },
+      { name: "f1", ctrl: false, meta: false, shift: true, input: "" },
+      { name: "f1", ctrl: true, meta: false, shift: false, input: "" },
+      { name: "f12", ctrl: false, meta: false, shift: false, input: "" }
+    ]
+  );
+
+  // Bare 13~ is F3; 13;mod~ and Kitty 13;mod u remain modified Enter.
+  assert.deepEqual([...parseInputChunk("\x1b[13~")], [
+    keyEvent("f3", "", "\x1b[13~")
+  ]);
+  assert.deepEqual([...parseInputChunk("\x1b[13;5~")], [
+    keyEvent("return", "\r", "\x1b[13;5~", true)
+  ]);
+  assert.deepEqual([...parseInputChunk("\x1b[13;5u")], [
+    keyEvent("return", "\r", "\x1b[13;5u", true)
+  ]);
+});
+
 test("parseInputChunk maps modifyOtherKeys printable input", () => {
   assert.deepEqual([...parseInputChunk("\x1b[27;5;97~")], [
     {

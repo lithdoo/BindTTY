@@ -412,6 +412,76 @@ test("Textarea edits controlled multiline value and submits with Ctrl Enter", ()
   assert.equal(value.get(), "h\ni");
 });
 
+test("Textarea submits with F2 by default without inserting text", () => {
+  const value = createSignal("draft");
+  const submits: string[] = [];
+  const changes: string[] = [];
+  const template = asElement(
+    Textarea({
+      value,
+      onChange(nextValue) {
+        changes.push(nextValue);
+        value.set(nextValue);
+      },
+      onSubmit(nextValue) {
+        submits.push(nextValue);
+      }
+    })
+  );
+  const onKey = readOnKeyHandler(template);
+
+  (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
+    focusEvent(true)
+  );
+
+  assert.equal(callOnKey(onKey, key("", { name: "f2" })), true);
+  assert.deepEqual(submits, ["draft"]);
+  assert.equal(value.get(), "draft");
+  assert.deepEqual(changes, []);
+});
+
+test("Textarea ignores F2 when submitKeys omits f2", () => {
+  const submits: string[] = [];
+  const template = asElement(
+    Textarea({
+      value: "keep",
+      submitKeys: ["ctrl-enter"],
+      onSubmit(nextValue) {
+        submits.push(nextValue);
+      }
+    })
+  );
+  const onKey = readOnKeyHandler(template);
+
+  (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
+    focusEvent(true)
+  );
+
+  assert.equal(callOnKey(onKey, key("", { name: "f2" })), false);
+  assert.deepEqual(submits, []);
+});
+
+test("Textarea disabled blocks F2 submit", () => {
+  const submits: string[] = [];
+  const template = asElement(
+    Textarea({
+      value: "locked",
+      disabled: true,
+      onSubmit(nextValue) {
+        submits.push(nextValue);
+      }
+    })
+  );
+  const onKey = readOnKeyHandler(template);
+
+  (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
+    focusEvent(true)
+  );
+
+  assert.equal(callOnKey(onKey, key("", { name: "f2" })), false);
+  assert.deepEqual(submits, []);
+});
+
 test("Textarea moves the cursor by grapheme around wide characters", () => {
   const value = createSignal("A🙂B");
   const template = asElement(

@@ -81,7 +81,7 @@ export interface TextareaProps extends TextareaStyleProps {
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }
 
-export type TextareaSubmitKey = "ctrl-enter" | "meta-enter";
+export type TextareaSubmitKey = "ctrl-enter" | "meta-enter" | "f2";
 
 interface TextareaLayoutState {
   contentRect?: {
@@ -567,6 +567,10 @@ function readSubmitKeys(props: TextareaProps): readonly TextareaSubmitKey[] {
 }
 
 function isSubmitKey(event: TerminalKeyEvent, submitKeys: readonly TextareaSubmitKey[]): boolean {
+  if (event.name === "f2" && submitKeys.includes("f2")) {
+    return true;
+  }
+
   if (!(event.name === "return" || event.name === "enter")) {
     return false;
   }

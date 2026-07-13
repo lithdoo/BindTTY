@@ -34,7 +34,7 @@ Textarea 提供一个可控的多行文本编辑控件：
 6. 内容超过 viewport 时垂直滚动，光标始终保持可见。
 7. 聚焦时自绘 caret；未聚焦时不显示 caret。
 8. 支持 `disabled`，禁用时不编辑、不提交，但仍可留在焦点系统中，并允许 Up / Down / PageUp / PageDown 滚动查看内容。
-9. 支持提交快捷键：默认 `Ctrl+Enter` / `Meta+Enter`。
+9. 支持提交快捷键：默认 `Ctrl+Enter` / `Meta+Enter` / `F2`。
 10. 支持 Tab 不消费，让 interaction 焦点遍历继续工作。
 
 ## 3. 非目标
@@ -83,7 +83,7 @@ export interface TextareaProps extends TextareaStyleProps {
   onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }
 
-export type TextareaSubmitKey = 'ctrl-enter' | 'meta-enter';
+export type TextareaSubmitKey = 'ctrl-enter' | 'meta-enter' | 'f2';
 ```
 
 ### 4.1 受控模型
@@ -229,6 +229,7 @@ visualPositionToCursor(layout, visualRow, column): {
 | Enter | 插入 `\n` |
 | Ctrl+Enter | 提交 |
 | Meta+Enter | 提交 |
+| F2 | 提交 |
 | Backspace | 删除光标前一个 grapheme |
 | Delete | 删除光标后一个 grapheme |
 | Left / Right | 按 grapheme 移动 |
@@ -342,7 +343,7 @@ Textarea 默认不把普通 Enter 当作提交。普通 Enter 必须插入换行
 提交只由 `submitKeys` 决定，默认：
 
 ```ts
-['ctrl-enter', 'meta-enter']
+['ctrl-enter', 'meta-enter', 'f2']
 ```
 
 应用若想让单行斜杠命令用 Enter 提交，应在应用层包装 Textarea，不应写入 Textarea 默认语义。
@@ -578,7 +579,7 @@ render template
 3. disabled 时 Up / Down / PageUp / PageDown 可改变 `scrollRow`。
 4. Tab 返回 `false`。
 5. Enter 插入换行。
-6. Ctrl+Enter / Meta+Enter 触发 `onSubmit`。
+6. Ctrl+Enter / Meta+Enter / F2 触发 `onSubmit`。
 7. Ctrl/Meta 组合键不会被误当成 printable text 插入。
 8. 粘贴多 grapheme 文本后光标位置正确。
 9. `resetCursorToken` 改变时光标重置到文末。
@@ -593,7 +594,7 @@ render template
 1. Tab 聚焦 Textarea。
 2. 输入多行文本。
 3. Backspace 修改文本。
-4. Ctrl+Enter 或 Meta+Enter 提交。
+4. Ctrl+Enter、Meta+Enter 或 F2 提交。
 5. 提交结果显示在终端输出中。
 
 如果底层 raw input 暂时无法区分 Ctrl+Enter 和 Enter，该限制必须写入测试注释，并在 terminal input 层补能力，而不是改变 Textarea 的默认提交语义。
@@ -837,7 +838,7 @@ fallback false
 
 - Ctrl/Meta 组合键先走 submit/navigation 判断，不进入 printable。
 - Enter 插入换行。
-- Ctrl+Enter / Meta+Enter 调用 `onSubmit(value)`。
+- Ctrl+Enter / Meta+Enter / F2 调用 `onSubmit(value)`。
 - Up / Down 使用视觉行。
 - Home / End 使用逻辑行。
 - PageUp / PageDown 滚动。

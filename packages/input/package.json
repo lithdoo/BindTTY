@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/input",
-  "version": "0.1.0-alpha.8",
+  "version": "0.1.0-alpha.9",
   "type": "module",
   "description": "Terminal keyboard input parsing primitives for BindTTY.",
   "main": "./dist/index.js",
@@ -17,7 +17,7 @@
     "PLAN.md"
   ],
   "dependencies": {
-    "@bindtty/text": "0.1.0-alpha.8"
+    "@bindtty/text": "0.1.0-alpha.9"
   },
   "scripts": {
     "build": "npm run build --workspace @bindtty/text && tsc -p tsconfig.json",

@@ -195,6 +195,11 @@ function parseKittyOrFixterms(token: CsiToken): InputEvent | null {
     return keyEvent("backspace", "", token.sequence, ...flagsToTuple(flags));
   }
 
+  const functionKey = readKittyFunctionKeyName(codepoint);
+  if (functionKey) {
+    return keyEvent(functionKey, "", token.sequence, ...flagsToTuple(flags));
+  }
+
   const input = String.fromCodePoint(codepoint);
   if (input >= " ") {
     return {
@@ -261,7 +266,7 @@ function parseCsiTildeModifiedEnter(token: CsiToken): InputEvent | null {
 }
 
 function parseCsiTildeNavigation(token: CsiToken): InputEvent | null {
-  const match = token.payload.match(/^([1-8])(?:;([2-8]))?$/);
+  const match = token.payload.match(/^(\d+)(?:;([2-8]))?$/);
   if (!match) {
     return null;
   }
@@ -309,6 +314,30 @@ function readTildeNavigationName(code: string): string | null {
       return "pageup";
     case "6":
       return "pagedown";
+    case "11":
+      return "f1";
+    case "12":
+      return "f2";
+    case "13":
+      return "f3";
+    case "14":
+      return "f4";
+    case "15":
+      return "f5";
+    case "17":
+      return "f6";
+    case "18":
+      return "f7";
+    case "19":
+      return "f8";
+    case "20":
+      return "f9";
+    case "21":
+      return "f10";
+    case "23":
+      return "f11";
+    case "24":
+      return "f12";
     default:
       return null;
   }
@@ -328,7 +357,24 @@ function readLetterNavigationName(code: string): string | null {
       return "home";
     case "F":
       return "end";
+    case "P":
+      return "f1";
+    case "Q":
+      return "f2";
+    case "R":
+      return "f3";
+    case "S":
+      return "f4";
     default:
       return null;
   }
+}
+
+/** Kitty keyboard-protocol functional key codepoints for F1–F12. */
+function readKittyFunctionKeyName(codepoint: number): string | null {
+  if (codepoint < 57364 || codepoint > 57375) {
+    return null;
+  }
+
+  return `f${codepoint - 57363}`;
 }
