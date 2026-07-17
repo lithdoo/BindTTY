@@ -5,13 +5,20 @@ export interface MountOptions {
   context?: RuntimeContext;
 }
 
+export interface RuntimeElementActions {
+  focus?(node: MountedElementNode): unknown;
+  isFocused?(node: MountedElementNode): boolean;
+}
+
 export interface RuntimeContext {
   scheduler: RuntimeScheduler;
   onLifecycleError?: RuntimeLifecycleErrorHandler;
+  elementActions?: RuntimeElementActions;
 }
 
 export interface RuntimeRootOptions {
   onLifecycleError?: RuntimeLifecycleErrorHandler;
+  elementActions?: RuntimeElementActions;
 }
 
 export type RuntimeLifecyclePhase = "mounted" | "layout" | "unmount";

@@ -28,6 +28,7 @@ import {
   type LayoutViewport
 } from "@bindtty/layout";
 import type { Dispose, TerminalHost, TerminalKeyEvent, TerminalViewport } from "@bindtty/terminal";
+import type { InteractionNodeFocusChangeEvent } from "@bindtty/interaction";
 import {
   elementTemplate,
   forTemplate,
@@ -800,6 +801,103 @@ test("terminal Tab traversal changes which onKey handler receives keys", () => {
   assert.equal(terminal.writes.length, 3);
   assert.match(terminal.writes[2], /Y/);
   assert.doesNotMatch(terminal.writes[2], /X/);
+});
+
+test("app.focus programmatically focuses an element by id and repaints", () => {
+  const terminal = createMockTerminal(2, 1);
+  const focusEvents: string[] = [];
+  const app = createApp(
+    elementTemplate("hstack", {}, [
+      elementTemplate("text", {
+        id: "first",
+        value: "A",
+        onKey: true,
+        onFocusChange: (event: InteractionNodeFocusChangeEvent) =>
+          focusEvents.push(`first:${event.focused}`)
+      }),
+      elementTemplate("text", {
+        id: "second",
+        value: "B",
+        onKey: true,
+        onFocusChange: (event: InteractionNodeFocusChangeEvent) =>
+          focusEvents.push(`second:${event.focused}`)
+      })
+    ]),
+    { terminal }
+  );
+
+  app.start();
+  assert.equal(app.getFocusedId(), "first");
+
+  const result = app.focus("second");
+
+  assert.equal(result.handled, true);
+  assert.equal(app.getFocusedId(), "second");
+  assert.deepEqual(focusEvents, [
+    "first:true",
+    "first:false",
+    "second:true"
+  ]);
+  assert.equal(terminal.writes.length, 2);
+  assert.match(terminal.writes[1], /\x1b\[7mB/);
+});
+
+test("app.focus missing id is safe and does not repaint", () => {
+  const terminal = createMockTerminal(1, 1);
+  const app = createApp(
+    elementTemplate("text", {
+      id: "first",
+      value: "A",
+      onKey: true
+    }),
+    { terminal }
+  );
+
+  app.start();
+  const result = app.focus("missing");
+
+  assert.equal(result.handled, false);
+  assert.equal(app.getFocusedId(), "first");
+  assert.equal(terminal.writes.length, 1);
+});
+
+test("element ref api focuses its mounted node through the app", () => {
+  const terminal = createMockTerminal(2, 1);
+  let firstApi: MountedElementApi | undefined;
+  let secondApi: MountedElementApi | undefined;
+  const app = createApp(
+    elementTemplate("hstack", {}, [
+      elementTemplate("text", {
+        value: "A",
+        onKey: true,
+        ref(api: MountedElementApi) {
+          firstApi = api;
+        }
+      }),
+      elementTemplate("text", {
+        value: "B",
+        onKey: true,
+        ref(api: MountedElementApi) {
+          secondApi = api;
+        }
+      })
+    ]),
+    { terminal }
+  );
+
+  app.start();
+  assert.ok(firstApi);
+  assert.ok(secondApi);
+  assert.equal(firstApi.isFocused(), true);
+  assert.equal(secondApi.isFocused(), false);
+
+  const result = secondApi.focus() as { handled: boolean };
+
+  assert.equal(result.handled, true);
+  assert.equal(firstApi.isFocused(), false);
+  assert.equal(secondApi.isFocused(), true);
+  assert.equal(terminal.writes.length, 2);
+  assert.match(terminal.writes[1], /\x1b\[7mB/);
 });
 
 test("terminal runtime flush removes nodes whose dynamic onKey becomes false", async () => {

@@ -1,11 +1,18 @@
-import { createInteractionController } from "@bindtty/interaction";
+import {
+  createInteractionController,
+  type InteractionResult
+} from "@bindtty/interaction";
 import { layoutRoot } from "@bindtty/layout";
 import type { LayoutEngine, LayoutNode } from "@bindtty/layout";
 import { createTerminalRenderer } from "@bindtty/renderer-terminal";
 import { createRuntimeRoot, notifyElementLayout } from "@bindtty/runtime";
-import type { Dispose, RuntimeLifecycleErrorHandler } from "@bindtty/runtime";
+import type {
+  Dispose,
+  RuntimeLifecycleErrorHandler,
+  RuntimeRoot
+} from "@bindtty/runtime";
 import type { TerminalHost, TerminalKeyEvent } from "@bindtty/terminal";
-import type { ViewTemplate } from "@bindtty/vnode";
+import type { MountedElementNode, ViewTemplate } from "@bindtty/vnode";
 
 export interface AppStdout {
   columns?: number;
@@ -54,6 +61,8 @@ export interface BindTTYApp {
   start(): void;
   render(): string;
   resize(): string;
+  focus(target: string | MountedElementNode): InteractionResult;
+  getFocusedId(): string | null;
   stop(): void;
   dispose(): void;
 }
@@ -62,12 +71,10 @@ export function createApp(
   view: ViewTemplate,
   options: CreateAppOptions
 ): BindTTYApp {
-  const runtime = createRuntimeRoot(view, {
-    onLifecycleError: options.onLifecycleError
-  });
   const renderer = createTerminalRenderer();
   const interaction = createInteractionController();
   const terminal = options.terminal;
+  let runtime: RuntimeRoot;
   let started = false;
   let disposed = false;
   let flushUnsubscribe: Dispose | null = null;
@@ -88,6 +95,19 @@ export function createApp(
     if (result.handled || result.dirtyNodes.length > 0) {
       render();
     }
+  }
+
+  function focusElement(target: string | MountedElementNode): InteractionResult {
+    if (disposed) {
+      return { handled: false, dirtyNodes: [] };
+    }
+
+    refreshInteraction();
+    const result = interaction.focus(target);
+    if (result.handled || result.dirtyNodes.length > 0) {
+      render();
+    }
+    return result;
   }
 
   function readViewport(): AppViewport {
@@ -155,6 +175,14 @@ export function createApp(
     }
   }
 
+  runtime = createRuntimeRoot(view, {
+    onLifecycleError: options.onLifecycleError,
+    elementActions: {
+      focus: focusElement,
+      isFocused: (node) => interaction.isFocused(node)
+    }
+  });
+
   const app: BindTTYApp = {
     start(): void {
       if (started || disposed) {
@@ -184,6 +212,19 @@ export function createApp(
 
       renderer.reset();
       return render();
+    },
+
+    focus(target: string | MountedElementNode): InteractionResult {
+      return focusElement(target);
+    },
+
+    getFocusedId(): string | null {
+      if (disposed) {
+        return null;
+      }
+
+      refreshInteraction();
+      return interaction.getFocusedId();
     },
 
     stop(): void {

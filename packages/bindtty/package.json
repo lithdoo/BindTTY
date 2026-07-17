@@ -1,6 +1,6 @@
 {
   "name": "bindtty",
-  "version": "0.1.0-alpha.9",
+  "version": "0.1.0-alpha.10",
   "type": "module",
   "description": "MVVM signal-driven TUI framework for TypeScript/TSX.",
   "main": "./dist/index.js",
@@ -26,20 +26,20 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepublishOnly": "npm run build",
-    "test": "npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/terminal && npm run build --workspace @bindtty/interaction && npm run build --workspace @bindtty/widgets && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
+    "test": "npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/vnode && npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/renderer-terminal && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/terminal && npm run build --workspace @bindtty/interaction && npm run build --workspace @bindtty/widgets && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
   },
   "dependencies": {
-    "@bindtty/interaction": "0.1.0-alpha.9",
-    "@bindtty/jsx-runtime": "0.1.0-alpha.9",
-    "@bindtty/layout": "0.1.0-alpha.9",
-    "@bindtty/renderer-terminal": "0.1.0-alpha.9",
-    "@bindtty/runtime": "0.1.0-alpha.9",
-    "@bindtty/signal": "0.1.0-alpha.9",
-    "@bindtty/terminal": "0.1.0-alpha.9",
-    "@bindtty/vnode": "0.1.0-alpha.9"
+    "@bindtty/interaction": "0.1.0-alpha.10",
+    "@bindtty/jsx-runtime": "0.1.0-alpha.10",
+    "@bindtty/layout": "0.1.0-alpha.10",
+    "@bindtty/renderer-terminal": "0.1.0-alpha.10",
+    "@bindtty/runtime": "0.1.0-alpha.10",
+    "@bindtty/signal": "0.1.0-alpha.10",
+    "@bindtty/terminal": "0.1.0-alpha.10",
+    "@bindtty/vnode": "0.1.0-alpha.10"
   },
   "peerDependencies": {
-    "@bindtty/signal": "0.1.0-alpha.9"
+    "@bindtty/signal": "0.1.0-alpha.10"
   },
   "peerDependenciesMeta": {
     "@bindtty/signal": {
@@ -47,7 +47,7 @@
     }
   },
   "devDependencies": {
-    "@bindtty/widgets": "0.1.0-alpha.9",
+    "@bindtty/widgets": "0.1.0-alpha.10",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },

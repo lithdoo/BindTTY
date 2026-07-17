@@ -9,6 +9,7 @@ export type {
   Dispose,
   MountOptions,
   RuntimeContext,
+  RuntimeElementActions,
   RuntimeFlushListener,
   RuntimeFlushRecord,
   RuntimeLifecycleError,

@@ -28,6 +28,8 @@ export interface MountedElementApi<TLayout = unknown> {
 
   getProp(name: string): unknown;
   getLayout(): TLayout | null;
+  focus(): unknown;
+  isFocused(): boolean;
 
   onMounted?: () => void;
   onLayout?: (layout: TLayout) => void;

@@ -44,6 +44,20 @@ export function createMountedElementApi(
     },
     getLayout(): unknown | null {
       return state.disposed ? null : state.latestLayout;
+    },
+    focus(): unknown {
+      if (state.disposed) {
+        return undefined;
+      }
+
+      return state.context?.elementActions?.focus?.(node);
+    },
+    isFocused(): boolean {
+      if (state.disposed) {
+        return false;
+      }
+
+      return state.context?.elementActions?.isFocused?.(node) ?? false;
     }
   };
 }

@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/layout",
-  "version": "0.1.0-alpha.9",
+  "version": "0.1.0-alpha.10",
   "type": "module",
   "description": "Layout tree generation for BindTTY mounted nodes.",
   "main": "./dist/index.js",
@@ -21,14 +21,14 @@
     "test": "npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/vnode && npm run build --workspace @bindtty/jsx-runtime && npm run build --workspace @bindtty/runtime && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
   },
   "dependencies": {
-    "@bindtty/text": "0.1.0-alpha.9",
-    "@bindtty/vnode": "0.1.0-alpha.9",
+    "@bindtty/text": "0.1.0-alpha.10",
+    "@bindtty/vnode": "0.1.0-alpha.10",
     "yoga-layout": "3.2.1"
   },
   "devDependencies": {
-    "@bindtty/jsx-runtime": "0.1.0-alpha.9",
-    "@bindtty/runtime": "0.1.0-alpha.9",
-    "@bindtty/signal": "0.1.0-alpha.9",
+    "@bindtty/jsx-runtime": "0.1.0-alpha.10",
+    "@bindtty/runtime": "0.1.0-alpha.10",
+    "@bindtty/signal": "0.1.0-alpha.10",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },

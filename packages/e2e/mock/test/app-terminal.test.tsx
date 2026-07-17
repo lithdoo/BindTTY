@@ -396,6 +396,134 @@ test("tsx app dispatches terminal keys through interaction focus", async () => {
   assert.deepEqual(stdin.rawModeCalls, [true, false]);
 });
 
+test("tsx app focuses an element by id through the public app api", async () => {
+  const stdout = createFakeStdout(2, 1);
+  const stdin = createFakeStdin();
+  const first = createSignal("A");
+  const second = createSignal("B");
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <hstack>
+      <text
+        id="first"
+        value={first}
+        onKey={(event) => {
+          if (event.name === "return") {
+            first.set("X");
+            return true;
+          }
+          return false;
+        }}
+      />
+      <text
+        id="second"
+        value={second}
+        onKey={(event) => {
+          if (event.name === "return") {
+            second.set("Y");
+            return true;
+          }
+          return false;
+        }}
+      />
+    </hstack>,
+    { terminal }
+  );
+
+  app.start();
+  assert.equal(app.getFocusedId(), "first");
+
+  const result = app.focus("second");
+
+  assert.equal(result.handled, true);
+  assert.equal(app.getFocusedId(), "second");
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7mB/);
+
+  stdin.emitKey("\r", { name: "return" });
+  await nextMicrotask();
+
+  assert.equal(first.get(), "A");
+  assert.equal(second.get(), "Y");
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7mY/);
+
+  app.dispose();
+});
+
+test("tsx app focuses an element through its mounted ref api", async () => {
+  const stdout = createFakeStdout(2, 1);
+  const stdin = createFakeStdin();
+  const first = createSignal("A");
+  const second = createSignal("B");
+  let firstApi: MountedElementApi | undefined;
+  let secondApi: MountedElementApi | undefined;
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    exitOnCtrlC: false
+  });
+  const app = createApp(
+    <hstack>
+      <text
+        id="first"
+        ref={(api: MountedElementApi) => {
+          firstApi = api;
+        }}
+        value={first}
+        onKey={(event) => {
+          if (event.name === "return") {
+            first.set("X");
+            return true;
+          }
+          return false;
+        }}
+      />
+      <text
+        id="second"
+        ref={(api: MountedElementApi) => {
+          secondApi = api;
+        }}
+        value={second}
+        onKey={(event) => {
+          if (event.name === "return") {
+            second.set("Y");
+            return true;
+          }
+          return false;
+        }}
+      />
+    </hstack>,
+    { terminal }
+  );
+
+  app.start();
+  assert.equal(firstApi?.isFocused(), true);
+  assert.equal(secondApi?.isFocused(), false);
+
+  const result = secondApi?.focus();
+
+  assert.equal(typeof result, "object");
+  assert.equal(app.getFocusedId(), "second");
+  assert.equal(firstApi?.isFocused(), false);
+  assert.equal(secondApi?.isFocused(), true);
+
+  stdin.emitKey("\r", { name: "return" });
+  await nextMicrotask();
+
+  assert.equal(first.get(), "A");
+  assert.equal(second.get(), "Y");
+  assert.match(stdout.writes.at(-1) ?? "", /\x1b\[7mY/);
+
+  app.dispose();
+  assert.equal(secondApi?.focus(), undefined);
+  assert.equal(secondApi?.isFocused(), false);
+});
+
 test("tsx app dispatches terminal keys through Button widgets", async () => {
   const stdout = createFakeStdout(24, 12);
   const stdin = createFakeStdin();

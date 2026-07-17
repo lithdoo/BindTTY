@@ -100,6 +100,8 @@ test("element ref receives a stable api without entering ordinary props", () => 
   assert.equal(mountedApi.tag, "box");
   assert.equal(mountedApi.id, "panel");
   assert.equal(mountedApi.getProp("id"), "panel");
+  assert.equal(mountedApi.focus(), undefined);
+  assert.equal(mountedApi.isFocused(), false);
   assert.equal(mounted.api, mountedApi);
   assert.deepEqual(mounted.props, {
     id: "panel"
@@ -110,6 +112,43 @@ test("element ref receives a stable api without entering ordinary props", () => 
   assert.equal("ref" in mounted.props, false);
   assert.equal("ref" in mounted.propSources, false);
   assert.equal("ref" in mounted.bindings, false);
+});
+
+test("element api forwards focus actions from runtime context", () => {
+  let api: MountedElementApi | undefined;
+  let focusedNode: unknown;
+  let isFocusedNode: unknown;
+  const context = createTestRuntimeContext();
+  context.elementActions = {
+    focus(node) {
+      focusedNode = node;
+      return { handled: true, dirtyNodes: [node] };
+    },
+    isFocused(node) {
+      isFocusedNode = node;
+      return true;
+    }
+  };
+  const mounted = mountTemplate(
+    elementTemplate("box", {
+      id: "panel",
+      ref(nextApi: MountedElementApi) {
+        api = nextApi;
+      }
+    }),
+    { context }
+  );
+
+  assert.equal(mounted?.kind, "element");
+  assert.ok(api);
+  assert.deepEqual(api.focus(), { handled: true, dirtyNodes: [mounted] });
+  assert.equal(focusedNode, mounted);
+  assert.equal(api.isFocused(), true);
+  assert.equal(isFocusedNode, mounted);
+
+  mounted.dispose();
+  assert.equal(api.focus(), undefined);
+  assert.equal(api.isFocused(), false);
 });
 
 test("element ref accepts null and undefined as no-op lifecycle props", () => {

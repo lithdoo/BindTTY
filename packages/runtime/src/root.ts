@@ -22,7 +22,8 @@ export function createRuntimeRoot(
   root = mountTemplate(template, {
     context: {
       scheduler,
-      onLifecycleError: options.onLifecycleError
+      onLifecycleError: options.onLifecycleError,
+      elementActions: options.elementActions
     }
   });
 

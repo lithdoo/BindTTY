@@ -160,6 +160,86 @@ test("real PTY: Tab moves focus between Button widgets", { concurrency: false },
   }
 });
 
+test("real PTY: app.focus moves focus before Enter dispatch", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("programmatic-focus-app");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("programmatic-focus-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 80,
+    rows: 24,
+    env: {
+      BINDTTY_FOCUS_MODE: "app"
+    }
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await marker.waitFor("FOCUS:app:handled", { timeoutMs: 8_000 });
+    await marker.waitFor("FOCUSED:second", { timeoutMs: 8_000 });
+    await marker.waitFor("API_FOCUSED:true", { timeoutMs: 8_000 });
+
+    session.write("\r");
+
+    await marker.waitFor("PRESSED:Second", { timeoutMs: 8_000 });
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(!result.markers.includes("PRESSED:First"));
+    assert.ok(result.markers.includes("PRESSED:Second"));
+  } finally {
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
+test("real PTY: element ref focus moves focus before Enter dispatch", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("programmatic-focus-ref");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("programmatic-focus-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 80,
+    rows: 24,
+    env: {
+      BINDTTY_FOCUS_MODE: "ref"
+    }
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await marker.waitFor("FOCUS:ref:handled", { timeoutMs: 8_000 });
+    await marker.waitFor("FOCUSED:second", { timeoutMs: 8_000 });
+    await marker.waitFor("API_FOCUSED:true", { timeoutMs: 8_000 });
+
+    session.write("\r");
+
+    await marker.waitFor("PRESSED:Second", { timeoutMs: 8_000 });
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(!result.markers.includes("PRESSED:First"));
+    assert.ok(result.markers.includes("PRESSED:Second"));
+  } finally {
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
 test("real PTY: TextInput backspace edits before submit", { concurrency: false }, async (t) => {
   if (skipUnlessPty(t)) {
     return;
