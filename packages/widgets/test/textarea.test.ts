@@ -559,3 +559,33 @@ test("Textarea disabled state keeps navigation scrollable but blocks edits", () 
   assert.deepEqual(changes, []);
   assert.equal(value.get(), "one\ntwo\nthree");
 });
+
+test("Textarea disabled layout does not auto-scroll to the hidden caret", () => {
+  const template = asElement(
+    Textarea({
+      value: "one\ntwo\nthree",
+      disabled: true,
+      height: 1
+    })
+  );
+  const onKey = readOnKeyHandler(template);
+
+  applyTextareaLayoutWidth(template, 80);
+
+  assert.deepEqual(readRenderLines(template), [
+    {
+      key: "line:0",
+      kind: "text",
+      text: "one"
+    }
+  ]);
+
+  assert.equal(callOnKey(onKey, key("", { name: "down" })), true);
+  assert.deepEqual(readRenderLines(template), [
+    {
+      key: "line:0",
+      kind: "text",
+      text: "two"
+    }
+  ]);
+});

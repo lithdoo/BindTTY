@@ -293,13 +293,16 @@ function reconcileStateAfterLayoutWidth(
     wrap: readBindingValue(props.wrap) ?? "soft"
   });
   const rows = readViewportRows(props, nextLayout);
+  const disabled = readBooleanBindingValue(props.disabled, false);
   const cursorRow = findCursorVisualPosition(nextLayout, current.cursor).visualRow;
-  const scrollRow = ensureCursorVisible(
-    current.scrollRow,
-    cursorRow,
-    rows,
-    scrollableRowCount(nextLayout, cursorRow)
-  );
+  const scrollRow = disabled
+    ? clampScrollRow(current.scrollRow, 0, rows, contentVisualLineCount(nextLayout))
+    : ensureCursorVisible(
+        current.scrollRow,
+        cursorRow,
+        rows,
+        scrollableRowCount(nextLayout, cursorRow)
+      );
 
   if (scrollRow === current.scrollRow && rows === current.viewportRows) {
     return;
