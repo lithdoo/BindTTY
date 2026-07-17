@@ -22,6 +22,7 @@
 | E2E 测试 | [testing/E2E.md](./testing/E2E.md) |
 | 里程碑 / 路线图 | [architecture/ROADMAP.md](./architecture/ROADMAP.md) |
 | Alpha hardening 规划 | [architecture/NEXT_STEPS.md](./architecture/NEXT_STEPS.md) |
+| 发布历史 | [CHANGELOG.md](https://github.com/lithdoo/BindTTY/blob/main/CHANGELOG.md) |
 | 历史计划 | [archive/plans（GitHub）](https://github.com/lithdoo/BindTTY/tree/main/doc/archive/plans) |
 
 ## architecture/
@@ -85,6 +86,7 @@
 | 文档 | 内容 |
 | --- | --- |
 | [TODO.md](https://github.com/lithdoo/BindTTY/blob/main/TODO.md) | 开放改进项（可执行 checklist） |
+| [CHANGELOG.md](https://github.com/lithdoo/BindTTY/blob/main/CHANGELOG.md) | alpha 发布历史与用户可见变化 |
 | [archive（GitHub）](https://github.com/lithdoo/BindTTY/tree/main/doc/archive) | 历史备份与 [archive/plans（GitHub）](https://github.com/lithdoo/BindTTY/tree/main/doc/archive/plans) |
 | [redirects（GitHub）](https://github.com/lithdoo/BindTTY/tree/main/doc/redirects) | 旧路径 stub（`specs/TEXT_INPUT` 等已迁移至 widgets，由 rewrites 兼容） |
 

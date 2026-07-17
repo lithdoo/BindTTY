@@ -69,6 +69,7 @@ npm run test:e2e:real:wsl
 | `counter-app.tsx` | Button Enter 递增 |
 | `interaction-app.tsx` | TextInput 输入 + Enter 提交 |
 | `focus-app.tsx` | Tab 切换 Button focus + Enter |
+| `programmatic-focus-app.tsx` | `app.focus(id)` 与 `ref(api).focus()` 编程式聚焦 |
 | `textedit-app.tsx` | TextInput Backspace 后提交 |
 | `textarea-app.tsx` | Textarea 真实终端输入、宽字符/emoji、换行、Backspace、Tab 提交确认 |
 | `textarea-disabled-app.tsx` | disabled Textarea 阻止编辑但允许方向键滚动 |

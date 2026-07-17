@@ -134,6 +134,13 @@ doc/
 4. 刷新 front-matter「最后核对」
 5. 核对 `packages/<pkg>/test/` 与 doc 测试回归索引
 
+按 commit 类型补文档：
+
+1. `feat:` / `fix:` 改变用户可见行为时，更新对应 package/spec/widget 文档。
+2. 新增或调整 E2E harness 时，更新 [testing/E2E.md](./testing/E2E.md) 与 `packages/e2e/README.md`。
+3. `release` / 版本 bump / npm dist-tag 变化时，更新根目录 [CHANGELOG.md](https://github.com/lithdoo/BindTTY/blob/main/CHANGELOG.md)，不要把版本流水写进 `NEXT_STEPS.md`。
+4. 只描述历史落地过程的长计划进入 `doc/archive/plans/`；活跃文档只保留现行行为与必要链接。
+
 里程碑完成时：
 
 1. plan 全文移 `archive/plans/`

@@ -125,6 +125,7 @@ packages/e2e/
 - fake stdin 发送 Tab 后 focus 移动到第二个 target。
 - Enter 只派发给当前 focused target。
 - `onKey` callback 更新 signal 后能渲染可见结果。
+- `app.focus(id)` 与 `ref(api).focus()` 可编程式移动焦点，并通过 real PTY harness `programmatic-focus-app.tsx` 覆盖。
 - `dispose()` 后 fake stdin key 不再触发输出。
 
 ### Display-Width / 宽字符（mock + real）

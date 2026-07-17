@@ -91,4 +91,4 @@ raw chunk
   -> InputEvent
 ```
 
-See [INK-STYLE-REFACTOR.md](./INK-STYLE-REFACTOR.md) for the detailed design and [PLAN.md](./PLAN.md) for the migration history.
+See [doc/packages/INPUT.md](../../doc/packages/INPUT.md) for the current package contract. Historical migration notes are archived via [INK-STYLE-REFACTOR.md](./INK-STYLE-REFACTOR.md) and [PLAN.md](./PLAN.md).

@@ -97,7 +97,7 @@ name: @bindtty/widgets
   不 import @bindtty/widgets
 
 bindtty
-  可以从统一入口 re-export widgets
+  不 re-export widgets
 ```
 
 ## 3. 核心模型
@@ -249,7 +249,7 @@ MVP 建议：
 | --- | --- | --- |
 | Button | [BUTTON.md](../widgets/BUTTON.md) | implemented |
 | TextInput | [TEXT_INPUT.md](../widgets/TEXT_INPUT.md) | implemented |
-| Textarea | [../../packages/widgets/TEXTAREA.md](../../packages/widgets/TEXTAREA.md) | implemented |
+| Textarea | [packages/widgets/TEXTAREA.md](https://github.com/lithdoo/BindTTY/blob/main/packages/widgets/TEXTAREA.md) | implemented |
 | Checkbox | [CHECKBOX.md](../widgets/CHECKBOX.md) | implemented |
 | Select | [SELECT.md](../widgets/SELECT.md) | implemented |
 | ProgressBar | [PROGRESS_BAR.md](../widgets/PROGRESS_BAR.md) | implemented |
@@ -312,7 +312,7 @@ import { Button } from "@bindtty/widgets";
 <Button label="Save" onPress={save} />
 ```
 
-应用 `package.json` 须同时依赖 `bindtty` 与 `@bindtty/widgets`（版本号对齐，如均为 `0.1.0-alpha.5`）。
+应用 `package.json` 须同时依赖 `bindtty` 与 `@bindtty/widgets`（版本号对齐，如均为 `0.1.0-alpha.10`）。
 
 ## 10. 测试计划
 
@@ -482,7 +482,7 @@ npm test
 14. TextInput placeholder / disabled / focus 生命周期。
 15. TextInput 单元测试 + App 集成 + E2E 全覆盖。
 16. 应用显式安装 @bindtty/widgets 并从该包导入。
-17. Textarea 受控多行编辑、视觉换行、Ctrl+Enter submit、disabled scroll 已覆盖；Flex 剩余宽度 soft wrap 见 [TEXTAREA.md](../../packages/widgets/TEXTAREA.md) §8.1。
+17. Textarea 受控多行编辑、视觉换行、Ctrl+Enter submit、disabled scroll 已覆盖；Flex 剩余宽度 soft wrap 见 [TEXTAREA.md](https://github.com/lithdoo/BindTTY/blob/main/packages/widgets/TEXTAREA.md) §8.1。
 18. VScrollView 受控 offset、clip、键盘滚动已覆盖。
 19. List 作为 VScrollView + forTemplate 语法糖已覆盖。
 20. VScrollView `stickToBottom` 与 `showScrollbar`、HScrollView、ScrollView 双轴已覆盖（见 [SCROLL.md](../widgets/SCROLL.md)）。
@@ -505,4 +505,4 @@ Button、TextInput、Textarea、VScrollView 和 List 跑通后，下一步建议
 
 Checkbox 已实现（§7.3）；Select 已实现（§7.4）。下一项可考虑 Tabs 或 TextInput 增强。
 
-VScrollView / List API 与行为见 [SCROLL.md](../widgets/SCROLL.md)；TextInput 见 [TEXT_INPUT.md](../widgets/TEXT_INPUT.md)；Textarea 见 [../../packages/widgets/TEXTAREA.md](../../packages/widgets/TEXTAREA.md)。
+VScrollView / List API 与行为见 [SCROLL.md](../widgets/SCROLL.md)；TextInput 见 [TEXT_INPUT.md](../widgets/TEXT_INPUT.md)；Textarea 见 [packages/widgets/TEXTAREA.md](https://github.com/lithdoo/BindTTY/blob/main/packages/widgets/TEXTAREA.md)。

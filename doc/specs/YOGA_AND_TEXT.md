@@ -79,6 +79,8 @@ renderer.paint（segmentText + display width）
 
 `@bindtty/text` 是 Basic、Yoga、renderer 的 **唯一 width oracle**（CJK/emoji 见 DISPLAY_WIDTH）。
 
+`layoutText()` 的 word wrap 使用 display column 而不是 UTF-16 length：CJK 宽字符、emoji、combining mark 与 ZWJ grapheme 都按 `segmentText()` 结果测量。Yoga 与 Basic 的 text leaf 测量、renderer 的 hard wrap / truncate 绘制共享这一套结果，避免 layout 认为一行能放下但 renderer 实际溢出的情况。
+
 ---
 
 ## 3. Yoga flex props（当前已开放）

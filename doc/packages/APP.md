@@ -246,12 +246,12 @@ dependencies:
   @bindtty/renderer-terminal
   @bindtty/terminal
   @bindtty/interaction
-  @bindtty/widgets
   @bindtty/vnode
   @bindtty/signal
 
 devDependencies:
   @bindtty/jsx-runtime
+  @bindtty/widgets
   @types/node
   typescript
 ```
@@ -290,7 +290,7 @@ stdout.write(ANSI)
 5. runtime flush 后 refresh interaction + render。
 6. 两种模式：stdout 模式（write 到 stdout）和 terminal 模式（使用 TerminalHost）。
 7. dispose 时释放 runtime、interaction、terminal 和监听器。
-8. 从顶层 re-export Button、TextInput、ScrollView、List 等 widgets。
+8. 提供 App 级 programmatic focus：`focus(target)` / `getFocusedId()`。
 ```
 
 它不负责：
@@ -355,6 +355,8 @@ export interface BindTTYApp {
   start(): void;
   render(): string;
   resize(): string;
+  focus(target: string | MountedElementNode): InteractionResult;
+  getFocusedId(): string | null;
   stop(): void;
   dispose(): void;
 }
@@ -375,6 +377,10 @@ stdout.rows ?? fallbackViewport.height ?? 24
 `render()` 返回本次写入的 ANSI string，方便测试。
 
 `resize()` 返回重绘 ANSI string，方便测试。
+
+`focus(target)` 在刷新 interaction focus list 后移动焦点。`target` 可以是 focusable element 的 `id`，也可以是 `MountedElementNode`。目标不存在或 app 已 dispose 时返回未处理结果，不抛错；成功移动焦点后会触发 repaint。
+
+`getFocusedId()` 返回当前 focused element 的 id；无焦点或 app 已 dispose 时返回 `null`。
 
 `onLifecycleError` 用于接收 element lifecycle callback 的异常，包括 `api.onMounted`、`api.onLayout`、`api.onUnmount`。这些异常不会阻断后续节点更新、layout 派发或 dispose 清理；如果未提供该 handler，runtime 默认忽略这些异常。
 

@@ -16,11 +16,11 @@
 - [APP.md](../packages/APP.md) — createApp 主链路
 - [SCROLL_VIEWPORT.md](./SCROLL_VIEWPORT.md) — VScrollView 与 `api.onLayout`
 
-**核心能力已落地**（`ref(api)`、`onMounted` / `onLayout` / `onUnmount`、VScrollView 基于 applied layout state）。
+**核心能力已落地**（`ref(api)`、`api.focus()` / `api.isFocused()`、`onMounted` / `onLayout` / `onUnmount`、VScrollView 基于 applied layout state）。
 
 **暂未纳入**：
 
-1. focus / blur / onFocusChange 的 api 扩展。
+1. `blur()` / `onFocusChange()` 的 api 扩展。
 2. component-level lifecycle。
 3. hooks / effect / watch。
 4. React ref object / forwardRef 语义。
@@ -133,9 +133,9 @@ signal -> runtime -> layout -> signal -> runtime -> layout -> renderer
 4. 在 ref 中直接修改 mounted tree 结构。
 5. 用户直接持有可变内部 `MountedElementNode` 并绕过 runtime。
 6. 自动依赖追踪或 effect system。
-7. focus / blur / onFocusChange 等交互控制能力。
+7. `blur()` / `onFocusChange()` 等更完整的焦点生命周期 API。
 
-focus 相关能力可以后续基于同一个 `MountedElementApi` 增量扩展。
+`focus()` / `isFocused()` 已作为最小交互控制能力落地；更完整的焦点生命周期可后续基于同一个 `MountedElementApi` 增量扩展。
 
 ## 4. 核心设计
 
@@ -179,6 +179,8 @@ export interface MountedElementApi<TLayout = unknown> {
 
   getProp(name: string): unknown;
   getLayout(): TLayout | null;
+  focus(): unknown;
+  isFocused(): boolean;
 
   onMounted?: () => void;
   onLayout?: (layout: TLayout) => void;
@@ -192,12 +194,14 @@ export interface MountedElementApi<TLayout = unknown> {
 2. `api` 不暴露内部 `MountedElementNode` 引用。
 3. `getProp(name)` 返回当前 resolved prop 值。
 4. `getLayout()` 返回当前最新 layout 结果；首次 layout 前返回 `null`。
-5. `onMounted` 在 element 自身完成 mount 后触发。
-6. `onLayout` 在每次该 element 出现在 layout tree 中时触发。
-7. `onUnmount` 在 dispose 时触发。
-8. `onMounted` / `onLayout` / `onUnmount` 是 callback slot，重复赋值会覆盖旧回调。
-9. `TLayout` 在 `@bindtty/vnode` / `@bindtty/runtime` 层必须保持为 `unknown` 或泛型，不直接引用 `@bindtty/layout` 的 `LayoutNode`，避免底层包依赖上层 layout 包。
-10. `bindtty` app 层派发 layout 时传入真实 `LayoutNode`；widgets 若需要精确类型，可以在 widget 包内按 `LayoutNode` 使用或封装类型辅助。
+5. `focus()` 请求当前 element 获焦；在 app 层通过 interaction controller 完成。若节点已 dispose，或 runtime 未提供 element actions，返回 `undefined`。
+6. `isFocused()` 查询当前 element 是否获焦；节点已 dispose 时返回 `false`。
+7. `onMounted` 在 element 自身完成 mount 后触发。
+8. `onLayout` 在每次该 element 出现在 layout tree 中时触发。
+9. `onUnmount` 在 dispose 时触发。
+10. `onMounted` / `onLayout` / `onUnmount` 是 callback slot，重复赋值会覆盖旧回调。
+11. `TLayout` 在 `@bindtty/vnode` / `@bindtty/runtime` 层必须保持为 `unknown` 或泛型，不直接引用 `@bindtty/layout` 的 `LayoutNode`，避免底层包依赖上层 layout 包。
+12. `bindtty` app 层派发 layout 时传入真实 `LayoutNode`；widgets 若需要精确类型，可以在 widget 包内按 `LayoutNode` 使用或封装类型辅助。
 
 ### 4.3 为什么叫 ref，而不是 onMounted
 
@@ -686,18 +690,24 @@ children
 
 ### 9.6 @bindtty/interaction
 
-MVP 不接入 interaction。
+`MountedElementApi.focus()` / `MountedElementApi.isFocused()` 已通过 app 层注入的 element actions 接入 interaction controller：
 
-后续如果需要，可以在 `MountedElementApi` 上扩展：
+```text
+api.focus()
+  -> runtime elementActions.focus(node)
+  -> bindtty app focus(node)
+  -> interaction.focus(node)
+  -> render()
+```
+
+后续如果需要，可以继续扩展：
 
 ```ts
-isFocused(): boolean;
-focus(): boolean;
 blur(): boolean;
 onFocusChange(listener: (focused: boolean) => void): Dispose;
 ```
 
-但第一版不做，避免 ref 方案过度膨胀。
+暂不加入 `blur()` / `onFocusChange()`，避免 ref API 继续膨胀。
 
 ### 9.7 @bindtty/widgets
 

@@ -7,13 +7,14 @@
 | Button | [BUTTON.md](./BUTTON.md) | `packages/widgets/src/form/button.ts` |
 | Checkbox | [CHECKBOX.md](./CHECKBOX.md) | `packages/widgets/src/form/checkbox.ts` |
 | TextInput | [TEXT_INPUT.md](./TEXT_INPUT.md) | `packages/widgets/src/form/text-input.ts` |
+| Textarea | [packages/widgets/TEXTAREA.md](https://github.com/lithdoo/BindTTY/blob/main/packages/widgets/TEXTAREA.md) | `packages/widgets/src/textarea/` |
 | Select | [SELECT.md](./SELECT.md) | `packages/widgets/src/form/select.ts` |
 | VScrollView / HScrollView / ScrollView / List | [SCROLL.md](./SCROLL.md) | `packages/widgets/src/scroll/` |
-| ProgressBar | [PROGRESS_BAR.md](./PROGRESS_BAR.md) | `packages/widgets/src/display/progress-bar.ts |
+| ProgressBar | [PROGRESS_BAR.md](./PROGRESS_BAR.md) | `packages/widgets/src/display/progress-bar.ts` |
 
 导入：
 
 ```tsx
 import { createApp } from "bindtty";
-import { Button, VScrollView } from "@bindtty/widgets";
+import { Button, Textarea, VScrollView } from "@bindtty/widgets";
 ```

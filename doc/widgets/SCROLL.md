@@ -58,6 +58,7 @@ const offset = createSignal(0);
 | `scrollOnArrow` | `BindingValue<boolean>` | 是否在 focus 于容器时响应方向键，默认 true |
 | `onOffsetChange` | `(nextOffset: number) => void` | 键盘滚动时写回外部状态 |
 | `onFocusChange` | `InteractionNodeFocusChangeEvent => void` | 透传到内部 box |
+| `focusStyle` | `"inverse" \| "none"` | 透传到内部 focus target，默认使用 renderer focused inverse |
 | `stickToBottom` | `BindingValue<boolean>` | 内容增高时自动滚到底，默认 `false` |
 | `showScrollbar` | `BindingValue<boolean>` | 显示纯视觉滚动条（占 1 列宽），默认 `false` |
 
@@ -125,6 +126,7 @@ const offset = createSignal(0);
 | `height` | `BindingValue<number>` | 可选 |
 | `scrollOnArrow` | `BindingValue<boolean>` | focus 时响应 `←`/`→`，默认 true |
 | `onOffsetChange` | `(nextOffset: number) => void` | 键盘滚动时写回外部状态 |
+| `focusStyle` | `"inverse" \| "none"` | 透传到内部 focus target |
 | `stickToEnd` | `BindingValue<boolean>` | 内容变宽时自动滚到最右 |
 | `showScrollbar` | `BindingValue<boolean>` | 底部 1 行纯视觉滚动条 |
 
@@ -170,6 +172,7 @@ const scrollY = createSignal(0);
 | `scrollOnArrow` | `BindingValue<boolean>` | focus 于容器时响应方向键，默认 true |
 | `onOffsetXChange` / `onOffsetYChange` | `(nextOffset: number) => void` | 各轴键盘滚动写回；缺一则该轴不可键盘滚动 |
 | `onFocusChange` | `InteractionNodeFocusChangeEvent => void` | 透传到内部 box |
+| `focusStyle` | `"inverse" \| "none"` | 透传到内部 focus target |
 | `stickToBottom` | `BindingValue<boolean>` | Y 轴 stick，规则同 §2.1 |
 | `stickToEnd` | `BindingValue<boolean>` | X 轴 stick，规则同 §3 |
 | `showScrollbar` | `BindingValue<boolean \| { vertical?: boolean; horizontal?: boolean }>` | 纯视觉滚动条，默认 false |
@@ -247,6 +250,7 @@ M7 不强制新 `<list>` intrinsic；推荐 **composition**：
 | `height` | `BindingValue<number>` | 转发给 `VScrollView` |
 | `offset` | `BindingValue<number>` | 转发给 `VScrollView` |
 | `onOffsetChange` | `(nextOffset: number) => void` | 转发给 `VScrollView` |
+| `focusStyle` | `"inverse" \| "none"` | 转发给 `VScrollView` |
 | `stickToBottom` | `BindingValue<boolean>` | 转发给 `VScrollView` |
 | `showScrollbar` | `BindingValue<boolean>` | 转发给 `VScrollView` |
 

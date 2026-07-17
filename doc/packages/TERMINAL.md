@@ -498,7 +498,9 @@ stdin.on("data", (chunk) => {
 });
 ```
 
-`RawStdinInput` 可以处理跨 chunk 的 UTF-8 字符、CSI/SS3/Kitty 序列和 bracketed paste。
+`RawStdinInput` 可以处理跨 chunk 的 UTF-8 字符、CSI/SS3/Kitty 序列、F1-F12、modified Enter 和 bracketed paste。
+
+`rawMode: true` 时，默认平台 adapter 与 Win32 adapter 都走 `RawStdinInput`，因此完整使用 `@bindtty/input` 的 tokenizer/parser。未开启 raw mode 的兼容路径仍走 Node readline adapter；它依赖 Node keypress object，不覆盖所有增强键盘协议。
 
 MVP key event 示例：
 
@@ -519,6 +521,7 @@ CSI / SS3:
   Home / End
   Insert / Delete
   PageUp / PageDown
+  F1 / F2 / ... / F12
 
 Windows console prefixed:
   \x00 / \xe0 + navigation code

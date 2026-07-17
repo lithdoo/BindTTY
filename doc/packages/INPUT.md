@@ -17,6 +17,7 @@
 - UTF-8 跨 chunk 保留。
 - text / control / CSI / SS3 / paste / unknown tokenization。
 - legacy CSI / SS3 navigation。
+- legacy CSI / SS3 F1–F12。
 - Kitty / fixterms `CSI ... u`。
 - xterm modifyOtherKeys。
 - Win32 prefixed keys。
@@ -92,10 +93,17 @@ export interface InputKeyEvent {
 | `\r` / `\n` | `name: "return"` |
 | `\x7f` / `\b` | `name: "backspace"` |
 | `\x1b[A` / `\x1bOA` | `name: "up"` |
+| `\x1bOP` / `\x1b[11~` | `name: "f1"` |
+| `\x1bOQ` / `\x1b[12~` | `name: "f2"` |
+| `\x1bOR` / `\x1b[13~` | `name: "f3"` |
+| `\x1b[24~` | `name: "f12"` |
+| Kitty functional key codepoints | `name: "f1"` ... `name: "f12"` |
 | `\x1b[13;5u` | Ctrl+Enter |
 | `\x1b[13;5:3u` | Kitty event-type Ctrl+Enter |
 | `\x1b[27;5;13~` | modifyOtherKeys Ctrl+Enter |
 | unknown CSI | `name: "unknown"` |
+
+注意：裸 `\x1b[13~` 按 legacy 规则是 F3；但 `\x1b[13;2~` ... `\x1b[13;8~` 保持为 modified Enter 兼容序列，不解释为 Shift/Ctrl+F3。
 
 ## Public API
 

@@ -3,7 +3,7 @@
 > **类型**：widget
 > **状态**：implemented
 > **最后核对**：2026-07
-> **目标入口**：`@bindtty/widgets` / `bindtty`
+> **目标入口**：`@bindtty/widgets`
 > **代码入口**：`packages/widgets/src/textarea/`
 > **相关**：`README.md`、`../../doc/specs/TEXT_INPUT.md`、`../../doc/specs/SCROLL_VIEWPORT.md`
 
@@ -654,14 +654,12 @@ packages/widgets/test/textarea.test.ts
 ```text
 packages/widgets/src/index.ts
 packages/widgets/README.md
-packages/bindtty/src/index.ts
-packages/bindtty/test/app.test.ts
 ```
 
 验收：
 
 - `Textarea` 和 `TextareaProps` 可从 `@bindtty/widgets` 导入。
-- `Textarea` 可从顶层 `bindtty` 导入。
+- `bindtty` 顶层不 re-export widgets；应用需从 `@bindtty/widgets` 导入 `Textarea`。
 - 空实现先返回 focusable `box`，不破坏现有 Button / TextInput / ScrollView / List 测试。
 
 ### Phase 1 — 纯 layout 模型
