@@ -297,7 +297,7 @@ test("Textarea focused soft-wrapped caret stays on the first viewport row", () =
   }
 });
 
-test("Textarea caret inverse uses TextInput-compatible colors", () => {
+test("Textarea caret uses terminal inverse without hard-coded fallback colors", () => {
   const template = asElement(
     Textarea({
       value: "A"
@@ -312,8 +312,31 @@ test("Textarea caret inverse uses TextInput-compatible colors", () => {
   const row = asElement(viewport.children[0]!);
   const cursorNode = childElement(row, 1);
 
-  assert.equal(resolveSignal<string>(cursorNode.props.color), "white");
-  assert.equal(resolveSignal<string>(cursorNode.props.background), "black");
+  assert.equal(cursorNode.props.color, undefined);
+  assert.equal(cursorNode.props.background, undefined);
+  assert.equal(cursorNode.props.inverse, true);
+});
+
+test("Textarea caret preserves explicit text colors and applies inverse", () => {
+  const template = asElement(
+    Textarea({
+      value: "A",
+      color: "cyan",
+      background: "blue"
+    })
+  );
+  applyTextareaLayoutWidth(template, 10);
+  (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
+    focusEvent(true)
+  );
+
+  const viewport = childElement(template, 0);
+  const row = asElement(viewport.children[0]!);
+  const cursorNode = childElement(row, 1);
+
+  assert.equal(cursorNode.props.color, "cyan");
+  assert.equal(cursorNode.props.background, "blue");
+  assert.equal(cursorNode.props.inverse, true);
 });
 
 test("Textarea row hstack is width-constrained after layout so caret space cannot grow flex", () => {
@@ -410,6 +433,27 @@ test("Textarea edits controlled multiline value and submits with Ctrl Enter", ()
   assert.equal(callOnKey(onKey, key("\r", { name: "return", ctrl: true })), true);
   assert.deepEqual(submits, ["h\ni"]);
   assert.equal(value.get(), "h\ni");
+});
+
+test("Textarea never inserts non-text semantic events with printable payloads", () => {
+  const changes: string[] = [];
+  const template = asElement(
+    Textarea({
+      value: "",
+      onChange(value) {
+        changes.push(value);
+      }
+    })
+  );
+  applyTextareaLayoutWidth(template, 10);
+  const handler = readOnKeyHandler(template);
+
+  assert.equal(handler(key("B", {
+    kind: "unknown",
+    name: "unknown",
+    sequence: "\x1b[999B"
+  })), false);
+  assert.deepEqual(changes, []);
 });
 
 test("Textarea submits with F2 by default without inserting text", () => {

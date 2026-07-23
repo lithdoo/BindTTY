@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/input",
-  "version": "0.1.0-alpha.10",
+  "version": "0.1.0-beta.0",
   "type": "module",
   "description": "Terminal keyboard input parsing primitives for BindTTY.",
   "main": "./dist/index.js",
@@ -18,7 +18,7 @@
     "INK-STYLE-REFACTOR.md"
   ],
   "dependencies": {
-    "@bindtty/text": "0.1.0-alpha.10"
+    "@bindtty/text": "0.1.0-beta.0"
   },
   "scripts": {
     "build": "npm run build --workspace @bindtty/text && tsc -p tsconfig.json",

@@ -64,6 +64,7 @@ interface IntrinsicPaintProps {
   color?: BindingValue<string>;
   background?: BindingValue<string>;
   bold?: BindingValue<boolean>;
+  inverse?: BindingValue<boolean>;
 }
 
 type IntrinsicYogaAlignItems =

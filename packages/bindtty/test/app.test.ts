@@ -1006,6 +1006,17 @@ test("terminal mode dispatches TextInput changes and submit value", async () => 
   assert.match(stripVTControlCharacters(terminal.writes.at(-1) ?? ""), /sent:hi/);
 });
 
+test("terminal mode renders the TextInput caret with ANSI inverse and no fallback colors", () => {
+  const terminal = createMockTerminal(8, 3);
+  const app = createApp(TextInput({ value: "" }), { terminal });
+
+  app.start();
+
+  const output = terminal.writes.join("");
+  assert.match(output, /\x1b\[7m /);
+  assert.doesNotMatch(output, /\x1b\[(?:7;)?37;40m /);
+});
+
 test("terminal resize triggers app resize and full repaint", () => {
   const terminal = createMockTerminal(1, 1);
   const app = createApp(elementTemplate("text", { value: "AB" }), { terminal });

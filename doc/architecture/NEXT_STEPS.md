@@ -51,7 +51,7 @@ TSX → ViewTemplate → MountedNode → LayoutNode → Frame → ANSI Patch
 | M1–M7 主链路 | ✅ | [ROADMAP.md](./ROADMAP.md) |
 | TextInput display-column 输入窗口 | ✅ | [TEXT_INPUT.md](../widgets/TEXT_INPUT.md) §1.1、`packages/widgets/src/form/text-input.ts` |
 | display-width / CJK / emoji | ✅ | [DISPLAY_WIDTH.md](../specs/DISPLAY_WIDTH.md) |
-| npm 发布元数据 | ✅ | `LICENSE`、`publishConfig`、`scripts/publish-packages.mjs`，版本 `0.1.0-alpha.10` |
+| npm 发布元数据 | ✅ | `LICENSE`、`publishConfig`、`scripts/publish-packages.mjs`，版本 `0.1.0-beta.0` |
 | `@bindtty/input` raw keyboard parser | ✅ | [INPUT.md](../packages/INPUT.md) |
 | Textarea 多行编辑 widget | ✅ | [TEXTAREA.md](https://github.com/lithdoo/BindTTY/blob/main/packages/widgets/TEXTAREA.md) |
 | `bindtty` JSX 转发与 programmatic focus | ✅ | `packages/bindtty` 导出 `./jsx-runtime`、`./jsx-dev-runtime`，并提供 `app.focus()` / `app.getFocusedId()` |
@@ -80,7 +80,7 @@ real PTY 专项 job（Windows / WSL）可后续单独添加，不阻塞主 CI。
 
 ### 3.2 npm 发布
 
-**已完成（2026-07）**：12 包 `0.1.0-alpha.10` 公开发布，tag `latest`（含 `@bindtty/input`、Textarea 与 programmatic focus API）。
+**已完成（2026-07）**：12 包进入 `0.1.0-beta.0` 发布线，`beta` 与 `latest` 指向同一版本（含语义输入层、协议协商、Textarea 与 programmatic focus API）。
 
 ```bash
 npm install bindtty @bindtty/widgets
@@ -169,7 +169,7 @@ import { Button, List, TextInput, Textarea } from "@bindtty/widgets";
 
 ## 6. 版本目标（修订）
 
-### 0.1.0-alpha.10（当前）
+### 0.1.0-alpha.10（已完成）
 
 **已完成：**
 
@@ -197,8 +197,12 @@ import { Button, List, TextInput, Textarea } from "@bindtty/widgets";
 - `bindtty` JSX runtime 转发；顶层 API 冻结（widgets 见 `@bindtty/widgets`）
 - ROADMAP / 文档去漂移（README、ROADMAP、NEXT_STEPS 已同步）
 
-### 0.1.0-beta.0（候选）
+### 0.1.0-beta.0（当前）
 
+- 语义输入事件与 keyboard capability model
+- Kitty keyboard 单协议协商及 legacy 安全回退
+- PowerShell F2 原子解析、Ctrl+Enter 与 Win32 provider 边界
+- TextInput / Textarea 继承颜色的 inverse caret
 - layout prop matrix 稳定（min/max、margin、edge padding）；文档 CI 同步（`check:layout-props`）— Phase 1–3 已落地
 - ~~ScrollView `stickToBottom`~~（已完成）
 - ~~ScrollView scrollbar~~（已完成）

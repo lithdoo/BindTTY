@@ -11,7 +11,7 @@ export class DefaultPlatformAdapter implements PlatformTerminalAdapter {
 
   createStdinInput(options: CreateNodeTerminalOptions): StdinInputAdapter {
     if (options.rawMode === true) {
-      return new RawStdinInput();
+      return new RawStdinInput(options.inputTrace);
     }
 
     return new ReadlineStdinInput();

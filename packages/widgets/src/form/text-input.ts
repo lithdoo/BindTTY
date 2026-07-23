@@ -122,8 +122,9 @@ export function TextInput(props: TextInputProps): Template {
           "text",
           omitUndefined({
             value: cursorChar,
-            color: computed(() => readBindingValue(props.background) ?? "white"),
-            background: computed(() => readBindingValue(props.color) ?? "black"),
+            color: props.color,
+            background: props.background,
+            inverse: true,
             bold: props.bold,
             dim: disabledDim
           })

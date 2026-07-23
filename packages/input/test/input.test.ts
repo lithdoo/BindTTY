@@ -3,7 +3,9 @@ import test from "node:test";
 
 import {
   createInputParser,
+  keyboardCapabilitiesForProtocol,
   parseInputChunk,
+  toSemanticInputEvent,
   type InputEvent
 } from "@bindtty/input";
 
@@ -295,9 +297,80 @@ test("createInputParser flushes incomplete control sequences as unknown", () => 
 
   assert.deepEqual(parser.parse("\x1b["), []);
   assert.deepEqual(parser.flush(), [
-    keyEvent("unknown", "", "\x1b"),
-    textEvent("[")
+    keyEvent("unknown", "", "\x1b[")
   ]);
+});
+
+test("createInputParser flushes incomplete SS3 atomically without leaking suffix text", () => {
+  const parser = createInputParser();
+
+  assert.deepEqual(parser.parse("\x1bO"), []);
+  assert.deepEqual(parser.flush(), [
+    keyEvent("unknown", "", "\x1bO")
+  ]);
+});
+
+test("createInputParser bounds oversized CSI sequences and keeps following text", () => {
+  const parser = createInputParser();
+  const oversized = `\x1b[${"1".repeat(4094)}Z`;
+  const events = parser.parse(`${oversized}ok`);
+
+  assert.equal(events[0]?.name, "unknown");
+  assert.equal(events[0]?.sequence?.length, 4096);
+  assert.deepEqual(events.slice(1), [
+    textEvent("Z"),
+    textEvent("o"),
+    textEvent("k")
+  ]);
+});
+
+test("semantic input bridge distinguishes text keys paste and unknown events", () => {
+  assert.deepEqual(toSemanticInputEvent(textEvent("B"), "windows-vt"), {
+    kind: "text",
+    text: "B",
+    protocol: "windows-vt",
+    sequence: "B"
+  });
+  assert.deepEqual(
+    toSemanticInputEvent(keyEvent("f2", "", "\x1bOQ"), "windows-vt"),
+    {
+      kind: "key",
+      key: "f2",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      repeat: 1,
+      protocol: "windows-vt",
+      sequence: "\x1bOQ"
+    }
+  );
+  assert.deepEqual(
+    toSemanticInputEvent({
+      input: "hello",
+      name: "paste",
+      ctrl: false,
+      meta: false,
+      shift: false,
+      sequence: "\x1b[200~hello\x1b[201~"
+    }),
+    {
+      kind: "paste",
+      text: "hello",
+      protocol: "legacy-vt",
+      sequence: "\x1b[200~hello\x1b[201~"
+    }
+  );
+  assert.equal(
+    toSemanticInputEvent(keyEvent("unknown", "", "\x1b[999~")).kind,
+    "unknown"
+  );
+});
+
+test("keyboard capabilities do not promise modified Enter for legacy VT", () => {
+  assert.equal(keyboardCapabilitiesForProtocol("legacy-vt").modifiedEnter, false);
+  assert.equal(keyboardCapabilitiesForProtocol("windows-vt").modifiedEnter, false);
+  assert.equal(keyboardCapabilitiesForProtocol("kitty").modifiedEnter, true);
+  assert.equal(keyboardCapabilitiesForProtocol("win32").leftRightModifiers, true);
 });
 
 test("createInputParser reset clears partial state", () => {

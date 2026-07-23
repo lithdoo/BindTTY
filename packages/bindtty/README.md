@@ -1,6 +1,6 @@
 # bindtty
 
-BindTTY 的用户入口包。它组合 runtime、layout、renderer、terminal、interaction，提供 alpha 阶段稳定的公共 API：`createApp`、signal 原语、JSX runtime 转发，以及 App 级焦点控制。
+BindTTY 的用户入口包。它组合 runtime、layout、renderer、terminal、interaction，提供 beta 阶段稳定的公共 API：`createApp`、signal 原语、JSX runtime 转发，以及 App 级焦点控制。
 
 高层控件（Button、TextInput、Textarea、Select 等）请单独安装 [`@bindtty/widgets`](../widgets/README.md)。`bindtty` 顶层不 re-export widgets。
 
@@ -18,7 +18,7 @@ npm install bindtty @bindtty/widgets
 
 真实终端应用另需 `@bindtty/terminal`（`createNodeTerminal`）。JSX runtime 随 `bindtty` 依赖一并安装。
 
-当前公开版本为 `0.1.0-alpha.10`；`bindtty`、`@bindtty/widgets`、`@bindtty/terminal` 等官方包建议保持同版本安装。
+当前公开版本为 `0.1.0-beta.0`；`bindtty`、`@bindtty/widgets`、`@bindtty/terminal` 等官方包建议保持同版本安装。
 
 ## tsconfig
 
@@ -33,7 +33,7 @@ npm install bindtty @bindtty/widgets
 
 `bindtty` 通过 `./jsx-runtime` 和 `./jsx-dev-runtime` 子路径转发 `@bindtty/jsx-runtime`。
 
-## 公共 API（alpha）
+## 公共 API（beta）
 
 ### `bindtty` 导出
 
@@ -85,7 +85,7 @@ import { Button, TextInput, Textarea } from "@bindtty/widgets";
 
 `@bindtty/signal` 是 peer dependency（同时保留在 `dependencies` 中，以便 `npm install bindtty` 自动安装）。全应用应只有一份 `@bindtty/signal` 实例，否则可能出现 computed 不更新、订阅链断裂等问题。
 
-推荐统一从 `bindtty` 导入 signal，勿单独安装另一版本的 `@bindtty/signal`。使用 widgets 时，`bindtty` 与 `@bindtty/widgets` 请保持同版本号发布（如均为 `0.1.0-alpha.10`）。
+推荐统一从 `bindtty` 导入 signal，勿单独安装另一版本的 `@bindtty/signal`。使用 widgets 时，`bindtty` 与 `@bindtty/widgets` 请保持同版本号发布（如均为 `0.1.0-beta.0`）。
 
 排障：
 
@@ -96,7 +96,7 @@ import { Button, TextInput, Textarea } from "@bindtty/widgets";
   1. 只从 bindtty 导入 createSignal / computed / effect
   2. npm uninstall @bindtty/signal（若单独装了冲突版本）
   3. npm dedupe && npm install
-  4. 应用 package.json overrides: { "@bindtty/signal": "0.1.0-alpha.10" }
+  4. 应用 package.json overrides: { "@bindtty/signal": "0.1.0-beta.0" }
 ```
 
 ## 快速开始

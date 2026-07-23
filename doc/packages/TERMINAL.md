@@ -472,9 +472,34 @@ RawStdinInput
   stdin data chunk
   ↓
   @bindtty/input createInputParser()
+
+Win32ConsoleInput
+  Win32InputProvider / KEY_EVENT_RECORD
+  ↓
+  semantic TerminalKeyEvent
 ```
 
-默认平台 adapter 会选择合适的 stdin input。需要增强键盘协议时，应用可以显式使用 raw adapter，并启用 `enhancedKeyboard`。
+默认平台 adapter 会选择合适的 stdin input。需要 Ctrl+Enter 等 modified
+key 时，应用应使用 raw adapter，并设置 `keyboardProtocol: "auto"`。
+terminal 会先查询 Kitty 支持，只启用确认过的单一协议；查询响应由 host
+消费，不会进入 interaction/widgets。超时后回退 legacy VT。
+
+`enhancedKeyboard` 只保留旧版兼容语义：它会同时启用 Kitty 与
+modifyOtherKeys，新代码不应继续使用。
+
+```ts
+const terminal = createNodeTerminal({
+  stdout: process.stdout,
+  stdin: process.stdin,
+  rawMode: true,
+  keyboardProtocol: "auto"
+});
+
+terminal.keyboardCapabilities?.modifiedEnter;
+terminal.onKeyboardCapabilitiesChange?.((capabilities) => {
+  // 根据真实协议能力调整快捷键提示或 fallback。
+});
+```
 
 ### 9.1 Readline keypress 归一化
 
@@ -501,6 +526,14 @@ stdin.on("data", (chunk) => {
 `RawStdinInput` 可以处理跨 chunk 的 UTF-8 字符、CSI/SS3/Kitty 序列、F1-F12、modified Enter 和 bracketed paste。
 
 `rawMode: true` 时，默认平台 adapter 与 Win32 adapter 都走 `RawStdinInput`，因此完整使用 `@bindtty/input` 的 tokenizer/parser。未开启 raw mode 的兼容路径仍走 Node readline adapter；它依赖 Node keypress object，不覆盖所有增强键盘协议。
+
+Windows 上可通过 `win32InputProvider` 注入原生 console record source。
+选中该 adapter 后不会发送 VT/Kitty 协议探测，F2、Ctrl+Enter、modifier
+和 Unicode 直接从 `KEY_EVENT_RECORD` 映射，事件协议标记为 `win32`。
+
+诊断时可设置 `BINDTTY_INPUT_TRACE=1`；默认写入临时 JSONL 文件，也可用
+`BINDTTY_INPUT_TRACE_FILE` 指定路径。trace 记录 raw hex 与语义事件，
+不会写 stdout，paste 内容会被隐藏，避免破坏 TUI 输出或泄露粘贴文本。
 
 MVP key event 示例：
 

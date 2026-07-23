@@ -58,6 +58,7 @@ export interface InputTokenizer {
 
 const bracketedPasteStart = "\x1b[200~";
 const bracketedPasteEnd = "\x1b[201~";
+const maxControlSequenceLength = 4096;
 
 export function createInputTokenizer(): InputTokenizer {
   let decoder = new StringDecoder("utf8");
@@ -240,6 +241,16 @@ function readCsiToken(
   let cursor = index + 2;
 
   while (cursor < source.length) {
+    if (cursor - index >= maxControlSequenceLength) {
+      return {
+        token: {
+          type: "unknown",
+          sequence: source.slice(index, cursor)
+        },
+        nextIndex: cursor
+      };
+    }
+
     const char = source[cursor] ?? "";
     const code = char.charCodeAt(0);
 
@@ -276,9 +287,9 @@ function readCsiToken(
   return {
     token: {
       type: "unknown",
-      sequence: "\x1b"
+      sequence: source.slice(index)
     },
-    nextIndex: index + 1
+    nextIndex: source.length
   };
 }
 
@@ -291,9 +302,9 @@ function readSs3Token(
     return final ? {
       token: {
         type: "unknown",
-        sequence: "\x1b"
+        sequence: source.slice(index)
       },
-      nextIndex: index + 1
+      nextIndex: source.length
     } : "pending";
   }
 

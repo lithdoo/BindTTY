@@ -1,6 +1,16 @@
 # Changelog
 
-BindTTY 当前处于 `0.1.0-alpha` 阶段。本文记录公开包与用户可见行为变化；设计细节见 `doc/` 下对应 package/spec/widget 文档。
+BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见行为变化；设计细节见 `doc/` 下对应 package/spec/widget 文档。
+
+## 0.1.0-beta.0
+
+- TextInput/Textarea caret 改用 ANSI inverse 并继承当前前景、背景色，移除硬编码黑白。
+- 输入事件增加 `text` / `key` / `paste` / `unknown` 语义分类与协议能力模型。
+- CSI/SS3 不完整序列原子消费，修复 PowerShell 中 F2 序列尾字节被插入为 `B`。
+- 增加 Kitty keyboard 自动探测、单协议启停及 legacy 安全回退，避免同时盲开多个增强协议。
+- 增加 Win32 `KEY_EVENT_RECORD` provider 边界，保留 F2、Ctrl+Enter、modifier、repeat 和 Unicode 语义。
+- 增加脱敏输入 trace、Windows CI 输入门禁与 PowerShell/Console Host 实机验收矩阵。
+- npm `beta` 与 `latest` 均指向本版本。
 
 ## 0.1.0-alpha.10
 

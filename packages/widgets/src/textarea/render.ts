@@ -86,10 +86,9 @@ function renderTextareaLineAt(
         "text",
         omitUndefined({
           value: computed(() => readRenderLine(input.lines, index).cursor),
-          // Match TextInput: inverse = fg from box background (default white),
-          // bg from text color (default black) for a visible caret on dark TTYs.
-          color: computed(() => readBindingValue(input.background) ?? "white"),
-          background: computed(() => readBindingValue(input.color) ?? "black"),
+          color: input.color,
+          background: input.background,
+          inverse: true,
           bold: input.bold,
           dim: input.dim,
           wrap: "none"

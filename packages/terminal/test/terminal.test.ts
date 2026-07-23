@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 
-import { ANSI, createNodeTerminal, DefaultPlatformAdapter, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput } from "@bindtty/terminal";
+import { ANSI, createNodeTerminal, DefaultPlatformAdapter, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
 import type {
   CreateNodeTerminalOptions,
+  InputTraceRecord,
   StdinInputAdapter,
   KeypressKey,
   KeypressListener,
@@ -122,6 +123,7 @@ test("exports terminal ANSI lifecycle constants", () => {
     exitAltScreen: "\x1b[?1049l",
     hideCursor: "\x1b[?25l",
     showCursor: "\x1b[?25h",
+    queryKittyKeyboard: "\x1b[?u",
     enableKittyKeyboard: "\x1b[>1u",
     disableKittyKeyboard: "\x1b[<u",
     enableModifyOtherKeys: "\x1b[>4;2m",
@@ -254,6 +256,150 @@ test("start and stop apply enhanced keyboard protocol when requested", () => {
     ANSI.showCursor,
     ANSI.exitAltScreen
   ]);
+});
+
+test("auto keyboard protocol consumes Kitty probe response and updates capabilities", () => {
+  const stdout = createMockStdout();
+  const stdin = createMockStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    keyboardProtocol: "auto",
+    keyboardProbeTimeoutMs: 1000
+  });
+  const protocols: string[] = [];
+  const keys: TerminalKeyEvent[] = [];
+  terminal.onKeyboardCapabilitiesChange?.((capabilities) => {
+    protocols.push(capabilities.protocol);
+  });
+  terminal.onKey((event) => {
+    keys.push(event);
+  });
+
+  terminal.start();
+  assert.equal(stdout.writes.at(-1), ANSI.queryKittyKeyboard);
+
+  stdin.emitData("\x1b[?1u");
+
+  assert.equal(stdout.writes.at(-1), ANSI.enableKittyKeyboard);
+  assert.equal(terminal.keyboardCapabilities?.protocol, "kitty");
+  assert.deepEqual(protocols, ["kitty"]);
+  assert.deepEqual(keys, []);
+
+  terminal.stop();
+  assert.equal(stdout.writes.at(-1), ANSI.disableKittyKeyboard);
+});
+
+test("explicit keyboard protocol enables only the selected protocol", () => {
+  const kittyStdout = createMockStdout();
+  const kitty = createNodeTerminal({
+    stdout: kittyStdout,
+    keyboardProtocol: "kitty"
+  });
+  kitty.start();
+  kitty.stop();
+  assert.deepEqual(kittyStdout.writes, [
+    ANSI.enableKittyKeyboard,
+    ANSI.disableKittyKeyboard
+  ]);
+
+  const modifyStdout = createMockStdout();
+  const modify = createNodeTerminal({
+    stdout: modifyStdout,
+    keyboardProtocol: "modify-other-keys"
+  });
+  modify.start();
+  modify.stop();
+  assert.deepEqual(modifyStdout.writes, [
+    ANSI.enableModifyOtherKeys,
+    ANSI.disableModifyOtherKeys
+  ]);
+
+  const legacyStdout = createMockStdout();
+  const legacy = createNodeTerminal({
+    stdout: legacyStdout,
+    keyboardProtocol: "legacy",
+    enhancedKeyboard: true
+  });
+  legacy.start();
+  legacy.stop();
+  assert.deepEqual(legacyStdout.writes, []);
+});
+
+test("native Win32 input bypasses VT negotiation and preserves modified keys", () => {
+  const stdout = createMockStdout();
+  const stdin = createMockStdin();
+  let win32Listener: ((record: Parameters<typeof mapWin32KeyRecord>[0]) => void) | undefined;
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    keyboardProtocol: "auto",
+    platformAdapter: new Win32PlatformAdapter(),
+    win32InputProvider: {
+      attach(listener) {
+        win32Listener = listener;
+        return () => {
+          win32Listener = undefined;
+        };
+      }
+    }
+  });
+  const keys: TerminalKeyEvent[] = [];
+  terminal.onKey((event) => {
+    keys.push(event);
+  });
+
+  terminal.start();
+  assert.deepEqual(stdout.writes, []);
+  assert.equal(terminal.keyboardCapabilities?.protocol, "win32");
+
+  win32Listener?.({
+    keyDown: true,
+    virtualKeyCode: 0x71,
+    scanCode: 0x3c,
+    unicode: "",
+    controlKeyState: 0,
+    repeatCount: 1
+  });
+  win32Listener?.({
+    keyDown: true,
+    virtualKeyCode: 0x0d,
+    scanCode: 0x1c,
+    unicode: "\r",
+    controlKeyState: 0x0008,
+    repeatCount: 1
+  });
+
+  assert.deepEqual(
+    keys.map(({ kind, protocol, name, ctrl, input }) => ({
+      kind,
+      protocol,
+      name,
+      ctrl,
+      input
+    })),
+    [
+      {
+        kind: "key",
+        protocol: "win32",
+        name: "f2",
+        ctrl: false,
+        input: ""
+      },
+      {
+        kind: "key",
+        protocol: "win32",
+        name: "return",
+        ctrl: true,
+        input: "\r"
+      }
+    ]
+  );
+
+  terminal.stop();
+  assert.equal(win32Listener, undefined);
 });
 
 test("start tolerates streams without optional lifecycle APIs", () => {
@@ -639,6 +785,8 @@ test("dispose removes stdout resize listener and clears resize listeners", () =>
 
 test("normalizeKeypressEvent maps missing values to a stable event shape", () => {
   assert.deepEqual(normalizeKeypressEvent(undefined, undefined), {
+    kind: "key",
+    protocol: "readline",
     input: "",
     name: undefined,
     ctrl: false,
@@ -656,6 +804,8 @@ test("normalizeKeypressEvent maps missing values to a stable event shape", () =>
       sequence: "a"
     }),
     {
+      kind: "key",
+      protocol: "readline",
       input: "a",
       name: "a",
       ctrl: true,
@@ -688,6 +838,8 @@ test("start registers stdin keypress listener and emits normalized key events", 
 
   assert.deepEqual(events, [
     {
+      kind: "text",
+      protocol: "legacy-vt",
       input: "a",
       name: "a",
       ctrl: false,
@@ -834,6 +986,8 @@ test("ctrl c is dispatched when exitOnCtrlC is disabled", () => {
   assert.equal(stdin.listenerCount(), 1);
   assert.deepEqual(events, [
     {
+      kind: "key",
+      protocol: "legacy-vt",
       input: "c",
       name: "c",
       ctrl: true,
@@ -1119,6 +1273,8 @@ test("RawStdinInput preserves split raw input sequences", () => {
 
   assert.deepEqual(events, [
     {
+      kind: "key",
+      protocol: "legacy-vt",
       input: "\r",
       name: "return",
       ctrl: true,
@@ -1127,4 +1283,144 @@ test("RawStdinInput preserves split raw input sequences", () => {
       sequence: "\x1b[13;5u"
     }
   ]);
+});
+
+test("RawStdinInput traces raw bytes and parsed events without changing dispatch", () => {
+  const stdin = new PassThrough();
+  const records: InputTraceRecord[] = [];
+  const events: TerminalKeyEvent[] = [];
+  const adapter = new RawStdinInput((record) => {
+    records.push(record);
+  });
+  const detach = adapter.attach(stdin, (event) => {
+    events.push(event);
+  });
+
+  stdin.write(Buffer.from("\x1bOQ"));
+  detach();
+
+  assert.equal(records[0]?.rawHex, "1b4f51");
+  assert.equal(records[0]?.rawLength, 3);
+  assert.equal(records[0]?.adapter, "raw");
+  assert.equal(records[1]?.event?.name, "f2");
+  assert.equal(records[1]?.event?.kind, "key");
+  assert.equal(records[1]?.event?.inputLength, 0);
+  assert.equal(events[0]?.name, "f2");
+});
+
+test("RawStdinInput trace redacts bracketed paste across chunks", () => {
+  const stdin = new PassThrough();
+  const records: InputTraceRecord[] = [];
+  const adapter = new RawStdinInput((record) => {
+    records.push(record);
+  });
+  const detach = adapter.attach(stdin, () => {});
+
+  stdin.write("\x1b[20");
+  stdin.write("0~secret");
+  stdin.write("-continued");
+  stdin.write("\x1b[201~");
+  detach();
+
+  const rawRecords = records.filter((record) => record.rawLength !== undefined);
+  assert.equal(rawRecords[0]?.rawHex, "1b5b3230");
+  assert.deepEqual(
+    rawRecords.slice(1).map(({ rawHex, redacted }) => ({ rawHex, redacted })),
+    [
+      { rawHex: undefined, redacted: "paste" },
+      { rawHex: undefined, redacted: "paste" },
+      { rawHex: undefined, redacted: "paste" }
+    ]
+  );
+  assert.equal(JSON.stringify(records).includes("secret"), false);
+});
+
+test("mapWin32KeyRecord preserves F2 and Ctrl Enter semantics", () => {
+  assert.deepEqual(mapWin32KeyRecord({
+    keyDown: true,
+    virtualKeyCode: 0x71,
+    scanCode: 0x3c,
+    unicode: "",
+    controlKeyState: 0,
+    repeatCount: 1
+  }), {
+    kind: "key",
+    protocol: "win32",
+    input: "",
+    name: "f2",
+    ctrl: false,
+    meta: false,
+    shift: false,
+    sequence: "win32:71:3c"
+  });
+
+  assert.deepEqual(mapWin32KeyRecord({
+    keyDown: true,
+    virtualKeyCode: 0x0d,
+    scanCode: 0x1c,
+    unicode: "\r",
+    controlKeyState: 0x0008,
+    repeatCount: 1
+  }), {
+    kind: "key",
+    protocol: "win32",
+    input: "\r",
+    name: "return",
+    ctrl: true,
+    meta: false,
+    shift: false,
+    sequence: "win32:d:1c"
+  });
+});
+
+test("Win32ConsoleInput ignores key-up and expands repeat count", () => {
+  let listener: ((record: Parameters<typeof mapWin32KeyRecord>[0]) => void) | undefined;
+  const provider = {
+    attach(next: typeof listener) {
+      listener = next;
+      return () => {
+        listener = undefined;
+      };
+    }
+  };
+  const adapter = new Win32ConsoleInput(provider);
+  const events: TerminalKeyEvent[] = [];
+  const detach = adapter.attach(new PassThrough(), (event) => {
+    events.push(event);
+  });
+
+  listener?.({
+    keyDown: false,
+    virtualKeyCode: 0x71,
+    scanCode: 0x3c,
+    unicode: "",
+    controlKeyState: 0,
+    repeatCount: 1
+  });
+  listener?.({
+    keyDown: true,
+    virtualKeyCode: 0x71,
+    scanCode: 0x3c,
+    unicode: "",
+    controlKeyState: 0,
+    repeatCount: 2
+  });
+
+  assert.equal(events.length, 2);
+  assert.equal(events[0]?.name, "f2");
+  detach();
+});
+
+test("Win32PlatformAdapter selects native record provider when supplied", () => {
+  const provider = {
+    attach() {
+      return () => {};
+    }
+  };
+  const adapter = new Win32PlatformAdapter().createStdinInput({
+    stdout: createMockStdout(),
+    win32InputProvider: provider
+  });
+
+  assert.ok(adapter instanceof Win32ConsoleInput);
 });

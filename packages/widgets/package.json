@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/widgets",
-  "version": "0.1.0-alpha.10",
+  "version": "0.1.0-beta.0",
   "type": "module",
   "description": "Reusable interactive widgets for BindTTY.",
   "main": "./dist/index.js",
@@ -22,13 +22,13 @@
     "test": "npm run build --workspace @bindtty/signal && npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/vnode && npm run build --workspace @bindtty/runtime && npm run build --workspace @bindtty/layout && npm run build --workspace @bindtty/interaction && npm run build && tsc -p test/tsconfig.json && node --test test/dist/*.test.js"
   },
   "dependencies": {
-    "@bindtty/interaction": "0.1.0-alpha.10",
-    "@bindtty/signal": "0.1.0-alpha.10",
-    "@bindtty/text": "0.1.0-alpha.10",
-    "@bindtty/vnode": "0.1.0-alpha.10"
+    "@bindtty/interaction": "0.1.0-beta.0",
+    "@bindtty/signal": "0.1.0-beta.0",
+    "@bindtty/text": "0.1.0-beta.0",
+    "@bindtty/vnode": "0.1.0-beta.0"
   },
   "peerDependencies": {
-    "@bindtty/signal": "0.1.0-alpha.10"
+    "@bindtty/signal": "0.1.0-beta.0"
   },
   "peerDependenciesMeta": {
     "@bindtty/signal": {
@@ -36,8 +36,8 @@
     }
   },
   "devDependencies": {
-    "@bindtty/layout": "0.1.0-alpha.10",
-    "@bindtty/runtime": "0.1.0-alpha.10",
+    "@bindtty/layout": "0.1.0-beta.0",
+    "@bindtty/runtime": "0.1.0-beta.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },

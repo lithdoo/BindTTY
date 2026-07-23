@@ -7,7 +7,7 @@
 > **代码入口**：packages/input/src/index.ts  
 > **相关**：[TERMINAL.md](./TERMINAL.md) · [INTERACTION.md](./INTERACTION.md) · [WIDGETS.md](./WIDGETS.md)
 
-`@bindtty/input` 是 BindTTY 的终端键盘输入解析层。它把 raw stdin chunk 解析成稳定的 `InputEvent`，供 `@bindtty/terminal` 派发给 interaction/widgets。
+`@bindtty/input` 是 BindTTY 的终端键盘输入解析层。它把 raw stdin chunk 解析成稳定的 `InputEvent`，并通过 `SemanticInputEvent` 明确区分 text / key / paste / unknown，供 `@bindtty/terminal` 派发给 interaction/widgets。
 
 ## 边界
 
@@ -22,6 +22,8 @@
 - xterm modifyOtherKeys。
 - Win32 prefixed keys。
 - unknown escape/control 防污染。
+- 不完整 CSI / SS3 的原子 flush，禁止尾部字节降级成文本。
+- 输入协议能力建模。
 
 不负责：
 
@@ -44,6 +46,8 @@ RawInputToken
 parseInputToken
   ↓
 InputEvent
+  ↓
+SemanticInputEvent
   ↓
 @bindtty/terminal RawStdinInput
 ```
@@ -129,6 +133,21 @@ parser.hasPending(); // true
 parser.parse("5u"); // Ctrl+Enter
 parser.hasPending(); // false
 ```
+
+语义桥接与能力 API：
+
+```ts
+const semantic = toSemanticInputEvent(event, "windows-vt");
+const capabilities = keyboardCapabilitiesForProtocol("kitty");
+```
+
+widget 只允许 `kind: "text"` 的事件进入文本值；`kind: "unknown"` 即使
+携带可打印尾字节也不得插入。这一约束用于阻断 PowerShell/ConPTY 中
+未知或不完整功能键序列退化成普通字符。
+
+`KeyboardCapabilities` 描述当前输入层是否可靠支持 modified Enter、
+功能键、paste 等能力。应用应读取 terminal 暴露的能力，而不是根据
+`process.platform` 猜测。
 
 ## Paste
 

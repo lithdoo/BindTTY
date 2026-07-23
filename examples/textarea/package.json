@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/example-textarea",
-  "version": "0.1.0-alpha.10",
+  "version": "0.1.0-beta.0",
   "private": true,
   "type": "module",
   "description": "BindTTY Textarea manual playground for soft wrap and caret.",
@@ -10,12 +10,12 @@
     "start": "npm run build && node dist/main.js"
   },
   "dependencies": {
-    "@bindtty/terminal": "0.1.0-alpha.10",
-    "@bindtty/widgets": "0.1.0-alpha.10",
-    "bindtty": "0.1.0-alpha.10"
+    "@bindtty/terminal": "0.1.0-beta.0",
+    "@bindtty/widgets": "0.1.0-beta.0",
+    "bindtty": "0.1.0-beta.0"
   },
   "devDependencies": {
-    "@bindtty/jsx-runtime": "0.1.0-alpha.10",
+    "@bindtty/jsx-runtime": "0.1.0-beta.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },

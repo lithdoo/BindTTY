@@ -26,5 +26,9 @@ export function isArrowKey(event: TerminalKeyEvent): boolean {
 }
 
 export function isTextInputKey(event: TerminalKeyEvent): boolean {
+  if (event.kind !== undefined) {
+    return event.kind === "text";
+  }
+
   return event.input.length > 0 && !event.ctrl && !event.meta && !event.name;
 }

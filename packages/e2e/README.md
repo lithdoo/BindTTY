@@ -9,6 +9,9 @@ BindTTY 端到端测试，按目录区分两种运行方式：
 
 默认 `npm test` 会**两者都跑**。
 
+Windows 输入协议、PowerShell/host 实机矩阵与 trace 验收见
+[Windows 输入验收](../../doc/testing/WINDOWS_INPUT.md)。
+
 ## Mock E2E（`mock/`）
 
 内存 fake stream，不依赖 TTY，覆盖 `createApp` + `createNodeTerminal` 全链路：

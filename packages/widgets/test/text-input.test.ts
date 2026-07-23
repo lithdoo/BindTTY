@@ -65,6 +65,8 @@ function focusEvent(focused: boolean): InteractionNodeFocusChangeEvent {
 
 function toBindTTYKeyEvent(event: TerminalKeyEvent): BindTTYKeyEvent {
   const keyEvent: BindTTYKeyEvent = {
+    kind: event.kind,
+    protocol: event.protocol,
     input: event.input,
     name: event.name,
     ctrl: event.ctrl,
@@ -241,6 +243,26 @@ test("TextInput inserts printable input as a controlled component", () => {
   assert.equal(callOnKey(onKey, key("b")), true);
   assert.deepEqual(changes, ["a", "ab"]);
   assert.equal(resolveSignal<string>(before.props.value), "ab");
+});
+
+test("TextInput never inserts non-text semantic events even when input is printable", () => {
+  const changes: string[] = [];
+  const template = asElement(
+    TextInput({
+      value: "",
+      onChange(value) {
+        changes.push(value);
+      }
+    })
+  );
+  const handler = readOnKeyHandler(template);
+
+  assert.equal(callOnKey(handler, key("B", {
+    kind: "unknown",
+    name: "unknown",
+    sequence: "\x1b[999B"
+  })), false);
+  assert.deepEqual(changes, []);
 });
 
 test("TextInput does not change visible value unless parent updates controlled signal", () => {
@@ -454,8 +476,9 @@ test("TextInput forwards style props to the correct intrinsic elements", () => {
   assert.equal(before.props.color, "green");
   assert.equal(before.props.bold, true);
   assert.equal(before.props.dim, true);
-  assert.equal(resolveSignal<string>(cursor.props.color), "blue");
-  assert.equal(resolveSignal<string>(cursor.props.background), "green");
+  assert.equal(cursor.props.color, "green");
+  assert.equal(cursor.props.background, "blue");
+  assert.equal(cursor.props.inverse, true);
   assert.equal(cursor.props.bold, true);
   assert.equal(cursor.props.dim, true);
   assert.equal(after.props.color, "green");

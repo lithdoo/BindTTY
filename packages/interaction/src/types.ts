@@ -32,6 +32,8 @@ export type InteractionFocusChangeListener = (
 export type KeyEventPhase = "capture" | "target" | "bubble";
 
 export interface BindTTYKeyEvent {
+  kind?: TerminalKeyEvent["kind"];
+  protocol?: TerminalKeyEvent["protocol"];
   input: string;
   name?: string;
   ctrl: boolean;

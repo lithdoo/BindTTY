@@ -1,5 +1,10 @@
 import type { Readable } from "node:stream";
 
+import {
+  keyboardCapabilitiesForProtocol,
+  type InputProtocol,
+  type KeyboardCapabilities
+} from "@bindtty/input";
 import { resolvePlatformAdapter } from "./adapters/resolve.js";
 import { ANSI } from "./ansi.js";
 import type {
@@ -9,6 +14,8 @@ import type {
   TerminalHost,
   TerminalKeyEvent,
   TerminalKeyListener,
+  KeyboardCapabilitiesListener,
+  StdinInputKind,
   TerminalViewport
 } from "./types.js";
 
@@ -18,6 +25,8 @@ const defaultViewport: TerminalViewport = {
 };
 
 const win32ResizePollIntervalMs = 50;
+const defaultKeyboardProbeTimeoutMs = 100;
+const kittyKeyboardResponse = /^\x1b\[\?(\d+)u$/;
 
 function readResizePollIntervalMs(
   options: CreateNodeTerminalOptions
@@ -55,10 +64,18 @@ export function createNodeTerminal(
   let disposed = false;
   const resizeListeners = new Set<ResizeListener>();
   const keyListeners = new Set<TerminalKeyListener>();
+  const keyboardCapabilitiesListeners = new Set<KeyboardCapabilitiesListener>();
   const platform = resolvePlatformAdapter(options);
   let detachStdin: Dispose = () => {};
   let resizePollTimer: ReturnType<typeof setInterval> | undefined;
   let lastPolledViewport: TerminalViewport | null = null;
+  let keyboardProbeTimer: ReturnType<typeof setTimeout> | undefined;
+  let keyboardProtocolEnabled: "kitty" | "modify-other-keys" | "legacy-dual" | null = null;
+  let activeStdinKind: StdinInputKind | null = null;
+  let fallbackProtocol = fallbackInputProtocol(platform.name);
+  let keyboardCapabilities = keyboardCapabilitiesForProtocol(
+    fallbackProtocol
+  );
 
   function readViewport(): TerminalViewport {
     return {
@@ -116,14 +133,119 @@ export function createNodeTerminal(
   }
 
   function dispatchKey(event: TerminalKeyEvent): void {
+    if (consumeKittyProbeResponse(event)) {
+      return;
+    }
+
     if (event.ctrl && event.name === "c" && options.exitOnCtrlC !== false) {
       terminal.dispose();
       return;
     }
 
+    event.protocol = keyboardCapabilities.protocol;
+
     for (const listener of [...keyListeners]) {
       listener(event);
     }
+  }
+
+  function setKeyboardCapabilities(protocol: InputProtocol): void {
+    const next = keyboardCapabilitiesForProtocol(protocol);
+    if (next.protocol === keyboardCapabilities.protocol) {
+      return;
+    }
+
+    keyboardCapabilities = next;
+    for (const listener of [...keyboardCapabilitiesListeners]) {
+      listener(next);
+    }
+  }
+
+  function consumeKittyProbeResponse(event: TerminalKeyEvent): boolean {
+    if (options.keyboardProtocol !== "auto" || event.name !== "unknown") {
+      return false;
+    }
+
+    const match = event.sequence?.match(kittyKeyboardResponse);
+    if (!match) {
+      return false;
+    }
+
+    stopKeyboardProbe();
+    write(ANSI.enableKittyKeyboard);
+    keyboardProtocolEnabled = "kitty";
+    setKeyboardCapabilities("kitty");
+    return true;
+  }
+
+  function startKeyboardProtocol(): void {
+    if (activeStdinKind === "win32") {
+      setKeyboardCapabilities("win32");
+      return;
+    }
+
+    if (options.keyboardProtocol === "auto") {
+      write(ANSI.queryKittyKeyboard);
+      const timeout = Math.max(
+        0,
+        options.keyboardProbeTimeoutMs ?? defaultKeyboardProbeTimeoutMs
+      );
+      keyboardProbeTimer = setTimeout(() => {
+        keyboardProbeTimer = undefined;
+        setKeyboardCapabilities(fallbackProtocol);
+      }, timeout);
+      keyboardProbeTimer.unref?.();
+      return;
+    }
+
+    if (options.keyboardProtocol === "kitty") {
+      write(ANSI.enableKittyKeyboard);
+      keyboardProtocolEnabled = "kitty";
+      setKeyboardCapabilities("kitty");
+      return;
+    }
+
+    if (options.keyboardProtocol === "modify-other-keys") {
+      write(ANSI.enableModifyOtherKeys);
+      keyboardProtocolEnabled = "modify-other-keys";
+      setKeyboardCapabilities("modify-other-keys");
+      return;
+    }
+
+    if (options.keyboardProtocol === "legacy") {
+      setKeyboardCapabilities(fallbackProtocol);
+      return;
+    }
+
+    if (options.enhancedKeyboard === true) {
+      write(ANSI.enableKittyKeyboard);
+      write(ANSI.enableModifyOtherKeys);
+      keyboardProtocolEnabled = "legacy-dual";
+      setKeyboardCapabilities("modify-other-keys");
+    }
+  }
+
+  function stopKeyboardProbe(): void {
+    if (keyboardProbeTimer) {
+      clearTimeout(keyboardProbeTimer);
+      keyboardProbeTimer = undefined;
+    }
+  }
+
+  function stopKeyboardProtocol(): void {
+    stopKeyboardProbe();
+
+    if (keyboardProtocolEnabled === "kitty") {
+      write(ANSI.disableKittyKeyboard);
+    } else if (keyboardProtocolEnabled === "modify-other-keys") {
+      write(ANSI.disableModifyOtherKeys);
+    } else if (keyboardProtocolEnabled === "legacy-dual") {
+      write(ANSI.disableModifyOtherKeys);
+      write(ANSI.disableKittyKeyboard);
+    }
+
+    keyboardProtocolEnabled = null;
+    setKeyboardCapabilities(fallbackProtocol);
   }
 
   function write(chunk: string): void {
@@ -139,6 +261,10 @@ export function createNodeTerminal(
       return readViewport();
     },
 
+    get keyboardCapabilities(): KeyboardCapabilities {
+      return keyboardCapabilities;
+    },
+
     start(): void {
       if (started || disposed) {
         return;
@@ -150,9 +276,8 @@ export function createNodeTerminal(
         write(ANSI.enterAltScreen);
       }
 
-      if (options.enhancedKeyboard === true) {
-        write(ANSI.enableKittyKeyboard);
-        write(ANSI.enableModifyOtherKeys);
+      if (options.keyboardProtocol !== "auto") {
+        startKeyboardProtocol();
       }
 
       if (options.hideCursor === true) {
@@ -162,6 +287,16 @@ export function createNodeTerminal(
       if (options.stdin) {
         const stdin = options.stdin as Readable;
         const stdinInput = platform.createStdinInput(options);
+        activeStdinKind = stdinInput.kind;
+        if (stdinInput.kind === "win32") {
+          fallbackProtocol = "win32";
+          if (
+            options.keyboardProtocol === "auto" ||
+            (options.keyboardProtocol === undefined && options.enhancedKeyboard !== true)
+          ) {
+            setKeyboardCapabilities("win32");
+          }
+        }
 
         if (options.rawMode === true && options.stdin.setRawMode) {
           if (options.stdin.isTTY) {
@@ -177,6 +312,10 @@ export function createNodeTerminal(
         detachStdin = stdinInput.attach(stdin, dispatchKey);
       }
 
+      if (options.keyboardProtocol === "auto") {
+        startKeyboardProtocol();
+      }
+
       options.stdout.on?.("resize", handleResize);
       startWin32ResizePolling();
     },
@@ -190,15 +329,13 @@ export function createNodeTerminal(
       options.stdout.off?.("resize", handleResize);
       detachStdin();
       detachStdin = () => {};
+      activeStdinKind = null;
 
       if (options.rawMode === true && options.stdin?.setRawMode) {
         options.stdin.setRawMode(false);
       }
 
-      if (options.enhancedKeyboard === true) {
-        write(ANSI.disableModifyOtherKeys);
-        write(ANSI.disableKittyKeyboard);
-      }
+      stopKeyboardProtocol();
 
       if (options.hideCursor === true) {
         write(ANSI.showCursor);
@@ -219,6 +356,7 @@ export function createNodeTerminal(
       terminal.stop();
       resizeListeners.clear();
       keyListeners.clear();
+      keyboardCapabilitiesListeners.clear();
       disposed = true;
     },
 
@@ -244,8 +382,23 @@ export function createNodeTerminal(
       return () => {
         keyListeners.delete(listener);
       };
+    },
+
+    onKeyboardCapabilitiesChange(listener: KeyboardCapabilitiesListener): Dispose {
+      if (disposed) {
+        return () => {};
+      }
+
+      keyboardCapabilitiesListeners.add(listener);
+      return () => {
+        keyboardCapabilitiesListeners.delete(listener);
+      };
     }
   };
 
   return terminal;
+}
+
+function fallbackInputProtocol(platformName: string): InputProtocol {
+  return platformName === "win32" ? "windows-vt" : "legacy-vt";
 }

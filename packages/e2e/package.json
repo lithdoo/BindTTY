@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/e2e",
-  "version": "0.1.0-alpha.10",
+  "version": "0.1.0-beta.0",
   "private": true,
   "type": "module",
   "description": "End-to-end tests for BindTTY (mock streams and real PTY).",
@@ -18,18 +18,18 @@
     "run:real:wsl": "node scripts/run-wsl.mjs"
   },
   "dependencies": {
-    "@bindtty/signal": "0.1.0-alpha.10",
-    "@bindtty/text": "0.1.0-alpha.10",
-    "@bindtty/terminal": "0.1.0-alpha.10",
-    "@bindtty/widgets": "0.1.0-alpha.10",
-    "@bindtty/input": "0.1.0-alpha.10",
-    "bindtty": "0.1.0-alpha.10"
+    "@bindtty/signal": "0.1.0-beta.0",
+    "@bindtty/text": "0.1.0-beta.0",
+    "@bindtty/terminal": "0.1.0-beta.0",
+    "@bindtty/widgets": "0.1.0-beta.0",
+    "@bindtty/input": "0.1.0-beta.0",
+    "bindtty": "0.1.0-beta.0"
   },
   "optionalDependencies": {
     "node-pty": "^1.0.0"
   },
   "devDependencies": {
-    "@bindtty/jsx-runtime": "0.1.0-alpha.10",
+    "@bindtty/jsx-runtime": "0.1.0-beta.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },

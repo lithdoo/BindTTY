@@ -17,6 +17,24 @@ export type {
   InputPasteEvent,
   InputUnknownEvent
 } from "./events.js";
+export {
+  keyboardCapabilitiesForProtocol
+} from "./capabilities.js";
+export type {
+  KeyboardCapabilities
+} from "./capabilities.js";
+export {
+  toSemanticInputEvent
+} from "./semantic-events.js";
+export type {
+  InputProtocol,
+  KeyInputEvent,
+  PasteInputEvent as SemanticPasteInputEvent,
+  SemanticInputEvent,
+  SemanticInputEventBase,
+  TextInputEvent,
+  UnknownInputEvent as SemanticUnknownInputEvent
+} from "./semantic-events.js";
 export type { FixedKeymapEntry } from "./keymap.js";
 export type {
   CsiToken,

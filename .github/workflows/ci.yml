@@ -40,3 +40,29 @@ jobs:
 
       - name: Build docs
         run: npm run docs:build
+
+  windows-input:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test input stack
+        run: |
+          npm test --workspace @bindtty/input
+          npm test --workspace @bindtty/terminal
+          npm test --workspace @bindtty/interaction
+          npm test --workspace @bindtty/widgets
+
+      - name: Test Windows ConPTY
+        run: npm run test:e2e:real:win

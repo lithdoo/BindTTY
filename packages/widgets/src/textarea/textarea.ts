@@ -585,6 +585,10 @@ function isSubmitKey(event: TerminalKeyEvent, submitKeys: readonly TextareaSubmi
 }
 
 function isTextareaTextInput(event: TerminalKeyEvent): boolean {
+  if (event.kind !== undefined) {
+    return event.kind === "text";
+  }
+
   return (
     event.input !== "" &&
     !event.ctrl &&

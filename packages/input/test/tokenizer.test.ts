@@ -99,19 +99,14 @@ test("tokenizer preserves split bracketed paste", () => {
   ]);
 });
 
-test("tokenizer flushes incomplete CSI as unknown escape plus text", () => {
+test("tokenizer flushes incomplete CSI as one unknown token", () => {
   const tokenizer = createInputTokenizer();
 
   assert.deepEqual(tokenizer.tokenize("\x1b["), []);
   assert.deepEqual(tokenizer.flush(), [
     {
       type: "unknown",
-      sequence: "\x1b"
-    },
-    {
-      type: "text",
-      value: "[",
-      sequence: "["
+      sequence: "\x1b["
     }
   ]);
 });
