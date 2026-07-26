@@ -12,6 +12,22 @@ BindTTY 端到端测试，按目录区分两种运行方式：
 Windows 输入协议、PowerShell/host 实机矩阵与 trace 验收见
 [Windows 输入验收](../../doc/testing/WINDOWS_INPUT.md)。
 
+Windows 物理键盘基线通过以下命令采集：
+
+```powershell
+npm run capture:windows:ps51
+npm run capture:windows:pwsh
+```
+
+采集结果位于 `fixtures/windows-input/`，必须由 fixture validator 校验，
+不得用手写 VT 序列代替真实 PowerShell/host 样本。
+
+四组物理采集齐全后运行发布门禁：
+
+```powershell
+npm run validate:windows-matrix
+```
+
 ## Mock E2E（`mock/`）
 
 内存 fake stream，不依赖 TTY，覆盖 `createApp` + `createNodeTerminal` 全链路：
@@ -69,6 +85,7 @@ npm run test:e2e:real:wsl
 
 | 文件 | 场景 |
 | --- | --- |
+| `auto-input-app.tsx` | 不注入平台 adapter，验证自动 backend 下 F2 保持语义事件且不污染 Textarea |
 | `counter-app.tsx` | Button Enter 递增 |
 | `interaction-app.tsx` | TextInput 输入 + Enter 提交 |
 | `focus-app.tsx` | Tab 切换 Button focus + Enter |

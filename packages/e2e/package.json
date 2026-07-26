@@ -9,13 +9,17 @@
     "build:mock": "npm run build:deps && tsc -p mock/tsconfig.json",
     "build:real": "npm run build:deps && tsc -p real/harness/tsconfig.json && tsc -p real/tsconfig.json",
     "build": "npm run build:mock && npm run build:real",
-    "test": "npm run build && node --test dist/mock/test/*.test.js && node --test --test-concurrency=1 --test-force-exit dist/real/test/*.test.js",
+    "test": "npm run build && node --test scripts/*.test.mjs && node --test dist/mock/test/*.test.js && node --test --test-concurrency=1 --test-force-exit dist/real/test/*.test.js",
     "test:mock": "npm run build:mock && node --test dist/mock/test/*.test.js",
     "test:real": "npm run build:real && node --test --test-concurrency=1 --test-force-exit dist/real/test/*.test.js",
     "test:all": "npm test",
     "env:real": "node scripts/print-env.mjs",
     "run:real:win": "node scripts/run-host.mjs",
-    "run:real:wsl": "node scripts/run-wsl.mjs"
+    "run:real:wsl": "node scripts/run-wsl.mjs",
+    "capture:windows:ps51": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/capture-windows-input.ps1",
+    "capture:windows:pwsh": "pwsh -NoProfile -File scripts/capture-windows-input.ps1",
+    "validate:windows-fixture": "node scripts/validate-windows-input-fixture.mjs",
+    "validate:windows-matrix": "node scripts/validate-windows-input-fixture.mjs"
   },
   "dependencies": {
     "@bindtty/signal": "0.1.0-beta.0",

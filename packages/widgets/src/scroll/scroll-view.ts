@@ -339,7 +339,11 @@ function createScrollViewHandler(
     const maxX = stateX.hasLayout ? stateX.max : Number.MAX_SAFE_INTEGER;
     const pageY = stateY.hasLayout ? stateY.page : fallbackPageY;
 
-    switch (event.name) {
+    if (event.kind !== "key") {
+      return false;
+    }
+
+    switch (event.key) {
       case "up": {
         if (stickyY) {
           stateY.userDetached = true;

@@ -164,15 +164,30 @@ function createMockTerminal(width = 1, height = 1): MockTerminal {
 
 function keyEvent(
   input: string,
-  overrides: Partial<TerminalKeyEvent> = {}
+  overrides: Partial<{
+    name: string;
+    ctrl: boolean;
+    alt: boolean;
+    shift: boolean;
+    meta: boolean;
+  }> = {}
 ): TerminalKeyEvent {
-  return {
-    input,
-    ctrl: false,
-    meta: false,
-    shift: false,
-    ...overrides
-  };
+  if (overrides.name) {
+    return {
+      kind: "key",
+      key: overrides.name === "return" ? "enter" : overrides.name,
+      modifiers: {
+        ctrl: overrides.ctrl ?? false,
+        alt: overrides.alt ?? false,
+        shift: overrides.shift ?? false,
+        meta: overrides.meta ?? false
+      },
+      repeat: 1,
+      protocol: "legacy-vt"
+    };
+  }
+
+  return { kind: "text", text: input, protocol: "legacy-vt" };
 }
 
 async function nextMicrotask(): Promise<void> {
@@ -743,7 +758,7 @@ test("terminal key events dispatch to the focused onKey handler and repaint", as
     elementTemplate("text", {
       value: label,
       onKey: (event: TerminalKeyEvent) => {
-        if (event.input === "x") {
+        if (event.kind === "text" && event.text === "x") {
           label.set("B");
           return true;
         }
@@ -770,7 +785,7 @@ test("terminal Tab traversal changes which onKey handler receives keys", () => {
       elementTemplate("text", {
         value: firstLabel,
         onKey: (event: TerminalKeyEvent) => {
-          if (event.input === "x") {
+          if (event.kind === "text" && event.text === "x") {
             firstLabel.set("X");
             return true;
           }
@@ -780,7 +795,7 @@ test("terminal Tab traversal changes which onKey handler receives keys", () => {
       elementTemplate("text", {
         value: secondLabel,
         onKey: (event: TerminalKeyEvent) => {
-          if (event.input === "x") {
+          if (event.kind === "text" && event.text === "x") {
             secondLabel.set("Y");
             return true;
           }
@@ -906,7 +921,7 @@ test("terminal runtime flush removes nodes whose dynamic onKey becomes false", a
   const secondLabel = createSignal("B");
   const firstOnKey = createSignal<false | ((event: TerminalKeyEvent) => boolean)>(
     (event) => {
-      if (event.name === "return") {
+      if (event.kind === "key" && event.key === "enter") {
         firstLabel.set("X");
         return true;
       }
@@ -922,7 +937,7 @@ test("terminal runtime flush removes nodes whose dynamic onKey becomes false", a
       elementTemplate("text", {
         value: secondLabel,
         onKey: (event: TerminalKeyEvent) => {
-          if (event.name === "return") {
+          if (event.kind === "key" && event.key === "enter") {
             secondLabel.set("Y");
             return true;
           }

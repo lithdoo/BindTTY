@@ -13,6 +13,12 @@ export interface ReverseKeymap {
   bySequence: Map<string, InputEvent>;
 }
 
+const windowsPrefixedModifiedFunctionKeys: readonly FixedKeymapEntry[] = [
+  ...createWindowsPrefixedFunctionKeys(0x54, 0x87, "shift"),
+  ...createWindowsPrefixedFunctionKeys(0x5e, 0x89, "ctrl"),
+  ...createWindowsPrefixedFunctionKeys(0x68, 0x8b, "meta")
+];
+
 export const defaultFixedKeymap: readonly FixedKeymapEntry[] = [
   { name: "return", input: "\r", sequences: ["\r", "\n"] },
   { name: "backspace", input: "", sequences: ["\x7f", "\b"] },
@@ -40,6 +46,7 @@ export const defaultFixedKeymap: readonly FixedKeymapEntry[] = [
   { name: "f10", input: "", sequences: ["\x1b[21~", "\x00D"] },
   { name: "f11", input: "", sequences: ["\x1b[23~", "\xe0\x85", "\x00\x85"] },
   { name: "f12", input: "", sequences: ["\x1b[24~", "\xe0\x86", "\x00\x86"] },
+  ...windowsPrefixedModifiedFunctionKeys,
   { name: "up", input: "", shift: true, sequences: ["\x1b[1;2A"] },
   { name: "down", input: "", shift: true, sequences: ["\x1b[1;2B"] },
   { name: "right", input: "", shift: true, sequences: ["\x1b[1;2C"] },
@@ -57,6 +64,26 @@ export const defaultFixedKeymap: readonly FixedKeymapEntry[] = [
   { name: "right", input: "", ctrl: true, shift: true, sequences: ["\x1b[1;6C"] },
   { name: "left", input: "", ctrl: true, shift: true, sequences: ["\x1b[1;6D"] }
 ];
+
+function createWindowsPrefixedFunctionKeys(
+  f1Code: number,
+  f11Code: number,
+  modifier: "ctrl" | "meta" | "shift"
+): FixedKeymapEntry[] {
+  return Array.from({ length: 12 }, (_, index) => {
+    const code = index < 10
+      ? f1Code + index
+      : f11Code + index - 10;
+    return {
+      name: `f${index + 1}`,
+      input: "",
+      ctrl: modifier === "ctrl",
+      meta: modifier === "meta",
+      shift: modifier === "shift",
+      sequences: [`\x00${String.fromCharCode(code)}`, `\xe0${String.fromCharCode(code)}`]
+    };
+  });
+}
 
 export function buildReverseKeymap(entries: readonly FixedKeymapEntry[]): ReverseKeymap {
   const bySequence = new Map<string, InputEvent>();

@@ -5,21 +5,51 @@ export function normalizeKeypressEvent(
   key: KeypressKey | undefined
 ): TerminalKeyEvent {
   const normalizedInput = input ?? "";
+  const protocol = "readline" as const;
+  const sequence = key?.sequence;
+
+  if (key?.name === "paste") {
+    return {
+      kind: "paste",
+      protocol,
+      text: normalizedInput,
+      sequence
+    };
+  }
+
+  if (key?.name === "unknown") {
+    return {
+      kind: "unknown",
+      protocol,
+      raw: sequence ?? "",
+      reason: "unrecognized-readline-key",
+      sequence
+    };
+  }
+
+  if (isReadlineTextInput(normalizedInput, key)) {
+    return {
+      kind: "text",
+      protocol,
+      text: normalizedInput,
+      sequence
+    };
+  }
+
   return {
-    kind: key?.name === "paste"
-      ? "paste"
-      : key?.name === "unknown"
-        ? "unknown"
-        : isReadlineTextInput(normalizedInput, key)
-          ? "text"
-          : "key",
-    protocol: "readline",
-    input: normalizedInput,
-    name: key?.name,
-    ctrl: Boolean(key?.ctrl),
-    meta: Boolean(key?.meta),
-    shift: Boolean(key?.shift),
-    sequence: key?.sequence
+    kind: "key",
+    protocol,
+    key: key?.name === "return"
+      ? "enter"
+      : key?.name ?? normalizedInput,
+    modifiers: {
+      ctrl: key?.ctrl === true,
+      alt: key?.meta === true,
+      meta: false,
+      shift: key?.shift === true
+    },
+    repeat: 1,
+    sequence
   };
 }
 

@@ -50,6 +50,53 @@ test("runtime environment report", () => {
   assert.ok(env.nodeVersion.startsWith("v"));
 });
 
+test("real PTY: auto input backend preserves F2 as a semantic submit key", { concurrency: false }, async (t) => {
+  if (skipUnlessPty(t)) {
+    return;
+  }
+
+  const markerFile = createMarkerFile("auto-input");
+  const marker = MarkerLog.create(markerFile);
+  const session = new PtySession({
+    command: resolveNodeBinary(),
+    args: [harnessPath("auto-input-app")],
+    cwd: packageRoot,
+    markerFile,
+    cols: 80,
+    rows: 24
+  });
+
+  try {
+    await marker.waitFor("READY", { timeoutMs: 8_000 });
+    await delay(200);
+
+    // xterm SS3 F2 is accepted by Unix PTYs and translated by Windows ConPTY.
+    session.write("\x1bOQ");
+
+    await marker.waitFor('SUBMITTED:"draft"', { timeoutMs: 8_000 });
+    await marker.waitFor("PASS", { timeoutMs: 8_000 });
+    const result = await session.finish(marker, 12_000);
+    const backend = result.markers.find((line) => line.startsWith("BACKEND:"));
+
+    assert.equal(result.exitCode, 0);
+    assert.ok(backend, "default terminal must report its selected backend");
+    assert.ok(
+      backend.startsWith("BACKEND:raw:") ||
+      backend.startsWith("BACKEND:win32:"),
+      `unexpected auto backend: ${backend}`
+    );
+    assert.equal(
+      result.markers.some((line) => line.startsWith("VALUE:")),
+      false,
+      "F2 must not leak B or any other text into Textarea"
+    );
+    assert.ok(result.markers.includes("PASS"));
+  } finally {
+    session.dispose();
+    marker.cleanup();
+  }
+});
+
 test("real PTY: counter app renders and increments through Button", { concurrency: false }, async (t) => {
   if (skipUnlessPty(t)) {
     return;

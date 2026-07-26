@@ -7,7 +7,6 @@ import type { StdinInputAdapter } from "../types.js";
 import type { InputTraceOption } from "../types.js";
 import {
   createInputTraceListener,
-  traceInputEvent,
   traceRawInput
 } from "../input-trace.js";
 
@@ -45,14 +44,7 @@ export class RawStdinInput implements StdinInputAdapter {
       traceSuffix = combinedTraceText.slice(-5);
 
       for (const event of parser.parse(chunk)) {
-        const semantic = toSemanticInputEvent(event);
-        const terminalEvent: TerminalKeyEvent = {
-          ...event,
-          kind: semantic.kind,
-          protocol: semantic.protocol
-        };
-        traceInputEvent(this.trace, this.kind, terminalEvent, redactTraceChunk);
-        onKey(terminalEvent);
+        onKey(toSemanticInputEvent(event));
       }
     };
 

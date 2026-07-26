@@ -35,17 +35,37 @@ interface InteractionNodeFocusChangeEvent {
 
 type KeyEventPhase = "capture" | "target" | "bubble";
 
-interface BindTTYKeyEvent {
-  input: string;
-  name?: string;
-  ctrl: boolean;
-  meta: boolean;
-  shift: boolean;
+interface SemanticEventBase {
+  protocol:
+    | "kitty"
+    | "modify-other-keys"
+    | "windows-vt"
+    | "win32"
+    | "legacy-vt"
+    | "readline";
   sequence?: string;
+}
+
+type BindTTYKeyEvent = (
+  | (SemanticEventBase & { kind: "text"; text: string })
+  | (SemanticEventBase & {
+      kind: "key";
+      key: string;
+      modifiers: {
+        ctrl: boolean;
+        alt: boolean;
+        shift: boolean;
+        meta: boolean;
+      };
+      repeat: number;
+    })
+  | (SemanticEventBase & { kind: "paste"; text: string })
+  | (SemanticEventBase & { kind: "unknown"; raw: string; reason: string })
+) & {
   phase: KeyEventPhase;
   propagationStopped: boolean;
   stopPropagation(): void;
-}
+};
 
 type InteractionKeyHandler = (event: BindTTYKeyEvent) => boolean | void;
 type InteractionKeyListener = InteractionKeyHandler | null | undefined;

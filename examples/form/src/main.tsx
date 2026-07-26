@@ -21,7 +21,7 @@ const app = createApp(
     <box
       focusable={false}
       onKey={(event) => {
-        if (event.name === "return") {
+        if (event.kind === "key" && event.key === "enter") {
           status.set(`Sent: ${value.get()}`);
           return true;
         }

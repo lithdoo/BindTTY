@@ -121,7 +121,10 @@ onKey?: (event: BindTTYKeyEvent) => boolean | void
 ```tsx
 <box
   onKey={(event) => {
-    if (event.name === "return" || event.input === " ") {
+    if (
+      (event.kind === "key" && event.key === "enter") ||
+      (event.kind === "text" && event.text === " ")
+    ) {
       props.onPress?.();
       return true;
     }
@@ -253,7 +256,7 @@ onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void
 因此以下写法都成立：
 
 ```tsx
-<box focusable onKeyCapture={(event) => event.name === "escape"} />
+<box focusable onKeyCapture={(event) => event.kind === "key" && event.key === "escape"} />
 <box onKey={true} />
 <box onKey={false} />
 <box onKey={vm.canFocus} />
@@ -716,7 +719,7 @@ MVP 允许 focus target 与 key listener 嵌套。
 示例：
 
 ```tsx
-<box focusable onKey={(event) => event.name === "return"}>
+<box focusable onKey={(event) => event.kind === "key" && event.key === "enter"}>
   <text value="Panel" />
   <TextInput onSubmit={handleSubmit} />
 </box>
@@ -766,38 +769,35 @@ Escape 在 TextInput focused 时：
 `handleKey` 接收 `@bindtty/terminal` 的 `TerminalKeyEvent`，内部构造 `BindTTYKeyEvent` 再派发：
 
 ```ts
-export interface TerminalKeyEvent {
-  input: string;
-  name?: string;
-  ctrl: boolean;
-  meta: boolean;
-  shift: boolean;
-  sequence?: string;
-}
+export type TerminalKeyEvent =
+  | { kind: "text"; text: string; protocol: InputProtocol; sequence?: string }
+  | { kind: "key"; key: string; modifiers: KeyModifiers; repeat: number; protocol: InputProtocol; sequence?: string }
+  | { kind: "paste"; text: string; protocol: InputProtocol; sequence?: string }
+  | { kind: "unknown"; raw: string; reason: string; protocol: InputProtocol; sequence?: string };
 ```
 
 handler 只看到 `BindTTYKeyEvent`（含 `phase`、`propagationStopped`、`stopPropagation()`），不暴露 mounted node。
 
-常见特殊键通过 `name` 判断：
+常见特殊键先用 `kind === "key"` 缩窄，再通过 `key` 判断：
 
 ```text
-return / enter:
-  event.name === "return"
+enter:
+  event.kind === "key" && event.key === "enter"
 
 escape:
-  event.name === "escape"
+  event.kind === "key" && event.key === "escape"
 
 backspace:
-  event.name === "backspace"
+  event.kind === "key" && event.key === "backspace"
 
 delete:
-  event.name === "delete"
+  event.kind === "key" && event.key === "delete"
 
 tab:
-  event.name === "tab" 或 event.input === "\t"
+  event.kind === "key" && event.key === "tab"
 
 left / right / up / down:
-  event.name === "left" / "right" / "up" / "down"
+  event.kind === "key" && event.key === "left" / "right" / "up" / "down"
 ```
 
 `keyboard.ts` 应提供小工具函数，避免各模块重复写判断：
@@ -898,7 +898,10 @@ function Button(props: {
         props.disabled
           ? false
           : (event) => {
-              if (event.name === "return" || event.input === " ") {
+              if (
+                (event.kind === "key" && event.key === "enter") ||
+                (event.kind === "text" && event.text === " ")
+              ) {
                 props.onPress?.();
                 return true;
               }

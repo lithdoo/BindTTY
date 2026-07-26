@@ -230,17 +230,17 @@ function createTextInputOnKey(
     const position = clamp(cursor.get(), 0, segments.length);
 
     if (isTextInputKey(event)) {
-      const inputSegments = segmentText(event.input);
+      const inputSegments = segmentText(event.text);
       const nextValue =
         joinSegments(segments.slice(0, position)) +
-        event.input +
+        event.text +
         joinSegments(segments.slice(position));
       cursor.set(position + inputSegments.length);
       props.onChange?.(nextValue);
       return true;
     }
 
-    if (event.name === "backspace") {
+    if (event.kind === "key" && event.key === "backspace") {
       if (position > 0) {
         const nextValue =
           joinSegments(segments.slice(0, position - 1)) +
@@ -252,7 +252,7 @@ function createTextInputOnKey(
       return true;
     }
 
-    if (event.name === "delete") {
+    if (event.kind === "key" && event.key === "delete") {
       if (position < segments.length) {
         const nextValue =
           joinSegments(segments.slice(0, position)) +
@@ -263,22 +263,22 @@ function createTextInputOnKey(
       return true;
     }
 
-    if (event.name === "left") {
+    if (event.kind === "key" && event.key === "left") {
       cursor.set(Math.max(0, position - 1));
       return true;
     }
 
-    if (event.name === "right") {
+    if (event.kind === "key" && event.key === "right") {
       cursor.set(Math.min(segments.length, position + 1));
       return true;
     }
 
-    if (event.name === "home") {
+    if (event.kind === "key" && event.key === "home") {
       cursor.set(0);
       return true;
     }
 
-    if (event.name === "end") {
+    if (event.kind === "key" && event.key === "end") {
       cursor.set(segments.length);
       return true;
     }

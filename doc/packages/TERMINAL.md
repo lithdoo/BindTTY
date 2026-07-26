@@ -523,17 +523,54 @@ stdin.on("data", (chunk) => {
 });
 ```
 
-`RawStdinInput` 可以处理跨 chunk 的 UTF-8 字符、CSI/SS3/Kitty 序列、F1-F12、modified Enter 和 bracketed paste。
+`RawStdinInput` 可以处理跨 chunk 的 UTF-8 字符、CSI/SS3/Kitty 序列、后端可表达的 F1-F24、modified Enter 和 bracketed paste。
 
-`rawMode: true` 时，默认平台 adapter 与 Win32 adapter 都走 `RawStdinInput`，因此完整使用 `@bindtty/input` 的 tokenizer/parser。未开启 raw mode 的兼容路径仍走 Node readline adapter；它依赖 Node keypress object，不覆盖所有增强键盘协议。
+`rawMode: true` 时，默认平台 adapter 与 Win32 adapter 都走
+`RawStdinInput`。Windows 上默认 `inputBackend: "auto"` 还会主动识别支持
+raw mode 的 TTY，无需应用传入 `rawMode`。非 TTY 或显式
+`rawMode: false` 才走 Node readline 兼容路径。
 
-Windows 上可通过 `win32InputProvider` 注入原生 console record source。
-选中该 adapter 后不会发送 VT/Kitty 协议探测，F2、Ctrl+Enter、modifier
-和 Unicode 直接从 `KEY_EVENT_RECORD` 映射，事件协议标记为 `win32`。
+Windows 上由 optional `@bindtty/win32-input` binding 自动探测 console
+handle，并通过 `ReadConsoleInputW` 读取 `KEY_EVENT_RECORD`，应用无需注入
+provider。选中该 adapter 后不会发送 VT/Kitty 协议探测，F1–F24、
+Ctrl+Enter、modifier、repeat count 和 Unicode 直接映射为统一事件，协议
+标记为 `win32`。显式 `win32InputProvider` 仅保留给测试和自定义 host。
+
+binding 在 Windows 安装时通过 `node-gyp` 编译。optional 包缺失、编译失败、
+stdin 被重定向或 console handle 不可用时不会阻断 terminal，而是继续走
+raw VT / readline 降级链。native adapter 启动时暂时关闭 processed、line、
+echo 和 VT input mode，stop/dispose 时恢复原 console mode。
+
+backend 优先级由 terminal 输入层统一执行：
+
+1. 显式 `stdinInputAdapter`。
+2. 显式 `inputBackend` 诊断覆盖。
+3. 可用的 `Win32InputProvider`。
+4. 支持 raw mode 的 Windows TTY。
+5. readline 安全降级。
+
+应用层不应根据 PowerShell 或终端宿主名称自行分支。选择结果与降级原因
+写入 trace 的 `backend` 记录。
 
 诊断时可设置 `BINDTTY_INPUT_TRACE=1`；默认写入临时 JSONL 文件，也可用
 `BINDTTY_INPUT_TRACE_FILE` 指定路径。trace 记录 raw hex 与语义事件，
 不会写 stdout，paste 内容会被隐藏，避免破坏 TUI 输出或泄露粘贴文本。
+
+### 键盘协议协商
+
+raw VT backend 默认使用 `keyboardProtocol: "auto"`：
+
+1. 发送 Kitty keyboard status query，随后发送 primary device attributes。
+2. 收到合法 Kitty status response 后只启用 Kitty。
+3. 先收到 primary DA、收到畸形 status 或超时，则退回 backend 的
+   Windows VT / legacy VT 能力。
+4. probe response 由 terminal 消费，不进入 interaction 或 widgets。
+5. readline 直接报告 `readline` capabilities；Win32 record 直接报告
+   `win32`，两者都不发送 VT probe。
+
+modifyOtherKeys 没有可移植的正向支持查询，因此 auto 模式不盲目开启。
+只有显式 `keyboardProtocol: "modify-other-keys"` 才视为宿主已经确认支持。
+退出时只关闭实际启用的协议，restart 会重新协商。
 
 MVP key event 示例：
 
@@ -554,7 +591,7 @@ CSI / SS3:
   Home / End
   Insert / Delete
   PageUp / PageDown
-  F1 / F2 / ... / F12
+  F1 / F2 / ... / F24
 
 Windows console prefixed:
   \x00 / \xe0 + navigation code
@@ -565,7 +602,7 @@ Windows console prefixed:
 `exitOnCtrlC = true` 时：
 
 ```text
-if event.ctrl && event.name === "c":
+if event.kind === "key" && event.modifiers.ctrl && event.key === "c":
   dispose()
 ```
 

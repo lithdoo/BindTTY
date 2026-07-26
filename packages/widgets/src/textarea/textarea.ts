@@ -341,7 +341,7 @@ function createTextareaOnKey(
 
     const currentState = withViewportRows(syncedState, currentLayout, viewportRows.get());
 
-    if (event.name === "tab") {
+    if (event.kind === "key" && event.key === "tab") {
       return false;
     }
 
@@ -360,7 +360,7 @@ function createTextareaOnKey(
     }
 
     if (isTextareaTextInput(event)) {
-      const edited = insertText(currentState, event.input, currentLayout);
+      const edited = insertText(currentState, event.text, currentLayout);
       state.set(edited);
       props.onChange?.(edited.value);
       return true;
@@ -377,8 +377,11 @@ function reduceKey(
   state: TextareaEditState,
   layout: TextareaLayout
 ): TextareaEditState | null {
-  switch (event.name) {
-    case "return":
+  if (event.kind !== "key") {
+    return null;
+  }
+
+  switch (event.key) {
     case "enter":
       return insertNewline(state, layout);
     case "backspace":
@@ -394,9 +397,9 @@ function reduceKey(
     case "down":
       return moveVertical(state, layout, "down");
     case "home":
-      return event.ctrl ? moveDocumentStart(state, layout) : moveHome(state, layout);
+      return event.modifiers.ctrl ? moveDocumentStart(state, layout) : moveHome(state, layout);
     case "end":
-      return event.ctrl ? moveDocumentEnd(state, layout) : moveEnd(state, layout);
+      return event.modifiers.ctrl ? moveDocumentEnd(state, layout) : moveEnd(state, layout);
     case "pageup":
       return pageScroll(state, layout, "pageup");
     case "pagedown":
@@ -412,7 +415,11 @@ function handleDisabledNavigation(
   layout: TextareaLayout,
   state: ReturnType<typeof createSignal<TextareaEditState>>
 ): boolean {
-  switch (event.name) {
+  if (event.kind !== "key") {
+    return false;
+  }
+
+  switch (event.key) {
     case "up":
       state.set({
         ...currentState,
@@ -570,33 +577,26 @@ function readSubmitKeys(props: TextareaProps): readonly TextareaSubmitKey[] {
 }
 
 function isSubmitKey(event: TerminalKeyEvent, submitKeys: readonly TextareaSubmitKey[]): boolean {
-  if (event.name === "f2" && submitKeys.includes("f2")) {
+  if (event.kind !== "key") {
+    return false;
+  }
+
+  if (event.key === "f2" && submitKeys.includes("f2")) {
     return true;
   }
 
-  if (!(event.name === "return" || event.name === "enter")) {
+  if (event.key !== "enter") {
     return false;
   }
 
   return (
-    (event.ctrl && submitKeys.includes("ctrl-enter")) ||
-    (event.meta && submitKeys.includes("meta-enter"))
+    (event.modifiers.ctrl && submitKeys.includes("ctrl-enter")) ||
+    (event.modifiers.meta && submitKeys.includes("meta-enter"))
   );
 }
 
-function isTextareaTextInput(event: TerminalKeyEvent): boolean {
-  if (event.kind !== undefined) {
-    return event.kind === "text";
-  }
-
-  return (
-    event.input !== "" &&
-    !event.ctrl &&
-    !event.meta &&
-    event.name !== "return" &&
-    event.name !== "enter" &&
-    event.name !== "tab" &&
-    event.name !== "backspace" &&
-    event.name !== "delete"
-  );
+function isTextareaTextInput(
+  event: TerminalKeyEvent
+): event is Extract<TerminalKeyEvent, { kind: "text" }> {
+  return event.kind === "text";
 }

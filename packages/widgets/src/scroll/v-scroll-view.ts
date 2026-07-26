@@ -216,7 +216,11 @@ function createVScrollHandler(
     const max = state.hasLayout ? state.max : Number.MAX_SAFE_INTEGER;
     const page = state.hasLayout ? state.page : fallbackPage;
 
-    switch (event.name) {
+    if (event.kind !== "key") {
+      return false;
+    }
+
+    switch (event.key) {
       case "up": {
         if (sticky) {
           state.userDetached = true;

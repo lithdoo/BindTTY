@@ -62,7 +62,7 @@ function createButtonOnKey(
 ): BindingValue<InteractionKeyBinding> {
   const disabled = props.disabled;
   const handler: InteractionKeyHandler = (event) => {
-    if (isEnterKey(event) || event.input === " ") {
+    if (isEnterKey(event) || (event.kind === "text" && event.text === " ")) {
       props.onPress?.();
       return true;
     }

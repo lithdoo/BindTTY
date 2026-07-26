@@ -149,8 +149,11 @@ function createSelectOnKey<T>(
 
     const currentIndex = findSelectedIndex(options, readValue(props.value));
     const viewport = readViewportHeight(props.height);
+    if (event.kind !== "key") {
+      return false;
+    }
 
-    if (event.name === "down") {
+    if (event.key === "down") {
       if (currentIndex >= options.length - 1) {
         return false;
       }
@@ -161,7 +164,7 @@ function createSelectOnKey<T>(
       return true;
     }
 
-    if (event.name === "up") {
+    if (event.key === "up") {
       if (currentIndex <= 0) {
         return false;
       }
@@ -172,7 +175,7 @@ function createSelectOnKey<T>(
       return true;
     }
 
-    if (event.name === "home") {
+    if (event.key === "home") {
       if (currentIndex === 0) {
         return false;
       }
@@ -185,7 +188,7 @@ function createSelectOnKey<T>(
       return true;
     }
 
-    if (event.name === "end") {
+    if (event.key === "end") {
       const lastIndex = options.length - 1;
 
       if (currentIndex === lastIndex) {

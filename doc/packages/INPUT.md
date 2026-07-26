@@ -17,10 +17,10 @@
 - UTF-8 跨 chunk 保留。
 - text / control / CSI / SS3 / paste / unknown tokenization。
 - legacy CSI / SS3 navigation。
-- legacy CSI / SS3 F1–F12。
-- Kitty / fixterms `CSI ... u`。
+- legacy CSI / SS3 F1–F20。
+- Kitty / fixterms `CSI ... u`，包括 functional F1–F24。
 - xterm modifyOtherKeys。
-- Win32 prefixed keys。
+- Win32 prefixed F1–F12，包括 Shift/Ctrl/Alt 变体。
 - unknown escape/control 防污染。
 - 不完整 CSI / SS3 的原子 flush，禁止尾部字节降级成文本。
 - 输入协议能力建模。
@@ -101,13 +101,17 @@ export interface InputKeyEvent {
 | `\x1bOQ` / `\x1b[12~` | `name: "f2"` |
 | `\x1bOR` / `\x1b[13~` | `name: "f3"` |
 | `\x1b[24~` | `name: "f12"` |
-| Kitty functional key codepoints | `name: "f1"` ... `name: "f12"` |
+| legacy `25~` ... `34~` | `name: "f13"` ... `name: "f20"` |
+| Kitty functional key codepoints | `name: "f1"` ... `name: "f24"` |
 | `\x1b[13;5u` | Ctrl+Enter |
 | `\x1b[13;5:3u` | Kitty event-type Ctrl+Enter |
 | `\x1b[27;5;13~` | modifyOtherKeys Ctrl+Enter |
 | unknown CSI | `name: "unknown"` |
 
 注意：裸 `\x1b[13~` 按 legacy 规则是 F3；但 `\x1b[13;2~` ... `\x1b[13;8~` 保持为 modified Enter 兼容序列，不解释为 Shift/Ctrl+F3。
+
+F21–F24 仅在当前后端能够表达时提供（Kitty 或 native Win32）。legacy VT
+没有统一的 F21–F24 编码，因此输入层不会虚构非标准序列。
 
 ## Public API
 

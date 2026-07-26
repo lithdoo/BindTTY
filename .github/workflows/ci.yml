@@ -59,6 +59,7 @@ jobs:
 
       - name: Test input stack
         run: |
+          npm test --workspace @bindtty/win32-input
           npm test --workspace @bindtty/input
           npm test --workspace @bindtty/terminal
           npm test --workspace @bindtty/interaction

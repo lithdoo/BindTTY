@@ -2,11 +2,16 @@ import type { Readable } from "node:stream";
 
 import type {
   Dispose,
+  InputTraceOption,
   StdinInputAdapter,
   TerminalKeyEvent,
   Win32InputProvider,
   Win32KeyRecord
 } from "../types.js";
+import {
+  createInputTraceListener,
+  traceWin32KeyRecord
+} from "../input-trace.js";
 
 const RIGHT_ALT_PRESSED = 0x0001;
 const LEFT_ALT_PRESSED = 0x0002;
@@ -29,12 +34,19 @@ const VK_DOWN = 0x28;
 const VK_INSERT = 0x2d;
 const VK_DELETE = 0x2e;
 const VK_F1 = 0x70;
-const VK_F12 = 0x7b;
+const VK_F24 = 0x87;
 
 export class Win32ConsoleInput implements StdinInputAdapter {
   readonly kind = "win32" as const;
+  private readonly trace;
+  private pendingHighSurrogate: Win32KeyRecord | null = null;
 
-  constructor(private readonly provider: Win32InputProvider) {}
+  constructor(
+    private readonly provider: Win32InputProvider,
+    trace?: InputTraceOption
+  ) {
+    this.trace = createInputTraceListener(trace);
+  }
 
   prepare(_stdin: Readable): void {}
 
@@ -42,16 +54,60 @@ export class Win32ConsoleInput implements StdinInputAdapter {
     _stdin: Readable,
     onKey: (event: TerminalKeyEvent) => void
   ): Dispose {
-    return this.provider.attach((record) => {
-      const event = mapWin32KeyRecord(record);
-      if (!event) {
-        return;
-      }
+    this.pendingHighSurrogate = null;
+    const detach = this.provider.attach((record) => {
+      traceWin32KeyRecord(this.trace, record);
 
-      for (let index = 0; index < Math.max(1, record.repeatCount); index += 1) {
-        onKey(event);
+      for (const normalized of this.normalizeUnicodeRecord(record)) {
+        const event = mapWin32KeyRecord(normalized);
+        if (event) {
+          onKey(event);
+        }
       }
     });
+
+    return () => {
+      this.pendingHighSurrogate = null;
+      detach();
+    };
+  }
+
+  private normalizeUnicodeRecord(
+    record: Win32KeyRecord
+  ): readonly Win32KeyRecord[] {
+    if (!record.keyDown || record.unicode.length !== 1) {
+      return this.flushPendingBefore(record);
+    }
+
+    const code = record.unicode.charCodeAt(0);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const pending = this.pendingHighSurrogate;
+      this.pendingHighSurrogate = record;
+      return pending ? [pending] : [];
+    }
+
+    if (
+      code >= 0xdc00 &&
+      code <= 0xdfff &&
+      this.pendingHighSurrogate
+    ) {
+      const high = this.pendingHighSurrogate;
+      this.pendingHighSurrogate = null;
+      return [{
+        ...record,
+        unicode: high.unicode + record.unicode
+      }];
+    }
+
+    return this.flushPendingBefore(record);
+  }
+
+  private flushPendingBefore(
+    record: Win32KeyRecord
+  ): readonly Win32KeyRecord[] {
+    const pending = this.pendingHighSurrogate;
+    this.pendingHighSurrogate = null;
+    return pending ? [pending, record] : [record];
   }
 }
 
@@ -64,29 +120,52 @@ export function mapWin32KeyRecord(record: Win32KeyRecord): TerminalKeyEvent | nu
   const meta = hasFlag(record.controlKeyState, LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED);
   const shift = hasFlag(record.controlKeyState, SHIFT_PRESSED);
   const name = readVirtualKeyName(record.virtualKeyCode);
+  const modifiers = {
+    ctrl,
+    alt: meta,
+    meta: false,
+    shift
+  };
 
   if (name) {
     return {
       kind: "key",
       protocol: "win32",
-      input: name === "return" ? "\r" : "",
-      name,
-      ctrl,
-      meta,
-      shift,
+      key: name === "return" ? "enter" : name,
+      modifiers,
+      repeat: Math.max(1, record.repeatCount),
+      sequence: win32Sequence(record)
+    };
+  }
+
+  const virtualKeyInput = readVirtualKeyInput(record.virtualKeyCode);
+  if ((ctrl || meta) && virtualKeyInput) {
+    return {
+      kind: "key",
+      protocol: "win32",
+      key: virtualKeyInput,
+      modifiers,
+      repeat: Math.max(1, record.repeatCount),
       sequence: win32Sequence(record)
     };
   }
 
   if (record.unicode !== "") {
+    if (!ctrl && !meta) {
+      return {
+        kind: "text",
+        protocol: "win32",
+        text: record.unicode.repeat(Math.max(1, record.repeatCount)),
+        sequence: win32Sequence(record)
+      };
+    }
+
     return {
-      kind: ctrl || meta ? "key" : "text",
+      kind: "key",
       protocol: "win32",
-      input: record.unicode,
-      ...(ctrl || meta ? { name: record.unicode.toLocaleLowerCase() } : {}),
-      ctrl,
-      meta,
-      shift,
+      key: record.unicode.toLocaleLowerCase(),
+      modifiers,
+      repeat: Math.max(1, record.repeatCount),
       sequence: win32Sequence(record)
     };
   }
@@ -94,8 +173,20 @@ export function mapWin32KeyRecord(record: Win32KeyRecord): TerminalKeyEvent | nu
   return null;
 }
 
+function readVirtualKeyInput(code: number): string | null {
+  if (code >= 0x41 && code <= 0x5a) {
+    return String.fromCharCode(code + 0x20);
+  }
+
+  if (code >= 0x30 && code <= 0x39) {
+    return String.fromCharCode(code);
+  }
+
+  return null;
+}
+
 function readVirtualKeyName(code: number): string | null {
-  if (code >= VK_F1 && code <= VK_F12) {
+  if (code >= VK_F1 && code <= VK_F24) {
     return `f${code - VK_F1 + 1}`;
   }
 

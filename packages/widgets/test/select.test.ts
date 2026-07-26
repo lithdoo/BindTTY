@@ -51,11 +51,11 @@ function resolveSignal<T>(value: unknown): T {
 
 function key(name: string): BindTTYKeyEvent {
   const event: BindTTYKeyEvent = {
-    input: "",
-    name,
-    ctrl: false,
-    meta: false,
-    shift: false,
+    kind: "key",
+    key: name === "return" ? "enter" : name,
+    modifiers: { ctrl: false, alt: false, shift: false, meta: false },
+    repeat: 1,
+    protocol: "legacy-vt",
     phase: "target",
     propagationStopped: false,
     stopPropagation() {

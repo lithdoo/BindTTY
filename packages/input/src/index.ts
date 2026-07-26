@@ -27,7 +27,11 @@ export {
   toSemanticInputEvent
 } from "./semantic-events.js";
 export type {
+  FunctionKeyName,
   InputProtocol,
+  KeyModifiers,
+  KeyName,
+  KnownKeyName,
   KeyInputEvent,
   PasteInputEvent as SemanticPasteInputEvent,
   SemanticInputEvent,

@@ -1,0 +1,40 @@
+{
+  "name": "@bindtty/win32-input",
+  "version": "0.1.0-beta.0",
+  "type": "module",
+  "description": "Optional native Win32 console input provider for BindTTY.",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "require": "./index.cjs"
+    }
+  },
+  "files": [
+    "README.md",
+    "index.js",
+    "index.cjs",
+    "index.d.ts",
+    "binding.gyp",
+    "src",
+    "scripts"
+  ],
+  "scripts": {
+    "install": "node scripts/install.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lithdoo/BindTTY.git",
+    "directory": "packages/win32-input"
+  }
+}

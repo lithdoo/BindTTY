@@ -53,11 +53,11 @@ function resolveSignal<T>(value: unknown): T {
 
 function key(name: string): BindTTYKeyEvent {
   const event: BindTTYKeyEvent = {
-    input: "",
-    name,
-    ctrl: false,
-    meta: false,
-    shift: false,
+    kind: "key",
+    key: name === "return" ? "enter" : name,
+    modifiers: { ctrl: false, alt: false, shift: false, meta: false },
+    repeat: 1,
+    protocol: "legacy-vt",
     phase: "target",
     propagationStopped: false,
     stopPropagation() {
@@ -70,19 +70,28 @@ function key(name: string): BindTTYKeyEvent {
 
 function rawKey(
   input: string,
-  overrides: Partial<BindTTYKeyEvent> = {}
+  overrides: { name?: string } = {}
 ): BindTTYKeyEvent {
+  const semantic = overrides.name
+    ? {
+        kind: "key" as const,
+        key: overrides.name === "return" ? "enter" : overrides.name,
+        modifiers: { ctrl: false, alt: false, shift: false, meta: false },
+        repeat: 1,
+        protocol: "legacy-vt" as const
+      }
+    : {
+        kind: "text" as const,
+        text: input,
+        protocol: "legacy-vt" as const
+      };
   const event: BindTTYKeyEvent = {
-    input,
-    ctrl: false,
-    meta: false,
-    shift: false,
+    ...semantic,
     phase: "target",
     propagationStopped: false,
     stopPropagation() {
       event.propagationStopped = true;
-    },
-    ...overrides
+    }
   };
 
   return event;

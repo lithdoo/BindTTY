@@ -299,6 +299,11 @@ function parseSs3Token(final: string, sequence: string): InputEvent {
 }
 
 function readTildeNavigationName(code: string): string | null {
+  const functionKey = tildeFunctionKeys[code];
+  if (functionKey) {
+    return functionKey;
+  }
+
   switch (code) {
     case "1":
     case "7":
@@ -314,34 +319,33 @@ function readTildeNavigationName(code: string): string | null {
       return "pageup";
     case "6":
       return "pagedown";
-    case "11":
-      return "f1";
-    case "12":
-      return "f2";
-    case "13":
-      return "f3";
-    case "14":
-      return "f4";
-    case "15":
-      return "f5";
-    case "17":
-      return "f6";
-    case "18":
-      return "f7";
-    case "19":
-      return "f8";
-    case "20":
-      return "f9";
-    case "21":
-      return "f10";
-    case "23":
-      return "f11";
-    case "24":
-      return "f12";
     default:
       return null;
   }
 }
+
+const tildeFunctionKeys: Readonly<Record<string, string>> = {
+  "11": "f1",
+  "12": "f2",
+  "13": "f3",
+  "14": "f4",
+  "15": "f5",
+  "17": "f6",
+  "18": "f7",
+  "19": "f8",
+  "20": "f9",
+  "21": "f10",
+  "23": "f11",
+  "24": "f12",
+  "25": "f13",
+  "26": "f14",
+  "28": "f15",
+  "29": "f16",
+  "31": "f17",
+  "32": "f18",
+  "33": "f19",
+  "34": "f20"
+};
 
 function readLetterNavigationName(code: string): string | null {
   switch (code) {
@@ -370,9 +374,9 @@ function readLetterNavigationName(code: string): string | null {
   }
 }
 
-/** Kitty keyboard-protocol functional key codepoints for F1–F12. */
+/** Kitty keyboard-protocol private-use codepoints for F1–F24. */
 function readKittyFunctionKeyName(codepoint: number): string | null {
-  if (codepoint < 57364 || codepoint > 57375) {
+  if (codepoint < 57364 || codepoint > 57387) {
     return null;
   }
 

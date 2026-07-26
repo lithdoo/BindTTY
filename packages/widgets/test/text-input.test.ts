@@ -44,15 +44,40 @@ function readOnKeyHandler(template: ElementTemplate): InteractionKeyHandler {
 
 function key(
   input: string,
-  overrides: Partial<TerminalKeyEvent> = {}
+  overrides: Partial<{
+    name: string;
+    ctrl: boolean;
+    alt: boolean;
+    shift: boolean;
+    meta: boolean;
+    kind: "unknown";
+    sequence: string;
+  }> = {}
 ): TerminalKeyEvent {
-  return {
-    input,
-    ctrl: false,
-    meta: false,
-    shift: false,
-    ...overrides
-  };
+  if (overrides.kind === "unknown") {
+    return {
+      kind: "unknown",
+      raw: overrides.sequence ?? input,
+      reason: "test",
+      protocol: "legacy-vt"
+    };
+  }
+  if (overrides.name) {
+    return {
+      kind: "key",
+      key: overrides.name === "return" ? "enter" : overrides.name,
+      modifiers: {
+        ctrl: overrides.ctrl ?? false,
+        alt: overrides.alt ?? false,
+        shift: overrides.shift ?? false,
+        meta: overrides.meta ?? false
+      },
+      repeat: 1,
+      protocol: "legacy-vt"
+    };
+  }
+
+  return { kind: "text", text: input, protocol: "legacy-vt" };
 }
 
 function focusEvent(focused: boolean): InteractionNodeFocusChangeEvent {
@@ -65,14 +90,7 @@ function focusEvent(focused: boolean): InteractionNodeFocusChangeEvent {
 
 function toBindTTYKeyEvent(event: TerminalKeyEvent): BindTTYKeyEvent {
   const keyEvent: BindTTYKeyEvent = {
-    kind: event.kind,
-    protocol: event.protocol,
-    input: event.input,
-    name: event.name,
-    ctrl: event.ctrl,
-    meta: event.meta,
-    shift: event.shift,
-    sequence: event.sequence,
+    ...event,
     phase: "target",
     propagationStopped: false,
     stopPropagation() {
@@ -259,7 +277,6 @@ test("TextInput never inserts non-text semantic events even when input is printa
 
   assert.equal(callOnKey(handler, key("B", {
     kind: "unknown",
-    name: "unknown",
     sequence: "\x1b[999B"
   })), false);
   assert.deepEqual(changes, []);

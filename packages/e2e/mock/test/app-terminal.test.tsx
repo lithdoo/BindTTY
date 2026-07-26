@@ -214,7 +214,8 @@ test("tsx app renders updates resizes and disposes through the real node termina
     stdin,
     useAltScreen: true,
     hideCursor: true,
-    rawMode: true
+    rawMode: true,
+    keyboardProtocol: "legacy"
   });
   const app = createApp(
     <screen>
@@ -312,7 +313,8 @@ test("ctrl c from fake stdin disposes the real node terminal lifecycle", () => {
     stdin,
     useAltScreen: true,
     hideCursor: true,
-    rawMode: true
+    rawMode: true,
+    keyboardProtocol: "legacy"
   });
 
   terminal.start();
@@ -346,7 +348,7 @@ test("tsx app dispatches terminal keys through interaction focus", async () => {
       <text
         value={first}
         onKey={(event) => {
-          if (event.name === "return") {
+          if (event.kind === "key" && event.key === "enter") {
             first.set("X");
             return true;
           }
@@ -356,7 +358,7 @@ test("tsx app dispatches terminal keys through interaction focus", async () => {
       <text
         value={second}
         onKey={(event) => {
-          if (event.name === "return") {
+          if (event.kind === "key" && event.key === "enter") {
             second.set("Y");
             return true;
           }
@@ -413,7 +415,7 @@ test("tsx app focuses an element by id through the public app api", async () => 
         id="first"
         value={first}
         onKey={(event) => {
-          if (event.name === "return") {
+          if (event.kind === "key" && event.key === "enter") {
             first.set("X");
             return true;
           }
@@ -424,7 +426,7 @@ test("tsx app focuses an element by id through the public app api", async () => 
         id="second"
         value={second}
         onKey={(event) => {
-          if (event.name === "return") {
+          if (event.kind === "key" && event.key === "enter") {
             second.set("Y");
             return true;
           }
@@ -476,7 +478,7 @@ test("tsx app focuses an element through its mounted ref api", async () => {
         }}
         value={first}
         onKey={(event) => {
-          if (event.name === "return") {
+          if (event.kind === "key" && event.key === "enter") {
             first.set("X");
             return true;
           }
@@ -490,7 +492,7 @@ test("tsx app focuses an element through its mounted ref api", async () => {
         }}
         value={second}
         onKey={(event) => {
-          if (event.name === "return") {
+          if (event.kind === "key" && event.key === "enter") {
             second.set("Y");
             return true;
           }
@@ -1795,7 +1797,7 @@ test("tsx app applies focus inverse to wide text without breaking layout", async
       <text
         value="中"
         onKey={(event) => {
-          if (event.name === "return") {
+          if (event.kind === "key" && event.key === "enter") {
             return true;
           }
           return false;
@@ -1804,7 +1806,7 @@ test("tsx app applies focus inverse to wide text without breaking layout", async
       <text
         value="B"
         onKey={(event) => {
-          if (event.name === "return") {
+          if (event.kind === "key" && event.key === "enter") {
             return true;
           }
           return false;
@@ -2230,7 +2232,7 @@ test("tsx app bubbles TextInput Enter to Form container onKey", async () => {
     <box
       focusable={false}
       onKey={(event) => {
-        if (event.name === "return") {
+        if (event.kind === "key" && event.key === "enter") {
           submitMarker.set(`sent:${value.get()}`);
           return true;
         }
@@ -2271,7 +2273,7 @@ test("tsx app Modal onKeyCapture handles Escape while TextInput is focused", asy
     <box
       focusable={false}
       onKeyCapture={(event) => {
-        if (event.name === "escape") {
+        if (event.kind === "key" && event.key === "escape") {
           closeMarker.set("closed");
           return true;
         }
@@ -2353,7 +2355,7 @@ test("tsx app Tab handled by focused onKey does not move focus", async () => {
       <text
         value={first}
         onKey={(event) => {
-          if (event.name === "tab") {
+          if (event.kind === "key" && event.key === "tab") {
             return true;
           }
           return false;
@@ -2395,7 +2397,7 @@ test("tsx app stopPropagation without handled still runs Tab fallback", async ()
       <text
         value={second}
         onKey={(event) => {
-          if (event.name === "tab") {
+          if (event.kind === "key" && event.key === "tab") {
             event.stopPropagation();
           }
         }}

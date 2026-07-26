@@ -4,6 +4,7 @@ export const ANSI = {
   hideCursor: "\x1b[?25l",
   showCursor: "\x1b[?25h",
   queryKittyKeyboard: "\x1b[?u",
+  queryPrimaryDeviceAttributes: "\x1b[c",
   enableKittyKeyboard: "\x1b[>1u",
   disableKittyKeyboard: "\x1b[<u",
   enableModifyOtherKeys: "\x1b[>4;2m",

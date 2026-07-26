@@ -72,7 +72,7 @@ TextInput 的 **value 仍是普通 JS string**，但编辑语义按 `@bindtty/te
 
 ```text
 光标：left / right / home / end 每次移动 ±1 个 grapheme
-插入：在 grapheme index 处拼接 event.input
+插入：在 grapheme index 处拼接 text event 的 `event.text`
 删除：backspace / delete 每次移除一个完整 grapheme
 显示：beforeCursor / cursorChar / afterCursor 按 grapheme segment 拆分
 ```

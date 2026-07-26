@@ -11,13 +11,17 @@ Terminal keyboard input parsing primitives for BindTTY.
 - Tokenize text, control keys, CSI, SS3, bracketed paste, and unknown escape sequences.
 - Parse common terminal keyboard protocols:
   - legacy CSI / SS3 navigation keys
-  - legacy CSI / SS3 F1–F12 (plus common Win32 F-key prefixes)
-  - Kitty / fixterms `CSI ... u` (including functional F1–F12 codepoints)
+  - legacy CSI / SS3 F1–F20
+  - Kitty / fixterms `CSI ... u` functional F1–F24 codepoints
   - xterm modifyOtherKeys
-  - Win32 prefixed keys
+  - Win32 prefixed F1–F12, including Shift/Ctrl/Alt variants
 - Keep unknown control sequences from leaking into text input values.
 
 Note: bare `\x1b[13~` is F3, but `\x1b[13;2~`…`\x1b[13;8~` remain **modified Enter** (existing contract), not Shift/Ctrl+F3.
+
+F21–F24 are available when the active backend can represent them (Kitty or native
+Win32). BindTTY does not invent non-standard legacy VT byte sequences for keys the
+protocol cannot encode.
 
 It does not enable raw mode, write terminal protocol setup sequences, or manage focus. Those belong to `@bindtty/terminal` and `@bindtty/interaction`.
 

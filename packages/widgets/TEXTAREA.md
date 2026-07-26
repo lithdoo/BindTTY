@@ -225,7 +225,7 @@ visualPositionToCursor(layout, visualRow, column): {
 
 | 输入 | 行为 |
 |---|---|
-| printable `event.input` | 在光标处插入文本 |
+| `kind: "text"` 的 `event.text` | 在光标处插入文本 |
 | Enter | 插入 `\n` |
 | Ctrl+Enter | 提交 |
 | Meta+Enter | 提交 |
@@ -247,10 +247,10 @@ visualPositionToCursor(layout, visualRow, column): {
 3. Submit keys：匹配 `submitKeys` 时触发 `onSubmit(value)`。
 4. Navigation keys：方向键、Home/End、PageUp/PageDown。
 5. Editing keys：Backspace、Delete、Enter。
-6. Printable text：`event.input` 非空且不是控制序列时插入。
+6. Text event：`event.kind === "text"` 时插入 `event.text`。
 7. 未识别按键：返回 `false`。
 
-不要只用 `event.input` 判断文本输入。Ctrl/Meta 组合键可能也携带 input；必须先排除提交和导航语义。
+不要从 raw input 猜测文本输入。输入后端必须先归一化为互斥的 `text`、`key`、`paste` 或 `unknown` 事件。
 
 ### 6.1.2 printable 判定
 
@@ -258,20 +258,11 @@ visualPositionToCursor(layout, visualRow, column): {
 
 ```ts
 function isTextareaTextInput(event: TerminalKeyEvent): boolean {
-  return (
-    event.input !== "" &&
-    !event.ctrl &&
-    !event.meta &&
-    event.name !== "return" &&
-    event.name !== "enter" &&
-    event.name !== "tab" &&
-    event.name !== "backspace" &&
-    event.name !== "delete"
-  );
+  return event.kind === "text";
 }
 ```
 
-粘贴文本可能一次带入多个 grapheme，甚至包含 `\n`。首版允许插入整个 `event.input`，但插入后必须重新通过 `segmentText()` 和 layout 计算光标位置。
+粘贴文本可能一次带入多个 grapheme，甚至包含 `\n`。`paste` 事件应一次插入整个 `event.text`，插入后必须重新通过 `segmentText()` 和 layout 计算光标位置。
 
 ### 6.1.3 换行语义
 

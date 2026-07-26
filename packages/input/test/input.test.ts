@@ -100,6 +100,25 @@ test("parseInputChunk maps modifier combinations for Kitty Enter", () => {
   ]);
 });
 
+test("toSemanticInputEvent normalizes terminal Meta bits as Alt", () => {
+  assert.deepEqual(
+    toSemanticInputEvent(keyEvent("return", "\r", "\x1b[13;3u", false, true), "kitty"),
+    {
+      kind: "key",
+      key: "enter",
+      modifiers: {
+        ctrl: false,
+        alt: true,
+        shift: false,
+        meta: false
+      },
+      repeat: 1,
+      protocol: "kitty",
+      sequence: "\x1b[13;3u"
+    }
+  );
+});
+
 test("parseInputChunk maps F1-F12 from SS3, CSI tilde, Win32, and Kitty", () => {
   assert.deepEqual(
     [
@@ -154,6 +173,115 @@ test("parseInputChunk maps F1-F12 from SS3, CSI tilde, Win32, and Kitty", () => 
   assert.deepEqual([...parseInputChunk("\x1b[13;5u")], [
     keyEvent("return", "\r", "\x1b[13;5u", true)
   ]);
+});
+
+test("parseInputChunk maps Kitty F1-F24 with modifiers", () => {
+  const events = Array.from({ length: 24 }, (_, index) => {
+    const codepoint = 57364 + index;
+    const modifier = index % 3 === 0 ? ";2" : index % 3 === 1 ? ";3" : ";5";
+    return [...parseInputChunk(`\x1b[${codepoint}${modifier}u`)][0]!;
+  });
+
+  assert.deepEqual(
+    events.map((event) => ({
+      name: event.name,
+      ctrl: event.ctrl,
+      meta: event.meta,
+      shift: event.shift
+    })),
+    Array.from({ length: 24 }, (_, index) => ({
+      name: `f${index + 1}`,
+      ctrl: index % 3 === 2,
+      meta: index % 3 === 1,
+      shift: index % 3 === 0
+    }))
+  );
+});
+
+test("parseInputChunk maps xterm modifiers for every F1-F12 key", () => {
+  const tildeCodes = [
+    "15", "17", "18", "19", "20", "21", "23", "24"
+  ];
+  const sequences: string[] = [];
+  const expected: Array<{
+    name: string;
+    ctrl: boolean;
+    meta: boolean;
+    shift: boolean;
+  }> = [];
+
+  for (const modifier of ["2", "3", "5", "6", "7", "8"]) {
+    for (let index = 0; index < 12; index += 1) {
+      const sequence = index < 4
+        ? `\x1b[1;${modifier}${"PQRS"[index]}`
+        : `\x1b[${tildeCodes[index - 4]};${modifier}~`;
+      sequences.push(sequence);
+      const mask = Number(modifier) - 1;
+      expected.push({
+        name: `f${index + 1}`,
+        ctrl: Boolean(mask & 4),
+        meta: Boolean(mask & 2),
+        shift: Boolean(mask & 1)
+      });
+    }
+  }
+
+  assert.deepEqual(
+    [...parseInputChunk(sequences.join(""))].map((event) => ({
+      name: event.name,
+      ctrl: event.ctrl,
+      meta: event.meta,
+      shift: event.shift
+    })),
+    expected
+  );
+});
+
+test("parseInputChunk maps Windows prefixed Shift Ctrl and Alt F1-F12 atomically", () => {
+  const groups = [
+    { modifier: "shift", f1: 0x54, f11: 0x87 },
+    { modifier: "ctrl", f1: 0x5e, f11: 0x89 },
+    { modifier: "meta", f1: 0x68, f11: 0x8b }
+  ] as const;
+
+  for (const group of groups) {
+    for (let index = 0; index < 12; index += 1) {
+      const code = index < 10
+        ? group.f1 + index
+        : group.f11 + index - 10;
+      const sequence = `\x00${String.fromCharCode(code)}`;
+      assert.deepEqual([...parseInputChunk(sequence)], [
+        keyEvent(
+          `f${index + 1}`,
+          "",
+          sequence,
+          group.modifier === "ctrl",
+          group.modifier === "meta",
+          group.modifier === "shift"
+        )
+      ]);
+    }
+  }
+});
+
+test("parseInputChunk maps legacy F13-F20 without confusing modified Enter", () => {
+  const codes = ["25", "26", "28", "29", "31", "32", "33", "34"];
+  assert.deepEqual(
+    [...parseInputChunk(codes.map((code) => `\x1b[${code}~`).join(""))]
+      .map((event) => event.name),
+    Array.from({ length: 8 }, (_, index) => `f${index + 13}`)
+  );
+});
+
+test("createInputParser keeps Windows prefixed function keys atomic across chunks", () => {
+  const parser = createInputParser();
+
+  assert.deepEqual(parser.parse("\x00"), []);
+  assert.equal(parser.hasPending(), true);
+  assert.deepEqual(parser.parse("<"), [
+    keyEvent("f2", "", "\x00<")
+  ]);
+  assert.equal(parser.hasPending(), false);
 });
 
 test("parseInputChunk maps modifyOtherKeys printable input", () => {
@@ -336,9 +464,12 @@ test("semantic input bridge distinguishes text keys paste and unknown events", (
     {
       kind: "key",
       key: "f2",
-      ctrl: false,
-      meta: false,
-      shift: false,
+      modifiers: {
+        ctrl: false,
+        alt: false,
+        meta: false,
+        shift: false
+      },
       repeat: 1,
       protocol: "windows-vt",
       sequence: "\x1bOQ"

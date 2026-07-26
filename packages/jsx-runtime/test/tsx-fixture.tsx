@@ -19,8 +19,8 @@ export const view: Template = (
 export const interactionPropsView = (
   <box
     id="panel"
-    onKey={(event) => event.name === "return"}
-    onKeyCapture={(event) => event.name === "escape"}
+    onKey={(event) => event.kind === "key" && event.key === "enter"}
+    onKeyCapture={(event) => event.kind === "key" && event.key === "escape"}
     onFocusChange={(event) => {
       Boolean(event.focused);
     }}

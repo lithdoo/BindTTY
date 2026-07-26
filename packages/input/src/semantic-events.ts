@@ -8,6 +8,42 @@ export type InputProtocol =
   | "legacy-vt"
   | "readline";
 
+export type FunctionKeyName =
+  | "f1" | "f2" | "f3" | "f4" | "f5" | "f6"
+  | "f7" | "f8" | "f9" | "f10" | "f11" | "f12"
+  | "f13" | "f14" | "f15" | "f16" | "f17" | "f18"
+  | "f19" | "f20" | "f21" | "f22" | "f23" | "f24";
+
+export type KnownKeyName =
+  | FunctionKeyName
+  | "enter"
+  | "escape"
+  | "tab"
+  | "backspace"
+  | "delete"
+  | "insert"
+  | "home"
+  | "end"
+  | "pageup"
+  | "pagedown"
+  | "up"
+  | "down"
+  | "left"
+  | "right";
+
+/**
+ * Known names provide autocomplete while the string intersection preserves
+ * compatibility with printable and application-defined key names.
+ */
+export type KeyName = KnownKeyName | (string & {});
+
+export interface KeyModifiers {
+  ctrl: boolean;
+  alt: boolean;
+  shift: boolean;
+  meta: boolean;
+}
+
 export interface SemanticInputEventBase {
   protocol: InputProtocol;
   sequence?: string;
@@ -20,10 +56,8 @@ export interface TextInputEvent extends SemanticInputEventBase {
 
 export interface KeyInputEvent extends SemanticInputEventBase {
   kind: "key";
-  key: string;
-  ctrl: boolean;
-  meta: boolean;
-  shift: boolean;
+  key: KeyName;
+  modifiers: KeyModifiers;
   repeat: number;
 }
 
@@ -45,8 +79,8 @@ export type SemanticInputEvent =
   | UnknownInputEvent;
 
 /**
- * Compatibility bridge for consumers migrating from the original event shape.
- * Protocol adapters should pass the protocol they actually selected.
+ * Converts the original parser event shape at the protocol boundary. New
+ * consumers should use SemanticInputEvent exclusively.
  */
 export function toSemanticInputEvent(
   event: InputEvent,
@@ -82,12 +116,19 @@ export function toSemanticInputEvent(
 
   return {
     kind: "key",
-    key: event.name ?? event.input,
-    ctrl: event.ctrl,
-    meta: event.meta,
-    shift: event.shift,
+    key: normalizeKeyName(event.name ?? event.input),
+    modifiers: {
+      ctrl: event.ctrl,
+      alt: event.meta,
+      shift: event.shift,
+      meta: false
+    },
     repeat: 1,
     protocol,
     sequence: event.sequence
   };
+}
+
+function normalizeKeyName(name: string): KeyName {
+  return name === "return" ? "enter" : name;
 }

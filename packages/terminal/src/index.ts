@@ -9,14 +9,25 @@ export {
   mapWin32KeyRecord
 } from "./adapters/win32-console-input.js";
 export { createNodeTerminal } from "./host.js";
+export {
+  detectTerminalInputEnvironment,
+  selectInputBackend
+} from "./backend-selection.js";
+export { discoverNativeWin32InputProvider } from "./native-win32-provider.js";
 export { normalizeKeypressEvent } from "./input.js";
 export { parseRawChunk } from "./raw-input.js";
 export type {
   CreateNodeTerminalOptions,
   Dispose,
+  InputTraceBackendSelection,
+  InputTraceCaptureMarker,
+  InputTraceEnvironment,
   InputTraceListener,
   InputTraceOption,
   InputTraceRecord,
+  InputTraceWin32Record,
+  InputBackendOption,
+  InputBackendSelection,
   KeypressKey,
   KeypressListener,
   KeyboardCapabilitiesListener,
@@ -26,6 +37,7 @@ export type {
   StdinInputAdapter,
   StdinInputKind,
   TerminalHost,
+  TerminalInputEnvironment,
   TerminalKeyEvent,
   TerminalKeyListener,
   TerminalStdin,

@@ -23,14 +23,40 @@ createNodeTerminal({
 });
 ```
 
-`auto` probes Kitty support, enables only the protocol that was confirmed, and
-falls back to legacy VT without leaking the probe response into widgets.
+`auto` is the default for raw VT input. It probes Kitty support using the Kitty
+status query followed by primary device attributes, enables only a confirmed
+protocol, and falls back to Windows VT or legacy VT without leaking terminal
+responses into widgets. Readline reports readline capabilities and native
+Win32 records bypass VT negotiation.
+
+There is no portable positive query for modifyOtherKeys, so auto mode never
+blindly enables it. Use `keyboardProtocol: "modify-other-keys"` only when the
+embedding environment has explicitly confirmed support.
 `enhancedKeyboard` is retained only for compatibility with the former eager
 dual-enable behavior.
 
-Windows applications can inject a `Win32InputProvider` to receive native
-`KEY_EVENT_RECORD` data. This bypasses VT negotiation and preserves physical
-F-keys and Ctrl+Enter as semantic key events.
+On Windows, the optional `@bindtty/win32-input` package is discovered
+automatically. When stdin is a console handle it reads native
+`KEY_EVENT_RECORD` data, bypasses VT negotiation, and preserves physical
+F-keys, Ctrl+Enter, repeat counts, and Unicode as semantic events. No
+application wiring is required. Explicit `win32InputProvider` injection remains
+available for tests and custom hosts.
+
+If the optional addon is absent, cannot be built, or stdin is redirected,
+terminal safely continues through the raw VT and readline fallback chain.
+
+Backend selection belongs to `@bindtty/terminal`. With the default
+`inputBackend: "auto"` policy, Windows prefers an available native provider,
+otherwise uses raw input for a capable TTY, and falls back to readline for a
+non-TTY. Applications do not inspect PowerShell, Windows Terminal, or Console
+Host. `inputBackend: "readline" | "raw" | "win32"` is available only as an
+explicit diagnostic or compatibility override.
+
+Set `BINDTTY_INPUT_TRACE=1` to write an optional JSONL diagnostic trace.
+`BINDTTY_INPUT_TRACE_FILE` selects the destination. The trace records a safe
+environment snapshot, backend selection reason, capabilities, raw input or
+Win32 records, and the final dispatched event. Bracketed paste content is
+redacted.
 
 See:
 

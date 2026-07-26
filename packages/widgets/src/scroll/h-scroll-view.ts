@@ -212,7 +212,11 @@ function createHScrollHandler(
     const offset = state.hasLayout ? state.applied : fallbackOffset;
     const max = state.hasLayout ? state.max : Number.MAX_SAFE_INTEGER;
 
-    switch (event.name) {
+    if (event.kind !== "key") {
+      return false;
+    }
+
+    switch (event.key) {
       case "left": {
         if (sticky) {
           state.userDetached = true;

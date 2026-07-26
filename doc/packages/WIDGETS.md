@@ -198,7 +198,10 @@ Button 示例（概念）：
     props.disabled
       ? false
       : (event) => {
-          if (event.name === "return" || event.input === " ") {
+          if (
+            (event.kind === "key" && event.key === "enter") ||
+            (event.kind === "text" && event.text === " ")
+          ) {
             props.onPress?.();
             return true;
           }

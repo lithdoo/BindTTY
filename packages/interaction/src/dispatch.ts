@@ -11,14 +11,7 @@ import type {
 
 export function createKeyEvent(raw: TerminalKeyEvent): BindTTYKeyEvent {
   const event: BindTTYKeyEvent = {
-    kind: raw.kind,
-    protocol: raw.protocol,
-    input: raw.input,
-    name: raw.name,
-    ctrl: raw.ctrl,
-    meta: raw.meta,
-    shift: raw.shift,
-    sequence: raw.sequence,
+    ...raw,
     phase: "target",
     propagationStopped: false,
     stopPropagation() {

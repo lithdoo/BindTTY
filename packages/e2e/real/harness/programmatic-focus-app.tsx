@@ -47,7 +47,7 @@ const app = createApp(
       id="first"
       value={first}
       onKey={(event) => {
-        if (event.name === "return") {
+        if (event.kind === "key" && event.key === "enter") {
           mark("PRESSED:First");
           return true;
         }
@@ -61,7 +61,7 @@ const app = createApp(
       }}
       value={second}
       onKey={(event) => {
-        if (event.name === "return") {
+        if (event.kind === "key" && event.key === "enter") {
           mark("PRESSED:Second");
           setTimeout(() => {
             app.dispose();

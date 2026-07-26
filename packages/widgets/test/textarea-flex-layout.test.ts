@@ -273,11 +273,16 @@ test("Yoga empty Textarea rows keep height 1 after consecutive Enter", () => {
 
   const onKey = (textarea as { props: { onKey?: unknown } }).props.onKey as
     | ((event: {
-        input: string;
-        name: string;
-        ctrl: boolean;
-        meta: boolean;
-        shift: boolean;
+        kind: "key";
+        key: string;
+        modifiers: {
+          ctrl: boolean;
+          alt: boolean;
+          shift: boolean;
+          meta: boolean;
+        };
+        repeat: number;
+        protocol: "legacy-vt";
         phase: "target";
         propagationStopped: boolean;
         stopPropagation(): void;
@@ -287,11 +292,11 @@ test("Yoga empty Textarea rows keep height 1 after consecutive Enter", () => {
 
   const enter = () => {
     const event = {
-      input: "\r",
-      name: "return",
-      ctrl: false,
-      meta: false,
-      shift: false,
+      kind: "key" as const,
+      key: "enter",
+      modifiers: { ctrl: false, alt: false, shift: false, meta: false },
+      repeat: 1,
+      protocol: "legacy-vt" as const,
       phase: "target" as const,
       propagationStopped: false,
       stopPropagation() {

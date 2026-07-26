@@ -58,19 +58,55 @@ function readOnKeyHandler(template: ElementTemplate): InteractionKeyHandler {
 
 function key(
   input: string,
-  overrides: Partial<BindTTYKeyEvent> = {}
+  overrides: Partial<{
+    name: string;
+    ctrl: boolean;
+    alt: boolean;
+    shift: boolean;
+    meta: boolean;
+    kind: "unknown";
+    sequence: string;
+  }> = {}
 ): BindTTYKeyEvent {
+  if (overrides.kind === "unknown") {
+    const event: BindTTYKeyEvent = {
+      kind: "unknown",
+      raw: overrides.sequence ?? input,
+      reason: "test",
+      protocol: "legacy-vt",
+      phase: "target",
+      propagationStopped: false,
+      stopPropagation() {
+        event.propagationStopped = true;
+      }
+    };
+    return event;
+  }
+  const semantic = overrides.name
+    ? {
+        kind: "key" as const,
+        key: overrides.name === "return" ? "enter" : overrides.name,
+        modifiers: {
+          ctrl: overrides.ctrl ?? false,
+          alt: overrides.alt ?? false,
+          shift: overrides.shift ?? false,
+          meta: overrides.meta ?? false
+        },
+        repeat: 1,
+        protocol: "legacy-vt" as const
+      }
+    : {
+        kind: "text" as const,
+        text: input,
+        protocol: "legacy-vt" as const
+      };
   const event: BindTTYKeyEvent = {
-    input,
-    ctrl: false,
-    meta: false,
-    shift: false,
+    ...semantic,
     phase: "target",
     propagationStopped: false,
     stopPropagation() {
       event.propagationStopped = true;
-    },
-    ...overrides
+    }
   };
 
   return event;
@@ -435,6 +471,32 @@ test("Textarea edits controlled multiline value and submits with Ctrl Enter", ()
   assert.equal(value.get(), "h\ni");
 });
 
+test("Textarea treats Alt Enter as a newline instead of Meta Enter submit", () => {
+  const value = createSignal("draft");
+  const submits: string[] = [];
+  const template = asElement(
+    Textarea({
+      value,
+      submitKeys: ["meta-enter"],
+      onChange(nextValue) {
+        value.set(nextValue);
+      },
+      onSubmit(nextValue) {
+        submits.push(nextValue);
+      }
+    })
+  );
+  const onKey = readOnKeyHandler(template);
+
+  (template.props.onFocusChange as (event: InteractionNodeFocusChangeEvent) => void)(
+    focusEvent(true)
+  );
+
+  assert.equal(callOnKey(onKey, key("\r", { name: "return", alt: true })), true);
+  assert.equal(value.get(), "draft\n");
+  assert.deepEqual(submits, []);
+});
+
 test("Textarea never inserts non-text semantic events with printable payloads", () => {
   const changes: string[] = [];
   const template = asElement(
@@ -450,7 +512,6 @@ test("Textarea never inserts non-text semantic events with printable payloads", 
 
   assert.equal(handler(key("B", {
     kind: "unknown",
-    name: "unknown",
     sequence: "\x1b[999B"
   })), false);
   assert.deepEqual(changes, []);

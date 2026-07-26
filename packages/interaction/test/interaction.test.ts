@@ -85,24 +85,32 @@ function forNode(nodes: MountedNode[]): MountedForNode {
 
 function createKeyEvent(input = "x"): TerminalKeyEvent {
   return {
-    input,
-    ctrl: false,
-    meta: false,
-    shift: false
+    kind: "text",
+    text: input,
+    protocol: "legacy-vt"
   };
 }
 
 function createNamedKeyEvent(
   name: string,
-  overrides: Partial<TerminalKeyEvent> = {}
+  overrides: Partial<{
+    ctrl: boolean;
+    alt: boolean;
+    shift: boolean;
+    meta: boolean;
+  }> = {}
 ): TerminalKeyEvent {
   return {
-    input: "",
-    name,
-    ctrl: false,
-    meta: false,
-    shift: false,
-    ...overrides
+    kind: "key",
+    key: name === "return" ? "enter" : name,
+    modifiers: {
+      ctrl: overrides.ctrl ?? false,
+      alt: overrides.alt ?? false,
+      shift: overrides.shift ?? false,
+      meta: overrides.meta ?? false
+    },
+    repeat: 1,
+    protocol: "legacy-vt"
   };
 }
 
@@ -127,7 +135,7 @@ test("exports expected interaction types", () => {
     reason: "initial"
   };
   const handler: InteractionKeyHandler = (event) => {
-    assert.equal(event.input, "x");
+    assert.equal(event.kind === "text" ? event.text : "", "x");
     assert.equal(event.phase, "target");
     return true;
   };
@@ -541,13 +549,10 @@ test("focus change subscriptions can unsubscribe and are cleared on dispose", ()
 
 test("keyboard helpers classify traversal and common key events", () => {
   assert.equal(isTabKey(createNamedKeyEvent("tab")), true);
-  assert.equal(isTabKey(createKeyEvent("\t")), true);
   assert.equal(isShiftTabKey(createNamedKeyEvent("tab", { shift: true })), true);
   assert.equal(isShiftTabKey(createNamedKeyEvent("tab")), false);
   assert.equal(isEnterKey(createNamedKeyEvent("return")), true);
-  assert.equal(isEnterKey(createKeyEvent("\r")), true);
   assert.equal(isEscapeKey(createNamedKeyEvent("escape")), true);
-  assert.equal(isEscapeKey(createKeyEvent("\u001b")), true);
   assert.equal(isArrowKey(createNamedKeyEvent("left")), true);
   assert.equal(isArrowKey(createNamedKeyEvent("right")), true);
   assert.equal(isArrowKey(createNamedKeyEvent("up")), true);
@@ -603,7 +608,7 @@ test("handleKey delivers Tab to onKey handlers before fallback", () => {
   let calls = 0;
   const node = createMountedElement("node", {
     onKey: (event: BindTTYKeyEvent) => {
-      if (event.name === "tab") {
+      if (event.kind === "key" && event.key === "tab") {
         calls += 1;
         return true;
       }
@@ -622,13 +627,13 @@ test("handleKey dispatches non-traversal keys to the focused handler", () => {
   const calls: string[] = [];
   const first = createMountedElement("first", {
     onKey: (event: BindTTYKeyEvent) => {
-      calls.push(`first:${event.input}`);
+      calls.push(`first:${event.kind === "text" ? event.text : ""}`);
       return true;
     }
   });
   const second = createMountedElement("second", {
     onKey: (event: BindTTYKeyEvent) => {
-      calls.push(`second:${event.input}`);
+      calls.push(`second:${event.kind === "text" ? event.text : ""}`);
       return true;
     }
   });
@@ -749,7 +754,7 @@ test("handleKey onKeyCapture can intercept Escape before target", () => {
   const parent = createMountedElement("parent", {
     focusable: false,
     onKeyCapture: (event: BindTTYKeyEvent) => {
-      if (event.name === "escape") {
+      if (event.kind === "key" && event.key === "escape") {
         calls.push("modal");
         return true;
       }
@@ -769,7 +774,7 @@ test("handleKey stopPropagation prevents bubble but not fallback", () => {
   const first = createMountedElement("first", { onKey: true });
   const second = createMountedElement("second", {
     onKey: (event: BindTTYKeyEvent) => {
-      if (event.name === "tab") {
+      if (event.kind === "key" && event.key === "tab") {
         event.stopPropagation();
       }
     }
@@ -806,7 +811,7 @@ test("handleKey bubbles Enter from child when child does not handle it", () => {
   const calls: string[] = [];
   const child = createMountedElement("child", {
     onKey: (event: BindTTYKeyEvent) => {
-      if (event.name === "return") {
+      if (event.kind === "key" && event.key === "enter") {
         return false;
       }
       return false;
@@ -815,7 +820,7 @@ test("handleKey bubbles Enter from child when child does not handle it", () => {
   const form = createMountedElement("form", {
     focusable: false,
     onKey: (event: BindTTYKeyEvent) => {
-      if (event.name === "return") {
+      if (event.kind === "key" && event.key === "enter") {
         calls.push("submit");
         return true;
       }
@@ -835,7 +840,7 @@ test("handleKey does not bubble when child handles Backspace", () => {
   const calls: string[] = [];
   const child = createMountedElement("child", {
     onKey: (event: BindTTYKeyEvent) => {
-      if (event.name === "backspace") {
+      if (event.kind === "key" && event.key === "backspace") {
         calls.push("child");
         return true;
       }
@@ -862,7 +867,7 @@ test("handleKey bubbles unhandled arrow keys to scroll container", () => {
   let offset = 0;
   const child = createMountedElement("input", {
     onKey: (event: BindTTYKeyEvent) => {
-      if (event.name === "left" || event.name === "right") {
+      if (event.kind === "key" && (event.key === "left" || event.key === "right")) {
         return true;
       }
       return false;
@@ -871,7 +876,7 @@ test("handleKey bubbles unhandled arrow keys to scroll container", () => {
   const scroll = createMountedElement("scroll", {
     focusable: false,
     onKey: (event: BindTTYKeyEvent) => {
-      if (event.name === "down") {
+      if (event.kind === "key" && event.key === "down") {
         offset += 1;
         return true;
       }
@@ -891,7 +896,8 @@ test("onKeyCapture can handle Tab and prevent focus traversal", () => {
   const first = createMountedElement("first", { onKey: true });
   const second = createMountedElement("second", { onKey: true });
   const parent = createMountedElement("parent", {
-    onKeyCapture: (event: BindTTYKeyEvent) => (event.name === "tab" ? true : false),
+    onKeyCapture: (event: BindTTYKeyEvent) =>
+      event.kind === "key" && event.key === "tab",
     onKey: true
   }, [first, second]);
 
