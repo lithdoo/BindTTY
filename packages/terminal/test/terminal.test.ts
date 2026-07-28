@@ -1157,9 +1157,6 @@ test(
 
 test(
   "configured resize burst publishes an immediate and final viewport only",
-  {
-    todo: "ResizeCoordinator does not yet bound rapid event-driven repaints"
-  },
   async () => {
     const stdout = createMockStdout();
     const terminal = createNodeTerminal({
@@ -1167,7 +1164,7 @@ test(
       resizePollIntervalMs: 0,
       resizeMinFrameIntervalMs: 80,
       resizeSettleDelayMs: 80
-    } as CreateNodeTerminalOptions);
+    });
     const events: TerminalResizeEvent[] = [];
 
     terminal.onResize((event) => {
@@ -1196,6 +1193,46 @@ test(
     });
   }
 );
+
+test("stop cancels a pending resize frame and restart begins a new burst", async () => {
+  const stdout = createMockStdout();
+  const terminal = createNodeTerminal({
+    stdout,
+    resizePollIntervalMs: 0,
+    resizeMinFrameIntervalMs: 80,
+    resizeSettleDelayMs: 80
+  });
+  const events: TerminalResizeEvent[] = [];
+
+  terminal.onResize((event) => {
+    events.push(event);
+  });
+
+  terminal.start();
+  stdout.columns = 11;
+  stdout.emitResize();
+  stdout.columns = 12;
+  stdout.emitResize();
+  terminal.stop();
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 120);
+  });
+
+  assert.deepEqual(events.map((event) => event.viewport), [
+    { width: 11, height: 3 }
+  ]);
+
+  terminal.start();
+  stdout.columns = 13;
+  stdout.emitResize();
+  terminal.stop();
+
+  assert.deepEqual(events.map((event) => event.viewport), [
+    { width: 11, height: 3 },
+    { width: 13, height: 3 }
+  ]);
+});
 
 test("resize polling detects the latest viewport when events are missing", async () => {
   const stdout = createMockStdout();

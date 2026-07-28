@@ -39,19 +39,53 @@ const defaultViewport: TerminalViewport = {
 };
 
 const win32ResizePollIntervalMs = 50;
+const win32ResizeMinFrameIntervalMs = 32;
+const win32ResizeSettleDelayMs = 100;
 const defaultKeyboardProbeTimeoutMs = 100;
 const kittyKeyboardResponse = /^\x1b\[\?(\d+)u$/;
 const kittyKeyboardLikeResponse = /^\x1b\[\?[^]*u$/;
 const primaryDeviceAttributesResponse = /^\x1b\[\??[\d;]*c$/;
 
+function normalizeDurationMs(
+  value: number | undefined,
+  fallback: number
+): number {
+  if (value === undefined) {
+    return fallback;
+  }
+
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.floor(value));
+}
+
 function readResizePollIntervalMs(
   options: CreateNodeTerminalOptions
 ): number {
-  if (options.resizePollIntervalMs !== undefined) {
-    return options.resizePollIntervalMs;
-  }
+  return normalizeDurationMs(
+    options.resizePollIntervalMs,
+    process.platform === "win32" ? win32ResizePollIntervalMs : 0
+  );
+}
 
-  return process.platform === "win32" ? win32ResizePollIntervalMs : 0;
+function readResizeMinFrameIntervalMs(
+  options: CreateNodeTerminalOptions
+): number {
+  return normalizeDurationMs(
+    options.resizeMinFrameIntervalMs,
+    process.platform === "win32" ? win32ResizeMinFrameIntervalMs : 0
+  );
+}
+
+function readResizeSettleDelayMs(
+  options: CreateNodeTerminalOptions
+): number {
+  return normalizeDurationMs(
+    options.resizeSettleDelayMs,
+    process.platform === "win32" ? win32ResizeSettleDelayMs : 0
+  );
 }
 
 function shouldPollStdoutResize(
@@ -111,6 +145,15 @@ export function createNodeTerminal(
   const inputTrace = createInputTraceListener(options.inputTrace);
   let detachStdin: Dispose = () => {};
   let resizePollTimer: ReturnType<typeof setInterval> | undefined;
+  let resizeFrameTimer: ReturnType<typeof setTimeout> | undefined;
+  let resizeSettleTimer: ReturnType<typeof setTimeout> | undefined;
+  let lastResizePublishedAt: number | undefined;
+  let pendingResize:
+    | {
+        viewport: TerminalViewport;
+        source: TerminalResizeEvent["source"];
+      }
+    | undefined;
   let publishedViewport: TerminalViewport = {
     width: readViewportDimension(
       options.stdout.columns,
@@ -154,18 +197,19 @@ export function createNodeTerminal(
     };
   }
 
-  function publishViewportIfChanged(
+  function publishViewport(
+    viewport: TerminalViewport,
     source: TerminalResizeEvent["source"]
   ): void {
-    const nextViewport = readViewport(publishedViewport);
-    if (viewportsEqual(publishedViewport, nextViewport)) {
+    if (viewportsEqual(publishedViewport, viewport)) {
       return;
     }
 
     const previousViewport = publishedViewport;
-    publishedViewport = nextViewport;
+    publishedViewport = viewport;
+    lastResizePublishedAt = Date.now();
     const event: TerminalResizeEvent = {
-      viewport: { ...nextViewport },
+      viewport: { ...viewport },
       previousViewport: { ...previousViewport },
       source
     };
@@ -174,12 +218,111 @@ export function createNodeTerminal(
     }
   }
 
+  function clearResizeFrameTimer(): void {
+    if (resizeFrameTimer) {
+      clearTimeout(resizeFrameTimer);
+      resizeFrameTimer = undefined;
+    }
+  }
+
+  function clearResizeSettleTimer(): void {
+    if (resizeSettleTimer) {
+      clearTimeout(resizeSettleTimer);
+      resizeSettleTimer = undefined;
+    }
+  }
+
+  function publishPendingResize(): void {
+    const pending = pendingResize;
+    pendingResize = undefined;
+    if (pending) {
+      publishViewport(pending.viewport, pending.source);
+    }
+  }
+
+  function schedulePendingResize(
+    delayMs: number,
+    settleDelayMs: number
+  ): void {
+    if (!resizeFrameTimer) {
+      resizeFrameTimer = setTimeout(() => {
+        resizeFrameTimer = undefined;
+        publishPendingResize();
+      }, delayMs);
+      resizeFrameTimer.unref?.();
+    }
+
+    clearResizeSettleTimer();
+    resizeSettleTimer = setTimeout(() => {
+      resizeSettleTimer = undefined;
+      clearResizeFrameTimer();
+      publishPendingResize();
+    }, settleDelayMs);
+    resizeSettleTimer.unref?.();
+  }
+
+  function coordinateViewportChange(
+    source: TerminalResizeEvent["source"]
+  ): void {
+    const nextViewport = readViewport(publishedViewport);
+    if (viewportsEqual(publishedViewport, nextViewport)) {
+      pendingResize = undefined;
+      clearResizeFrameTimer();
+      clearResizeSettleTimer();
+      return;
+    }
+
+    if (
+      pendingResize &&
+      viewportsEqual(pendingResize.viewport, nextViewport)
+    ) {
+      pendingResize.source = source;
+      return;
+    }
+
+    const minFrameIntervalMs = readResizeMinFrameIntervalMs(options);
+    const settleDelayMs = readResizeSettleDelayMs(options);
+    if (minFrameIntervalMs === 0 || lastResizePublishedAt === undefined) {
+      pendingResize = undefined;
+      clearResizeFrameTimer();
+      clearResizeSettleTimer();
+      publishViewport(nextViewport, source);
+      return;
+    }
+
+    const elapsedMs = Date.now() - lastResizePublishedAt;
+    if (elapsedMs >= minFrameIntervalMs) {
+      pendingResize = undefined;
+      clearResizeFrameTimer();
+      clearResizeSettleTimer();
+      publishViewport(nextViewport, source);
+      return;
+    }
+
+    pendingResize = {
+      viewport: nextViewport,
+      source
+    };
+    const frameDelayMs = Math.max(0, minFrameIntervalMs - elapsedMs);
+    schedulePendingResize(
+      frameDelayMs,
+      settleDelayMs > 0 ? settleDelayMs : frameDelayMs
+    );
+  }
+
+  function resetResizeCoordinator(): void {
+    clearResizeFrameTimer();
+    clearResizeSettleTimer();
+    pendingResize = undefined;
+    lastResizePublishedAt = undefined;
+  }
+
   function handleStdoutResize(): void {
-    publishViewportIfChanged("event");
+    coordinateViewportChange("event");
   }
 
   function pollViewportIfChanged(): void {
-    publishViewportIfChanged("poll");
+    coordinateViewportChange("poll");
   }
 
   function startWin32ResizePolling(): void {
@@ -198,7 +341,6 @@ export function createNodeTerminal(
       clearInterval(resizePollTimer);
       resizePollTimer = undefined;
     }
-
   }
 
   function dispatchKey(event: TerminalKeyEvent): void {
@@ -493,6 +635,7 @@ export function createNodeTerminal(
       }
 
       stopWin32ResizePolling();
+      resetResizeCoordinator();
       options.stdout.off?.("resize", handleStdoutResize);
       detachStdin();
       detachStdin = () => {};

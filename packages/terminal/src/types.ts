@@ -242,6 +242,16 @@ export interface CreateNodeTerminalOptions {
    * Defaults to 50ms on win32 TTY stdout; set 0 to disable the fallback.
    */
   resizePollIntervalMs?: number;
+  /**
+   * Minimum interval between viewport publications during a resize burst.
+   * Defaults to 32ms on win32 and 0 elsewhere; set 0 to publish immediately.
+   */
+  resizeMinFrameIntervalMs?: number;
+  /**
+   * Publishes the latest pending viewport after resize activity settles.
+   * Defaults to 100ms on win32 and 0 elsewhere.
+   */
+  resizeSettleDelayMs?: number;
 }
 
 export interface TerminalHost {
