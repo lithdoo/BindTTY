@@ -12,6 +12,7 @@ import type {
   TerminalHost,
   TerminalInputEnvironment,
   TerminalKeyEvent,
+  TerminalResizeEvent,
   TerminalStdin,
   TerminalStdout,
   TerminalViewport
@@ -1033,30 +1034,36 @@ test("viewport reads stdout dimensions fallback and defaults", () => {
 test("start registers stdout resize listener and emits resize events", () => {
   const stdout = createMockStdout();
   const terminal = createNodeTerminal({ stdout });
-  let resizeCount = 0;
+  const events: TerminalResizeEvent[] = [];
 
-  terminal.onResize(() => {
-    resizeCount += 1;
+  terminal.onResize((event) => {
+    events.push(event);
   });
   stdout.emitResize();
 
-  assert.equal(resizeCount, 0);
+  assert.equal(events.length, 0);
   assert.equal(stdout.listenerCount(), 0);
 
   terminal.start();
 
   assert.equal(stdout.listenerCount(), 1);
 
+  stdout.columns = 12;
+  stdout.rows = 4;
   stdout.emitResize();
 
-  assert.equal(resizeCount, 1);
+  assert.deepEqual(events, [
+    {
+      viewport: { width: 12, height: 4 },
+      previousViewport: { width: 10, height: 3 },
+      source: "event"
+    }
+  ]);
+  assert.deepEqual(terminal.viewport, { width: 12, height: 4 });
 });
 
 test(
   "resize events publish only after the stdout viewport actually changes",
-  {
-    todo: "Win32 resize events must ignore stale dimensions and coalesce with polling"
-  },
   async () => {
     const stdout = createMockStdout();
     stdout.isTTY = true;
@@ -1064,10 +1071,10 @@ test(
       stdout,
       resizePollIntervalMs: 10
     });
-    let resizeCount = 0;
+    const events: TerminalResizeEvent[] = [];
 
-    terminal.onResize(() => {
-      resizeCount += 1;
+    terminal.onResize((event) => {
+      events.push(event);
     });
 
     terminal.start();
@@ -1079,9 +1086,108 @@ test(
     });
 
     terminal.stop();
-    assert.equal(resizeCount, 1);
+    assert.deepEqual(events, [
+      {
+        viewport: { width: 20, height: 3 },
+        previousViewport: { width: 10, height: 3 },
+        source: "poll"
+      }
+    ]);
   }
 );
+
+test("resize polling coalesces rapid changes into the latest viewport", async () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const terminal = createNodeTerminal({
+    stdout,
+    resizePollIntervalMs: 20
+  });
+  const events: TerminalResizeEvent[] = [];
+
+  terminal.onResize((event) => {
+    events.push(event);
+  });
+
+  terminal.start();
+  stdout.columns = 11;
+  stdout.emitResize();
+  stdout.columns = 12;
+  stdout.emitResize();
+  stdout.columns = 13;
+  stdout.emitResize();
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
+
+  terminal.stop();
+  assert.deepEqual(events, [
+    {
+      viewport: { width: 13, height: 3 },
+      previousViewport: { width: 10, height: 3 },
+      source: "poll"
+    }
+  ]);
+});
+
+test("resize events ignore duplicate dimensions", () => {
+  const stdout = createMockStdout();
+  const terminal = createNodeTerminal({ stdout });
+  let resizeCount = 0;
+
+  terminal.onResize(() => {
+    resizeCount += 1;
+  });
+
+  terminal.start();
+  stdout.emitResize();
+  stdout.emitResize();
+
+  assert.equal(resizeCount, 0);
+
+  stdout.columns = 12;
+  stdout.emitResize();
+  stdout.emitResize();
+
+  assert.equal(resizeCount, 1);
+});
+
+test("running viewport remains on the published snapshot until resize", () => {
+  const stdout = createMockStdout();
+  const terminal = createNodeTerminal({ stdout });
+
+  terminal.start();
+  stdout.columns = 12;
+  stdout.rows = 4;
+
+  assert.deepEqual(terminal.viewport, { width: 10, height: 3 });
+
+  stdout.emitResize();
+
+  assert.deepEqual(terminal.viewport, { width: 12, height: 4 });
+});
+
+test("invalid resize dimensions keep the last published viewport", () => {
+  const stdout = createMockStdout();
+  const terminal = createNodeTerminal({
+    stdout,
+    fallbackViewport: { width: 80, height: 24 }
+  });
+  let resizeCount = 0;
+
+  terminal.onResize(() => {
+    resizeCount += 1;
+  });
+
+  terminal.start();
+  stdout.columns = 0;
+  stdout.rows = Number.NaN;
+  stdout.emitResize();
+
+  assert.deepEqual(terminal.viewport, { width: 10, height: 3 });
+  assert.equal(resizeCount, 0);
+});
 
 test("onResize unsubscribe prevents future resize notifications", () => {
   const stdout = createMockStdout();
@@ -1093,6 +1199,7 @@ test("onResize unsubscribe prevents future resize notifications", () => {
 
   terminal.start();
   unsubscribe();
+  stdout.columns = 12;
   stdout.emitResize();
 
   assert.equal(resizeCount, 0);
@@ -1111,7 +1218,9 @@ test("resize listeners can unsubscribe while resize is being dispatched", () => 
   });
 
   terminal.start();
+  stdout.columns = 11;
   stdout.emitResize();
+  stdout.columns = 12;
   stdout.emitResize();
 
   assert.equal(resizeCount, 1);
@@ -1188,6 +1297,7 @@ test("stop removes stdout resize listener and restart registers it again", () =>
   assert.equal(resizeCount, 0);
 
   terminal.start();
+  stdout.columns = 12;
   stdout.emitResize();
 
   assert.equal(stdout.listenerCount(), 1);
@@ -1208,6 +1318,7 @@ test("dispose removes stdout resize listener and clears resize listeners", () =>
 
   assert.equal(stdout.listenerCount(), 0);
 
+  stdout.columns = 12;
   stdout.emitResize();
 
   assert.equal(resizeCount, 0);

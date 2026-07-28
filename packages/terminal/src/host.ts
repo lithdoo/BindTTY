@@ -26,6 +26,7 @@ import type {
   TerminalHost,
   TerminalKeyEvent,
   TerminalKeyListener,
+  TerminalResizeEvent,
   KeyboardCapabilitiesListener,
   KeyboardProtocolOption,
   StdinInputKind,
@@ -72,6 +73,22 @@ function viewportsEqual(
   return left.width === right.width && left.height === right.height;
 }
 
+function readViewportDimension(
+  ...candidates: Array<number | undefined>
+): number {
+  for (const candidate of candidates) {
+    if (
+      typeof candidate === "number" &&
+      Number.isFinite(candidate) &&
+      candidate > 0
+    ) {
+      return Math.max(1, Math.floor(candidate));
+    }
+  }
+
+  return 1;
+}
+
 export function createNodeTerminal(
   options: CreateNodeTerminalOptions
 ): TerminalHost {
@@ -94,7 +111,18 @@ export function createNodeTerminal(
   const inputTrace = createInputTraceListener(options.inputTrace);
   let detachStdin: Dispose = () => {};
   let resizePollTimer: ReturnType<typeof setInterval> | undefined;
-  let lastPolledViewport: TerminalViewport | null = null;
+  let publishedViewport: TerminalViewport = {
+    width: readViewportDimension(
+      options.stdout.columns,
+      options.fallbackViewport?.width,
+      defaultViewport.width
+    ),
+    height: readViewportDimension(
+      options.stdout.rows,
+      options.fallbackViewport?.height,
+      defaultViewport.height
+    )
+  };
   let keyboardProbeTimer: ReturnType<typeof setTimeout> | undefined;
   let keyboardProbeDaTimer: ReturnType<typeof setTimeout> | undefined;
   let keyboardProbeState: "idle" | "kitty-query" = "idle";
@@ -107,38 +135,55 @@ export function createNodeTerminal(
     fallbackProtocol
   );
 
-  function readViewport(): TerminalViewport {
+  function readViewport(
+    runtimeFallback: TerminalViewport = defaultViewport
+  ): TerminalViewport {
     return {
-      width:
-        options.stdout.columns ??
-        options.fallbackViewport?.width ??
-        defaultViewport.width,
-      height:
-        options.stdout.rows ??
-        options.fallbackViewport?.height ??
+      width: readViewportDimension(
+        options.stdout.columns,
+        runtimeFallback.width,
+        options.fallbackViewport?.width,
+        defaultViewport.width
+      ),
+      height: readViewportDimension(
+        options.stdout.rows,
+        runtimeFallback.height,
+        options.fallbackViewport?.height,
         defaultViewport.height
+      )
     };
   }
 
-  function handleResize(): void {
-    lastPolledViewport = readViewport();
-
-    for (const listener of [...resizeListeners]) {
-      listener();
-    }
-  }
-
-  function pollViewportIfChanged(): void {
-    const nextViewport = readViewport();
-
-    if (
-      lastPolledViewport !== null &&
-      viewportsEqual(lastPolledViewport, nextViewport)
-    ) {
+  function publishViewportIfChanged(
+    source: TerminalResizeEvent["source"]
+  ): void {
+    const nextViewport = readViewport(publishedViewport);
+    if (viewportsEqual(publishedViewport, nextViewport)) {
       return;
     }
 
-    handleResize();
+    const previousViewport = publishedViewport;
+    publishedViewport = nextViewport;
+    const event: TerminalResizeEvent = {
+      viewport: { ...nextViewport },
+      previousViewport: { ...previousViewport },
+      source
+    };
+    for (const listener of [...resizeListeners]) {
+      listener(event);
+    }
+  }
+
+  function handleStdoutResize(): void {
+    if (resizePollTimer) {
+      return;
+    }
+
+    publishViewportIfChanged("event");
+  }
+
+  function pollViewportIfChanged(): void {
+    publishViewportIfChanged("poll");
   }
 
   function startWin32ResizePolling(): void {
@@ -148,7 +193,6 @@ export function createNodeTerminal(
       return;
     }
 
-    lastPolledViewport = readViewport();
     resizePollTimer = setInterval(pollViewportIfChanged, intervalMs);
     resizePollTimer.unref?.();
   }
@@ -159,7 +203,6 @@ export function createNodeTerminal(
       resizePollTimer = undefined;
     }
 
-    lastPolledViewport = null;
   }
 
   function dispatchKey(event: TerminalKeyEvent): void {
@@ -353,7 +396,9 @@ export function createNodeTerminal(
 
   const terminal: TerminalHost = {
     get viewport(): TerminalViewport {
-      return readViewport();
+      return started
+        ? { ...publishedViewport }
+        : readViewport(publishedViewport);
     },
 
     get keyboardCapabilities(): KeyboardCapabilities {
@@ -365,6 +410,7 @@ export function createNodeTerminal(
         return;
       }
 
+      publishedViewport = readViewport(publishedViewport);
       started = true;
       traceTerminalEnvironment(inputTrace, options, platform);
 
@@ -441,7 +487,7 @@ export function createNodeTerminal(
         startKeyboardProtocol();
       }
 
-      options.stdout.on?.("resize", handleResize);
+      options.stdout.on?.("resize", handleStdoutResize);
       startWin32ResizePolling();
     },
 
@@ -451,7 +497,7 @@ export function createNodeTerminal(
       }
 
       stopWin32ResizePolling();
-      options.stdout.off?.("resize", handleResize);
+      options.stdout.off?.("resize", handleStdoutResize);
       detachStdin();
       detachStdin = () => {};
 

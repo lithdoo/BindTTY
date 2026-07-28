@@ -5,7 +5,7 @@ import type {
 
 export type Dispose = () => void;
 
-export type ResizeListener = () => void;
+export type ResizeListener = (event: TerminalResizeEvent) => void;
 export type TerminalKeyListener = (event: TerminalKeyEvent) => void;
 export type KeyboardCapabilitiesListener = (
   capabilities: KeyboardCapabilities
@@ -142,8 +142,8 @@ export interface TerminalStdout {
   columns?: number;
   rows?: number;
   write(chunk: string): unknown;
-  on?(event: "resize", listener: ResizeListener): unknown;
-  off?(event: "resize", listener: ResizeListener): unknown;
+  on?(event: "resize", listener: () => void): unknown;
+  off?(event: "resize", listener: () => void): unknown;
 }
 
 export interface TerminalStdin {
@@ -159,6 +159,12 @@ export interface TerminalStdin {
 export interface TerminalViewport {
   width: number;
   height: number;
+}
+
+export interface TerminalResizeEvent {
+  readonly viewport: TerminalViewport;
+  readonly previousViewport: TerminalViewport;
+  readonly source: "event" | "poll";
 }
 
 export type TerminalKeyEvent = SemanticInputEvent;

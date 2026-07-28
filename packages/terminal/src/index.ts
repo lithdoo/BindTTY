@@ -40,6 +40,7 @@ export type {
   TerminalInputEnvironment,
   TerminalKeyEvent,
   TerminalKeyListener,
+  TerminalResizeEvent,
   TerminalStdin,
   TerminalStdout,
   TerminalViewport,

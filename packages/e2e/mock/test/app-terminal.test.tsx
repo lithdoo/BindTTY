@@ -610,6 +610,7 @@ test("tsx app toggles Checkbox with Space", async () => {
   await nextMicrotask();
 
   assert.equal(checked.get(), true);
+  stdout.columns = 25;
   stdout.emitResize();
   await nextMicrotask();
 
@@ -653,6 +654,7 @@ test("tsx app changes Select with Down", async () => {
   await nextMicrotask();
 
   assert.equal(value.get(), "b");
+  stdout.columns = 25;
   stdout.emitResize();
   await nextMicrotask();
 

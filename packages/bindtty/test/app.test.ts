@@ -27,7 +27,13 @@ import {
   type LayoutNode,
   type LayoutViewport
 } from "@bindtty/layout";
-import type { Dispose, TerminalHost, TerminalKeyEvent, TerminalViewport } from "@bindtty/terminal";
+import type {
+  Dispose,
+  ResizeListener,
+  TerminalHost,
+  TerminalKeyEvent,
+  TerminalViewport
+} from "@bindtty/terminal";
 import type { InteractionNodeFocusChangeEvent } from "@bindtty/interaction";
 import {
   elementTemplate,
@@ -105,7 +111,8 @@ function createMockTerminal(width = 1, height = 1): MockTerminal {
     width,
     height
   };
-  const resizeListeners = new Set<() => void>();
+  let previousViewport = currentViewport;
+  const resizeListeners = new Set<ResizeListener>();
   const keyListeners = new Set<(event: TerminalKeyEvent) => void>();
 
   return {
@@ -128,7 +135,7 @@ function createMockTerminal(width = 1, height = 1): MockTerminal {
     write(chunk: string) {
       this.writes.push(chunk);
     },
-    onResize(listener: () => void): Dispose {
+    onResize(listener: ResizeListener): Dispose {
       resizeListeners.add(listener);
       return () => {
         resizeListeners.delete(listener);
@@ -147,8 +154,14 @@ function createMockTerminal(width = 1, height = 1): MockTerminal {
       return keyListeners.size;
     },
     emitResize() {
+      const event = {
+        viewport: { ...currentViewport },
+        previousViewport: { ...previousViewport },
+        source: "event" as const
+      };
+      previousViewport = currentViewport;
       for (const listener of [...resizeListeners]) {
-        listener();
+        listener(event);
       }
     },
     emitKey(event: TerminalKeyEvent) {
