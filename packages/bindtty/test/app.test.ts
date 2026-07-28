@@ -32,6 +32,7 @@ import type {
   ResizeListener,
   TerminalHost,
   TerminalKeyEvent,
+  TerminalResizeEvent,
   TerminalViewport
 } from "@bindtty/terminal";
 import type { InteractionNodeFocusChangeEvent } from "@bindtty/interaction";
@@ -61,7 +62,7 @@ interface MockTerminal extends TerminalHost {
   disposeCalls: number;
   resizeListenerCount(): number;
   keyListenerCount(): number;
-  emitResize(): void;
+  emitResize(event?: TerminalResizeEvent): void;
   emitKey(event: TerminalKeyEvent): void;
   setViewport(viewport: TerminalViewport): void;
 }
@@ -153,11 +154,11 @@ function createMockTerminal(width = 1, height = 1): MockTerminal {
     keyListenerCount() {
       return keyListeners.size;
     },
-    emitResize() {
-      const event = {
+    emitResize(providedEvent?: TerminalResizeEvent) {
+      const event: TerminalResizeEvent = providedEvent ?? {
         viewport: { ...currentViewport },
         previousViewport: { ...previousViewport },
-        source: "event" as const
+        source: "event"
       };
       previousViewport = currentViewport;
       for (const listener of [...resizeListeners]) {
@@ -1056,6 +1057,102 @@ test("terminal resize triggers app resize and full repaint", () => {
   assert.equal(terminal.writes.length, 2);
   assert.match(terminal.writes[1], /A/);
   assert.match(terminal.writes[1], /B/);
+});
+
+test("terminal resize renders from the viewport event snapshot", () => {
+  const terminal = createMockTerminal(9, 4);
+  const calls: Array<{ root: unknown; viewport: LayoutViewport }> = [];
+  const app = createApp(elementTemplate("text", { value: "A" }), {
+    terminal,
+    layoutEngine: createRecordingLayoutEngine(calls)
+  });
+
+  app.start();
+  terminal.emitResize({
+    viewport: { width: 3, height: 2 },
+    previousViewport: { width: 9, height: 4 },
+    source: "poll"
+  });
+
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1]?.viewport, { width: 3, height: 2 });
+  assert.deepEqual(terminal.viewport, { width: 9, height: 4 });
+});
+
+test("terminal resize consumes a queued runtime flush in one repaint", async () => {
+  const terminal = createMockTerminal(1, 1);
+  const label = createSignal("A");
+  const calls: Array<{ root: unknown; viewport: LayoutViewport }> = [];
+  const app = createApp(elementTemplate("text", { value: label }), {
+    terminal,
+    layoutEngine: createRecordingLayoutEngine(calls)
+  });
+
+  app.start();
+  label.set("B");
+  terminal.setViewport({ width: 2, height: 1 });
+  terminal.emitResize();
+
+  assert.equal(calls.length, 2);
+  assert.equal(terminal.writes.length, 2);
+  assert.match(terminal.writes[1] ?? "", /B/);
+
+  await nextMicrotask();
+
+  assert.equal(calls.length, 2);
+  assert.equal(terminal.writes.length, 2);
+});
+
+test("terminal resize during write is serialized after the active frame", () => {
+  const terminal = createMockTerminal(1, 1);
+  const calls: Array<{ root: unknown; viewport: LayoutViewport }> = [];
+  const events: string[] = [];
+  const recordingLayoutEngine = createRecordingLayoutEngine(calls);
+  const layoutEngine: LayoutEngine = {
+    layout(root, options) {
+      events.push(`layout:${options.viewport.width}`);
+      return recordingLayoutEngine.layout(root, options);
+    }
+  };
+  const originalWrite = terminal.write.bind(terminal);
+  let resizeOnWrite = true;
+
+  terminal.write = (chunk: string) => {
+    const writeNumber = terminal.writes.length + 1;
+    events.push(`write:${writeNumber}:start`);
+    originalWrite(chunk);
+    if (resizeOnWrite) {
+      resizeOnWrite = false;
+      terminal.setViewport({ width: 2, height: 1 });
+      terminal.emitResize();
+    }
+    events.push(`write:${writeNumber}:end`);
+  };
+
+  const app = createApp(elementTemplate("text", { value: "AB" }), {
+    terminal,
+    layoutEngine
+  });
+
+  app.start();
+
+  assert.deepEqual(
+    calls.map((call) => call.viewport),
+    [
+      { width: 1, height: 1 },
+      { width: 2, height: 1 }
+    ]
+  );
+  assert.equal(terminal.writes.length, 2);
+  assert.deepEqual(events, [
+    "layout:1",
+    "write:1:start",
+    "write:1:end",
+    "layout:2",
+    "write:2:start",
+    "write:2:end"
+  ]);
+  assert.match(terminal.writes[1] ?? "", /A/);
 });
 
 test("terminal mode manual resize returns and writes the repaint patch", () => {

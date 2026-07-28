@@ -11,7 +11,11 @@ import type {
   RuntimeLifecycleErrorHandler,
   RuntimeRoot
 } from "@bindtty/runtime";
-import type { TerminalHost, TerminalKeyEvent } from "@bindtty/terminal";
+import type {
+  TerminalHost,
+  TerminalKeyEvent,
+  TerminalResizeEvent
+} from "@bindtty/terminal";
 import type { MountedElementNode, ViewTemplate } from "@bindtty/vnode";
 
 export interface AppStdout {
@@ -80,9 +84,12 @@ export function createApp(
   let flushUnsubscribe: Dispose | null = null;
   let terminalResizeUnsubscribe: Dispose | null = null;
   let terminalKeyUnsubscribe: Dispose | null = null;
+  let renderTransactionActive = false;
+  let renderRequested = false;
+  let pendingResizeViewport: AppViewport | null = null;
 
-  function handleResize(): void {
-    app.resize();
+  function handleResize(event?: TerminalResizeEvent): void {
+    requestResize(event?.viewport ?? readViewport());
   }
 
   function refreshInteraction(): void {
@@ -93,7 +100,7 @@ export function createApp(
     const result = interaction.handleKey(event);
 
     if (result.handled || result.dirtyNodes.length > 0) {
-      render();
+      requestRender();
     }
   }
 
@@ -105,7 +112,7 @@ export function createApp(
     refreshInteraction();
     const result = interaction.focus(target);
     if (result.handled || result.dirtyNodes.length > 0) {
-      render();
+      requestRender();
     }
     return result;
   }
@@ -136,12 +143,11 @@ export function createApp(
     }
   }
 
-  function render(): string {
+  function renderFrame(viewport: AppViewport): string {
     if (disposed) {
       return "";
     }
 
-    const viewport = readViewport();
     refreshInteraction();
     const layoutTree = layoutRoot(runtime.root, {
       viewport,
@@ -159,6 +165,59 @@ export function createApp(
     runtime.clearDirty();
     dispatchLayout(layoutTree);
     return patch;
+  }
+
+  function requestRender(): string {
+    if (disposed) {
+      return "";
+    }
+
+    renderRequested = true;
+    return flushRenderTransaction();
+  }
+
+  function requestResize(viewport: AppViewport): string {
+    if (disposed) {
+      return "";
+    }
+
+    pendingResizeViewport = { ...viewport };
+    return flushRenderTransaction();
+  }
+
+  function flushRenderTransaction(): string {
+    if (renderTransactionActive || disposed) {
+      return "";
+    }
+
+    renderTransactionActive = true;
+    let lastPatch = "";
+
+    try {
+      while (renderRequested || pendingResizeViewport !== null) {
+        const resizeViewport = pendingResizeViewport;
+        pendingResizeViewport = null;
+        renderRequested = false;
+
+        if (resizeViewport !== null) {
+          runtime.flushNow();
+
+          if (pendingResizeViewport !== null) {
+            continue;
+          }
+
+          // The resize frame includes any dirty runtime state consumed above.
+          renderRequested = false;
+          renderer.reset();
+        }
+
+        lastPatch = renderFrame(resizeViewport ?? readViewport());
+      }
+    } finally {
+      renderTransactionActive = false;
+    }
+
+    return lastPatch;
   }
 
   function dispatchLayout(layout: LayoutNode | null): void {
@@ -192,7 +251,7 @@ export function createApp(
       started = true;
       terminal?.start();
       flushUnsubscribe = runtime.onFlush(() => {
-        render();
+        requestRender();
       });
       if (terminal) {
         terminalResizeUnsubscribe = terminal.onResize(handleResize);
@@ -200,18 +259,13 @@ export function createApp(
       } else if ("stdout" in options) {
         options.stdout.on?.("resize", handleResize);
       }
-      render();
+      requestRender();
     },
 
-    render,
+    render: requestRender,
 
     resize(): string {
-      if (disposed) {
-        return "";
-      }
-
-      renderer.reset();
-      return render();
+      return requestResize(readViewport());
     },
 
     focus(target: string | MountedElementNode): InteractionResult {
@@ -256,6 +310,8 @@ export function createApp(
       runtime.dispose();
       interaction.dispose();
       renderer.reset();
+      renderRequested = false;
+      pendingResizeViewport = null;
       terminal?.dispose();
     }
   };
