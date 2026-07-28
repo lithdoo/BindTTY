@@ -454,6 +454,28 @@ test("write sends chunks to stdout and ignores empty chunks", () => {
   assert.deepEqual(stdout.writes, ["hello"]);
 });
 
+test(
+  "write propagates stdout backpressure to the terminal host",
+  {
+    todo: "TerminalHost.write currently discards stdout.write(false)"
+  },
+  () => {
+    const stdout = createMockStdout();
+    stdout.write = function writeBlocked(chunk: string): boolean {
+      this.writes.push(chunk);
+      return false;
+    };
+    const terminal = createNodeTerminal({ stdout });
+
+    const accepted = (
+      terminal.write as unknown as (chunk: string) => boolean
+    )("frame");
+
+    assert.equal(accepted, false);
+    assert.deepEqual(stdout.writes, ["frame"]);
+  }
+);
+
 test("start applies alternate screen cursor and raw mode lifecycle", () => {
   const stdout = createMockStdout();
   const stdin = createMockStdin();
@@ -1093,6 +1115,88 @@ test(
         source: "poll"
       }
     ]);
+  }
+);
+
+test(
+  "resize event remains authoritative while polling is enabled",
+  {
+    todo: "Windows polling currently suppresses Cursor-style resize events"
+  },
+  () => {
+    const stdout = createMockStdout();
+    stdout.isTTY = true;
+    const terminal = createNodeTerminal({
+      stdout,
+      resizePollIntervalMs: 60_000
+    });
+    const events: TerminalResizeEvent[] = [];
+
+    terminal.onResize((event) => {
+      events.push(event);
+    });
+
+    terminal.start();
+
+    // Cursor/xterm.js can expose the new viewport at event time even when a
+    // later polling sample is stale. The event must not be discarded merely
+    // because the Windows polling fallback is active.
+    stdout.columns = 120;
+    stdout.rows = 36;
+    stdout.emitResize();
+    stdout.columns = 10;
+    stdout.rows = 3;
+
+    terminal.stop();
+    assert.deepEqual(events, [
+      {
+        viewport: { width: 120, height: 36 },
+        previousViewport: { width: 10, height: 3 },
+        source: "event"
+      }
+    ]);
+  }
+);
+
+test(
+  "configured resize burst publishes an immediate and final viewport only",
+  {
+    todo: "ResizeCoordinator does not yet bound rapid event-driven repaints"
+  },
+  async () => {
+    const stdout = createMockStdout();
+    const terminal = createNodeTerminal({
+      stdout,
+      resizePollIntervalMs: 0,
+      resizeMinFrameIntervalMs: 80,
+      resizeSettleDelayMs: 80
+    } as CreateNodeTerminalOptions);
+    const events: TerminalResizeEvent[] = [];
+
+    terminal.onResize((event) => {
+      events.push(event);
+    });
+
+    terminal.start();
+    for (let index = 1; index <= 50; index += 1) {
+      stdout.columns = 10 + index;
+      stdout.rows = 3 + (index % 5);
+      stdout.emitResize();
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 120);
+    });
+
+    terminal.stop();
+    assert.ok(
+      events.length <= 2,
+      `expected at most immediate + settled events, received ${events.length}`
+    );
+    assert.deepEqual(events.at(-1)?.viewport, {
+      width: 60,
+      height: 3
+    });
   }
 );
 

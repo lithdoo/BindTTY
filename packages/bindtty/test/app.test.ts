@@ -1155,6 +1155,72 @@ test("terminal resize during write is serialized after the active frame", () => 
   assert.match(terminal.writes[1] ?? "", /A/);
 });
 
+test(
+  "terminal output backpressure keeps only the latest resize frame",
+  {
+    todo: "App does not yet wait for terminal drain or collapse blocked frames"
+  },
+  () => {
+    const drainListeners = new Set<() => void>();
+    const terminal = Object.assign(createMockTerminal(1, 1), {
+      onDrain(listener: () => void): Dispose {
+        drainListeners.add(listener);
+        return () => {
+          drainListeners.delete(listener);
+        };
+      },
+      emitDrain(): void {
+        for (const listener of [...drainListeners]) {
+          listener();
+        }
+      }
+    });
+    const calls: Array<{ root: unknown; viewport: LayoutViewport }> = [];
+    const originalWrite = terminal.write.bind(terminal);
+    let writeCount = 0;
+
+    terminal.write = (chunk: string): boolean => {
+      writeCount += 1;
+      originalWrite(chunk);
+      return writeCount !== 2;
+    };
+
+    const app = createApp(elementTemplate("text", { value: "ABCD" }), {
+      terminal,
+      layoutEngine: createRecordingLayoutEngine(calls)
+    });
+
+    app.start();
+
+    terminal.setViewport({ width: 2, height: 1 });
+    terminal.emitResize();
+    terminal.setViewport({ width: 3, height: 1 });
+    terminal.emitResize();
+    terminal.setViewport({ width: 4, height: 1 });
+    terminal.emitResize();
+
+    assert.equal(
+      terminal.writes.length,
+      2,
+      "blocked output must not enqueue intermediate resize frames"
+    );
+
+    terminal.emitDrain();
+
+    assert.equal(terminal.writes.length, 3);
+    assert.deepEqual(
+      calls.map((call) => call.viewport),
+      [
+        { width: 1, height: 1 },
+        { width: 2, height: 1 },
+        { width: 4, height: 1 }
+      ]
+    );
+    assert.match(terminal.writes.at(-1) ?? "", /D/);
+    app.dispose();
+  }
+);
+
 test("terminal mode manual resize returns and writes the repaint patch", () => {
   const terminal = createMockTerminal(1, 1);
   const app = createApp(elementTemplate("text", { value: "A" }), { terminal });
