@@ -89,7 +89,7 @@ test("encodeAnsiPatch encodes text style and colors", () => {
   );
 });
 
-test("encodeAnsiPatch resets style before each changed cell and at the end", () => {
+test("encodeAnsiPatch keeps adjacent cells in one cursor run", () => {
   const patch: FramePatch = {
     kind: "incremental",
     width: 2,
@@ -118,7 +118,7 @@ test("encodeAnsiPatch resets style before each changed cell and at the end", () 
 
   assert.equal(
     encodeAnsiPatch(patch),
-    "\x1b[1;1H\x1b[0m\x1b[32mA\x1b[1;2H\x1b[0mB\x1b[0m"
+    "\x1b[1;1H\x1b[0m\x1b[32mA\x1b[0mB\x1b[0m"
   );
 });
 
@@ -253,7 +253,7 @@ test("encodeAnsiPatch emits blank cells that clear old wide text", () => {
 
   assert.equal(
     encodeAnsiPatch(patch),
-    "\x1b[1;1H\x1b[0m \x1b[1;2H\x1b[0m \x1b[0m"
+    "\x1b[1;1H\x1b[0m  \x1b[0m"
   );
 });
 
@@ -295,7 +295,61 @@ test("encodeAnsiPatch sorts mixed wide changes and still skips placeholders", ()
 
   assert.equal(
     encodeAnsiPatch(patch),
-    "\x1b[1;1H\x1b[0m中\x1b[1;3H\x1b[0mB\x1b[0m"
+    "\x1b[1;1H\x1b[0m中B\x1b[0m"
+  );
+});
+
+test("encodeAnsiPatch uses one cursor run per contiguous row", () => {
+  const patch: FramePatch = {
+    kind: "incremental",
+    width: 3,
+    height: 2,
+    changes: [
+      { x: 1, y: 1, cell: { char: "D", style: {} } },
+      { x: 0, y: 0, cell: { char: "A", style: {} } },
+      { x: 0, y: 1, cell: { char: "C", style: {} } },
+      { x: 1, y: 0, cell: { char: "B", style: {} } }
+    ]
+  };
+
+  assert.equal(
+    encodeAnsiPatch(patch),
+    "\x1b[1;1H\x1b[0mAB\x1b[2;1H\x1b[0mCD\x1b[0m"
+  );
+});
+
+test("encodeAnsiPatch compacts a full terminal frame", () => {
+  const width = 80;
+  const height = 24;
+  const changes: FramePatch["changes"] = [];
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      changes.push({
+        x,
+        y,
+        cell: { char: " ", style: {}, width: 1 }
+      });
+    }
+  }
+
+  const encoded = encodeAnsiPatch({
+    kind: "full",
+    width,
+    height,
+    changes
+  });
+  const perCellBaseline = changes.reduce(
+    (length, change) =>
+      length +
+      `\x1b[${change.y + 1};${change.x + 1}H`.length +
+      "\x1b[0m ".length,
+    "\x1b[?7l\x1b[0m\x1b[?7h".length
+  );
+
+  assert.ok(
+    encoded.length * 5 < perCellBaseline,
+    `expected run encoding to use under 20% of per-cell output: ${encoded.length}/${perCellBaseline}`
   );
 });
 

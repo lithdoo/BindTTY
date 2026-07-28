@@ -334,7 +334,10 @@ test("default viewport is used when stdout and fallback sizes are unavailable", 
   app.start();
 
   assert.equal(stdout.writes.length, 1);
-  assert.match(stdout.writes[0], /\x1b\[24;80H/);
+  const rendered = stripVTControlCharacters(stdout.writes[0]);
+  assert.equal(rendered.length, 80 * 24);
+  assert.equal(rendered[0], "A");
+  assert.match(rendered.slice(1), /^ +$/);
 });
 
 test("stdout mode uses the injected layout engine", () => {

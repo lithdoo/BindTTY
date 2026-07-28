@@ -138,7 +138,7 @@ test("runtime + layout + renderer clears wide text when updating to ASCII", asyn
   title.set("A");
   await Promise.resolve();
 
-  assert.deepEqual(patches, ["\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[0m"]);
+  assert.deepEqual(patches, ["\x1b[1;1H\x1b[0mA \x1b[0m"]);
 });
 
 test("runtime + layout + renderer returns empty patch when wide text is unchanged", () => {

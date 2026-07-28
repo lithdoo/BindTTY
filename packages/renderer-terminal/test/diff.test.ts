@@ -341,7 +341,7 @@ test("encodeAnsiPatch clears wide text from diffFrames CJK to blank patch", () =
 
   assert.equal(
     encodeAnsiPatch(diffFrames(previous, next)),
-    "\x1b[1;1H\x1b[0m \x1b[1;2H\x1b[0m \x1b[0m"
+    "\x1b[1;1H\x1b[0m  \x1b[0m"
   );
 });
 

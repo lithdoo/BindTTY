@@ -71,7 +71,7 @@ test("TerminalRenderer renders a full patch on first render", () => {
 
   assert.equal(
     renderer.render(textLayout("A"), { viewport }),
-    "\x1b[?7l\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[1;3H\x1b[0m \x1b[0m\x1b[?7h"
+    "\x1b[?7l\x1b[1;1H\x1b[0mA  \x1b[0m\x1b[?7h"
   );
 });
 
@@ -91,7 +91,7 @@ test("TerminalRenderer paints focused state with inverse style", () => {
       viewport,
       isFocused: () => true
     }),
-    "\x1b[?7l\x1b[1;1H\x1b[0m\x1b[7mA\x1b[1;2H\x1b[0m \x1b[1;3H\x1b[0m \x1b[0m\x1b[?7h"
+    "\x1b[?7l\x1b[1;1H\x1b[0m\x1b[7mA\x1b[0m  \x1b[0m\x1b[?7h"
   );
 });
 
@@ -140,7 +140,7 @@ test("TerminalRenderer clears wide text when rendering ASCII over it", () => {
         height: 1
       }
     }),
-    "\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[0m"
+    "\x1b[1;1H\x1b[0mA \x1b[0m"
   );
 });
 
@@ -166,7 +166,7 @@ test("TerminalRenderer reset forces the next render to be full", () => {
 
   assert.equal(
     renderer.render(textLayout("A"), { viewport }),
-    "\x1b[?7l\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[1;3H\x1b[0m \x1b[0m\x1b[?7h"
+    "\x1b[?7l\x1b[1;1H\x1b[0mA  \x1b[0m\x1b[?7h"
   );
 });
 
@@ -177,7 +177,7 @@ test("TerminalRenderer render null clears the previous frame", () => {
 
   assert.equal(
     renderer.render(null, { viewport }),
-    "\x1b[1;1H\x1b[0m \x1b[1;2H\x1b[0m \x1b[1;3H\x1b[0m \x1b[0m"
+    "\x1b[1;1H\x1b[0m   \x1b[0m"
   );
   assert.equal(renderer.render(null, { viewport }), "");
 });
@@ -194,7 +194,7 @@ test("TerminalRenderer emits full patch when viewport size changes", () => {
         height: 1
       }
     }),
-    "\x1b[?7l\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[0m\x1b[?7h"
+    "\x1b[?7l\x1b[1;1H\x1b[0mA \x1b[0m\x1b[?7h"
   );
 });
 

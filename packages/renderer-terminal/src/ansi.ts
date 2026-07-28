@@ -50,16 +50,30 @@ export function encodeAnsiPatch(patch: FramePatch): string {
   }
 
   let output = "";
+  let expectedX = -1;
+  let expectedY = -1;
+  let activeStyle = "";
 
   for (const change of [...patch.changes].sort((left, right) => left.y - right.y || left.x - right.x)) {
     if (change.cell.width === 0) {
       continue;
     }
 
-    output += moveCursor(change.x, change.y);
-    output += RESET;
-    output += encodeStyle(change.cell.style);
+    if (change.x !== expectedX || change.y !== expectedY) {
+      output += moveCursor(change.x, change.y);
+      activeStyle = "";
+    }
+
+    const nextStyle = styleKey(change.cell.style);
+    if (activeStyle !== nextStyle) {
+      output += RESET;
+      output += encodeStyle(change.cell.style);
+      activeStyle = nextStyle;
+    }
+
     output += change.cell.char;
+    expectedX = change.x + (change.cell.width ?? 1);
+    expectedY = change.y;
   }
 
   if (output.length === 0) {
@@ -70,6 +84,18 @@ export function encodeAnsiPatch(patch: FramePatch): string {
   return patch.kind === "full"
     ? DISABLE_AUTOWRAP + encodedPatch + ENABLE_AUTOWRAP
     : encodedPatch;
+}
+
+function styleKey(style: CellStyle): string {
+  return [
+    style.bold === true ? "1" : "0",
+    style.dim === true ? "1" : "0",
+    style.italic === true ? "1" : "0",
+    style.underline === true ? "1" : "0",
+    style.inverse === true ? "1" : "0",
+    style.foreground ?? "",
+    style.background ?? ""
+  ].join(":");
 }
 
 function moveCursor(x: number, y: number): string {
