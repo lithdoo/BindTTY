@@ -31,6 +31,24 @@ function delay(ms: number): Promise<void> {
   });
 }
 
+async function waitForScreen(
+  session: PtySession,
+  expected: string[],
+  timeoutMs = 4_000
+): Promise<void> {
+  const started = Date.now();
+
+  while (Date.now() - started < timeoutMs) {
+    const actual = session.getScreenLines();
+    if (JSON.stringify(actual) === JSON.stringify(expected)) {
+      return;
+    }
+    await delay(25);
+  }
+
+  assert.deepEqual(session.getScreenLines(), expected);
+}
+
 function skipUnlessPty(t: test.TestContext): boolean {
   const env = readRuntimeEnv();
 
@@ -627,7 +645,7 @@ test("real PTY: wide text renders CJK emoji and scrolls ScrollView", { concurren
   }
 });
 
-test("real PTY: wide text rewraps after terminal resize", { concurrency: false }, async (t) => {
+test("real PTY: resize keeps final screen rows at exact coordinates", { concurrency: false }, async (t) => {
   if (skipUnlessPty(t)) {
     return;
   }
@@ -645,29 +663,67 @@ test("real PTY: wide text rewraps after terminal resize", { concurrency: false }
 
   try {
     await marker.waitFor("READY", { timeoutMs: 8_000 });
-    await delay(300);
-    assert.ok(
-      marker.readLines().some((line) => line.startsWith("HEIGHT:")),
-      `Expected initial HEIGHT marker, got: ${marker.readLines().join(", ")}`
-    );
 
     session.resize(8, 12);
-    await delay(500);
+    await marker.waitFor("FRAME:8:4x4", { timeoutMs: 8_000 });
+    await waitForScreen(session, [
+      "┌──────┐",
+      "│      │",
+      "│ 中中 │",
+      "│ 中🙂 │",
+      "│ 🙂AB │",
+      "│ C    │",
+      "│      │",
+      "└──────┘",
+      "        ",
+      "        ",
+      "        ",
+      "        "
+    ]);
 
-    await marker.waitFor("REWARP", { timeoutMs: 8_000 });
+    session.resize(12, 12);
+    await marker.waitFor("FRAME:12:8x2", { timeoutMs: 8_000 });
+    await waitForScreen(session, [
+      "┌──────────┐",
+      "│          │",
+      "│ 中中中🙂 │",
+      "│ 🙂ABC    │",
+      "│          │",
+      "└──────────┘",
+      "            ",
+      "            ",
+      "            ",
+      "            ",
+      "            ",
+      "            "
+    ]);
+
+    session.resize(6, 12);
+    await marker.waitFor("FRAME:6:2x7", { timeoutMs: 8_000 });
+    await waitForScreen(session, [
+      "┌────┐",
+      "│    │",
+      "│ 中 │",
+      "│ 中 │",
+      "│ 中 │",
+      "│ 🙂 │",
+      "│ 🙂 │",
+      "│ AB │",
+      "│ C  │",
+      "│    │",
+      "└────┘",
+      "      "
+    ]);
+
+    session.write("q");
     await marker.waitFor("PASS", { timeoutMs: 8_000 });
     const result = await session.finish(marker, 12_000);
 
     assert.equal(result.exitCode, 0);
     assert.ok(result.markers.includes("PASS"));
-    assert.ok(result.markers.includes("REWARP"));
-    const heights = result.markers
-      .filter((line) => line.startsWith("HEIGHT:"))
-      .map((line) => Number(line.slice("HEIGHT:".length)));
-    assert.ok(heights.length >= 2);
-    assert.notEqual(heights[0], heights[1]);
-    assert.match(result.visibleOutput, /中/);
-    assert.match(result.visibleOutput, /🙂/);
+    assert.ok(result.markers.includes("FRAME:8:4x4"));
+    assert.ok(result.markers.includes("FRAME:12:8x2"));
+    assert.ok(result.markers.includes("FRAME:6:2x7"));
   } finally {
     session.dispose();
     marker.cleanup();

@@ -4,6 +4,7 @@ import type { IDisposable, IPty } from "node-pty";
 import * as pty from "node-pty";
 
 import { MarkerLog } from "./marker-log.js";
+import { TerminalScreen } from "./terminal-screen.js";
 
 export interface PtySessionOptions {
   command: string;
@@ -31,9 +32,14 @@ export class PtySession {
   private readonly exitPromise: Promise<void>;
   private readonly pty: IPty;
   private readonly dataDisposable: IDisposable;
+  private readonly screen: TerminalScreen;
   private exitDisposable!: IDisposable;
 
   constructor(private readonly options: PtySessionOptions) {
+    this.screen = new TerminalScreen(
+      this.options.cols ?? 80,
+      this.options.rows ?? 24
+    );
     this.pty = pty.spawn(this.options.command, this.options.args, {
       name: "xterm-256color",
       cols: this.options.cols ?? 80,
@@ -50,6 +56,7 @@ export class PtySession {
 
     this.dataDisposable = this.pty.onData((chunk) => {
       this.output += chunk;
+      this.screen.write(chunk);
     });
 
     this.exitPromise = new Promise((resolve) => {
@@ -66,7 +73,12 @@ export class PtySession {
   }
 
   resize(cols: number, rows: number): void {
+    this.screen.resize(cols, rows);
     this.pty.resize(cols, rows);
+  }
+
+  getScreenLines(): string[] {
+    return this.screen.lines();
   }
 
   async waitForExit(timeoutMs = 15_000): Promise<number | null> {

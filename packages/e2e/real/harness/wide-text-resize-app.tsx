@@ -27,9 +27,7 @@ if (!process.stdout.isTTY || !process.stdin.isTTY) {
   fail("NOT_TTY");
 }
 
-let ready = false;
-let initialHeight: number | null = null;
-let rewrapSeen = false;
+let lastFrame = "";
 
 const terminal = createNodeTerminal({
   stdout: process.stdout,
@@ -52,28 +50,15 @@ const app = createApp(
         ref={(api: MountedElementApi) => {
           api.onLayout = (layout: unknown) => {
             const node = layout as LayoutNode;
-            const height = node.rect.height;
-
-            if (initialHeight === null) {
-              initialHeight = height;
-              mark(`HEIGHT:${height}`);
-              mark(`LAYOUT:${node.rect.width}x${height}`);
+            const frame =
+              `FRAME:${terminal.viewport.width}:` +
+              `${node.rect.width}x${node.rect.height}`;
+            if (frame === lastFrame) {
               return;
             }
 
-            if (!ready || rewrapSeen || height === initialHeight) {
-              return;
-            }
-
-            rewrapSeen = true;
-            mark(`HEIGHT:${height}`);
-            mark(`LAYOUT:${node.rect.width}x${height}`);
-            mark("REWARP");
-            setTimeout(() => {
-              app.dispose();
-              mark("PASS");
-              process.exit(0);
-            }, 150);
+            lastFrame = frame;
+            mark(frame);
           };
         }}
       />
@@ -89,11 +74,20 @@ terminal.onResize(() => {
   mark(`VIEWPORT:${terminal.viewport.width}`);
 });
 
+terminal.onKey((event) => {
+  if (event.kind !== "text" || event.text !== "q") {
+    return;
+  }
+
+  app.dispose();
+  mark("PASS");
+  process.exit(0);
+});
+
 setTimeout(() => {
   mark("READY");
-  ready = true;
 }, 300);
 
 setTimeout(() => {
   fail("TIMEOUT");
-}, 12_000);
+}, 20_000);
