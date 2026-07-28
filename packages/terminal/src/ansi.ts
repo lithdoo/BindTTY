@@ -3,6 +3,8 @@ export const ANSI = {
   exitAltScreen: "\x1b[?1049l",
   hideCursor: "\x1b[?25l",
   showCursor: "\x1b[?25h",
+  beginSynchronizedOutput: "\x1b[?2026h",
+  endSynchronizedOutput: "\x1b[?2026l",
   queryKittyKeyboard: "\x1b[?u",
   queryPrimaryDeviceAttributes: "\x1b[c",
   enableKittyKeyboard: "\x1b[>1u",

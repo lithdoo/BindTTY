@@ -261,6 +261,8 @@ export interface CreateNodeTerminalOptions {
   useAltScreen?: boolean;
   hideCursor?: boolean;
   rawMode?: boolean;
+  /** Win32 TTY 默认使用 DEC 2026，使每次应用 frame 原子呈现 */
+  synchronizedOutput?: boolean;
   exitOnCtrlC?: boolean;
   /** Win32 TTY：stdout resize 不可靠时轮询 columns/rows；默认 win32 50ms，0 关闭 */
   resizePollIntervalMs?: number;
@@ -289,6 +291,7 @@ fallbackViewport = { width: 80, height: 24 }
 useAltScreen = false
 hideCursor = false
 rawMode = false
+synchronizedOutput = win32 且 stdout.isTTY 时为 true，否则 false
 exitOnCtrlC = true
 resizePollIntervalMs = win32 且 stdout.isTTY 时为 50，否则 0（不轮询）
 ```
@@ -305,9 +308,17 @@ export const ANSI = {
   exitAltScreen: "\x1b[?1049l",
   hideCursor: "\x1b[?25l",
   showCursor: "\x1b[?25h",
+  beginSynchronizedOutput: "\x1b[?2026h",
+  endSynchronizedOutput: "\x1b[?2026l",
   reset: "\x1b[0m"
 };
 ```
+
+Windows TTY 上，公开的 `TerminalHost.write(frame)` 默认在同一次 stdout write
+中加入 DEC 2026 synchronized-output 起止边界，支持该模式的宿主只呈现完整
+frame，降低 resize 全帧重绘时的 tearing。未知的 DEC private mode 会被旧宿主
+忽略；重定向 stdout 不添加边界，也可用 `synchronizedOutput: false` 显式关闭。
+alt-screen、光标和键盘协议等 terminal lifecycle 序列始终写在 frame 边界外。
 
 MVP 不默认 clear screen。
 

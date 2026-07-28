@@ -383,6 +383,8 @@ test("exports terminal ANSI lifecycle constants", () => {
     exitAltScreen: "\x1b[?1049l",
     hideCursor: "\x1b[?25l",
     showCursor: "\x1b[?25h",
+    beginSynchronizedOutput: "\x1b[?2026h",
+    endSynchronizedOutput: "\x1b[?2026l",
     queryKittyKeyboard: "\x1b[?u",
     queryPrimaryDeviceAttributes: "\x1b[c",
     enableKittyKeyboard: "\x1b[>1u",
@@ -485,6 +487,104 @@ test(
     assert.deepEqual(stdout.writes, ["frame"]);
   }
 );
+
+test("write frames output atomically when synchronized output is enabled", () => {
+  const stdout = createMockStdout();
+  const terminal = createNodeTerminal({
+    stdout,
+    synchronizedOutput: true
+  });
+
+  terminal.write("frame");
+
+  assert.deepEqual(stdout.writes, [
+    ANSI.beginSynchronizedOutput + "frame" + ANSI.endSynchronizedOutput
+  ]);
+});
+
+test("synchronized output preserves stdout backpressure", () => {
+  const stdout = createMockStdout();
+  stdout.write = function writeBlocked(chunk: string): boolean {
+    this.writes.push(chunk);
+    return false;
+  };
+  const terminal = createNodeTerminal({
+    stdout,
+    synchronizedOutput: true
+  });
+
+  const accepted = terminal.write("frame");
+
+  assert.equal(accepted, false);
+  assert.deepEqual(stdout.writes, [
+    ANSI.beginSynchronizedOutput + "frame" + ANSI.endSynchronizedOutput
+  ]);
+});
+
+test("win32 TTY enables synchronized output without application wiring", () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const terminal = createNodeTerminal({
+    stdout,
+    platformAdapter: new Win32PlatformAdapter()
+  });
+
+  terminal.write("frame");
+
+  assert.deepEqual(stdout.writes, [
+    ANSI.beginSynchronizedOutput + "frame" + ANSI.endSynchronizedOutput
+  ]);
+});
+
+test("redirected win32 output does not enable synchronized output", () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = false;
+  const terminal = createNodeTerminal({
+    stdout,
+    platformAdapter: new Win32PlatformAdapter()
+  });
+
+  terminal.write("frame");
+
+  assert.deepEqual(stdout.writes, ["frame"]);
+});
+
+test("synchronized output can be disabled explicitly on win32 TTY", () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const terminal = createNodeTerminal({
+    stdout,
+    platformAdapter: new Win32PlatformAdapter(),
+    synchronizedOutput: false
+  });
+
+  terminal.write("frame");
+
+  assert.deepEqual(stdout.writes, ["frame"]);
+});
+
+test("terminal lifecycle writes stay outside synchronized frame boundaries", () => {
+  const stdout = createMockStdout();
+  const terminal = createNodeTerminal({
+    stdout,
+    useAltScreen: true,
+    hideCursor: true,
+    keyboardProtocol: "legacy",
+    synchronizedOutput: true
+  });
+
+  terminal.start();
+  terminal.write("frame");
+  terminal.stop();
+
+  assert.deepEqual(stdout.writes, [
+    ANSI.enterAltScreen,
+    ANSI.hideCursor,
+    ANSI.beginSynchronizedOutput + "frame" + ANSI.endSynchronizedOutput,
+    ANSI.showCursor,
+    ANSI.exitAltScreen
+  ]);
+});
 
 test("onDrain follows stdout drain subscription lifecycle", () => {
   const stdout = createMockStdout();

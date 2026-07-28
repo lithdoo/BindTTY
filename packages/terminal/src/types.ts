@@ -211,6 +211,12 @@ export interface CreateNodeTerminalOptions {
   hideCursor?: boolean;
   rawMode?: boolean;
   /**
+   * Wraps each public terminal write in DEC 2026 synchronized-output
+   * boundaries so supporting terminal hosts present the frame atomically.
+   * Defaults to true for win32 TTY output and false otherwise.
+   */
+  synchronizedOutput?: boolean;
+  /**
    * Selects the stdin backend. The default `auto` policy keeps this decision
    * inside terminal: native Win32 records first, then raw TTY input, then
    * readline. `rawMode` remains a compatibility override.

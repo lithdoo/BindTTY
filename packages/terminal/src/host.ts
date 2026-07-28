@@ -143,6 +143,9 @@ export function createNodeTerminal(
   const keyListeners = new Set<TerminalKeyListener>();
   const keyboardCapabilitiesListeners = new Set<KeyboardCapabilitiesListener>();
   const platform = resolvePlatformAdapter(options);
+  const synchronizedOutputEnabled =
+    options.synchronizedOutput ??
+    (platform.name === "win32" && options.stdout.isTTY === true);
   const inputTrace = createInputTraceListener(options.inputTrace);
   let detachStdin: Dispose = () => {};
   let stdoutDrainAttached = false;
@@ -395,7 +398,7 @@ export function createNodeTerminal(
     if (keyboardProbeState === "kitty-query" && match) {
       stopKeyboardProbeTimer();
       keyboardProbeState = "idle";
-      write(ANSI.enableKittyKeyboard);
+      writeRaw(ANSI.enableKittyKeyboard);
       keyboardProtocolEnabled = "kitty";
       setKeyboardCapabilities("kitty");
       return true;
@@ -445,7 +448,7 @@ export function createNodeTerminal(
 
       keyboardProbeState = "kitty-query";
       awaitingPrimaryDeviceAttributes = true;
-      write(
+      writeRaw(
         ANSI.queryKittyKeyboard +
         ANSI.queryPrimaryDeviceAttributes
       );
@@ -462,14 +465,14 @@ export function createNodeTerminal(
     }
 
     if (requested === "kitty") {
-      write(ANSI.enableKittyKeyboard);
+      writeRaw(ANSI.enableKittyKeyboard);
       keyboardProtocolEnabled = "kitty";
       setKeyboardCapabilities("kitty");
       return;
     }
 
     if (requested === "modify-other-keys") {
-      write(ANSI.enableModifyOtherKeys);
+      writeRaw(ANSI.enableModifyOtherKeys);
       keyboardProtocolEnabled = "modify-other-keys";
       setKeyboardCapabilities("modify-other-keys");
       return;
@@ -481,8 +484,8 @@ export function createNodeTerminal(
     }
 
     if (options.enhancedKeyboard === true) {
-      write(ANSI.enableKittyKeyboard);
-      write(ANSI.enableModifyOtherKeys);
+      writeRaw(ANSI.enableKittyKeyboard);
+      writeRaw(ANSI.enableModifyOtherKeys);
       keyboardProtocolEnabled = "legacy-dual";
       setKeyboardCapabilities("modify-other-keys");
     }
@@ -514,24 +517,38 @@ export function createNodeTerminal(
     stopKeyboardProbe();
 
     if (keyboardProtocolEnabled === "kitty") {
-      write(ANSI.disableKittyKeyboard);
+      writeRaw(ANSI.disableKittyKeyboard);
     } else if (keyboardProtocolEnabled === "modify-other-keys") {
-      write(ANSI.disableModifyOtherKeys);
+      writeRaw(ANSI.disableModifyOtherKeys);
     } else if (keyboardProtocolEnabled === "legacy-dual") {
-      write(ANSI.disableModifyOtherKeys);
-      write(ANSI.disableKittyKeyboard);
+      writeRaw(ANSI.disableModifyOtherKeys);
+      writeRaw(ANSI.disableKittyKeyboard);
     }
 
     keyboardProtocolEnabled = null;
     setKeyboardCapabilities(fallbackProtocol);
   }
 
-  function write(chunk: string): boolean {
+  function writeRaw(chunk: string): boolean {
     if (disposed || chunk === "") {
       return true;
     }
 
     return options.stdout.write(chunk) !== false;
+  }
+
+  function writeFrame(chunk: string): boolean {
+    if (disposed || chunk === "") {
+      return true;
+    }
+
+    return writeRaw(
+      synchronizedOutputEnabled
+        ? ANSI.beginSynchronizedOutput +
+          chunk +
+          ANSI.endSynchronizedOutput
+        : chunk
+    );
   }
 
   function attachStdoutDrain(): void {
@@ -592,7 +609,7 @@ export function createNodeTerminal(
       traceTerminalEnvironment(inputTrace, options, platform);
 
       if (options.useAltScreen === true) {
-        write(ANSI.enterAltScreen);
+        writeRaw(ANSI.enterAltScreen);
       }
 
       if (
@@ -603,7 +620,7 @@ export function createNodeTerminal(
       }
 
       if (options.hideCursor === true) {
-        write(ANSI.hideCursor);
+        writeRaw(ANSI.hideCursor);
       }
 
       if (options.stdin) {
@@ -693,11 +710,11 @@ export function createNodeTerminal(
       stopKeyboardProtocol();
 
       if (options.hideCursor === true) {
-        write(ANSI.showCursor);
+        writeRaw(ANSI.showCursor);
       }
 
       if (options.useAltScreen === true) {
-        write(ANSI.exitAltScreen);
+        writeRaw(ANSI.exitAltScreen);
       }
 
       started = false;
@@ -716,7 +733,7 @@ export function createNodeTerminal(
       disposed = true;
     },
 
-    write,
+    write: writeFrame,
 
     onResize(listener: ResizeListener): Dispose {
       if (disposed) {
