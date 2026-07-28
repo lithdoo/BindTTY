@@ -2,6 +2,16 @@
 
 BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见行为变化；设计细节见 `doc/` 下对应 package/spec/widget 文档。
 
+## 0.1.0-beta.3
+
+- Windows resize event 与 polling fallback 并行工作并共享 viewport 去重，不再因存在事件监听而禁用轮询兜底。
+- resize burst 默认限制为约 32ms 一帧，并在 100ms settle 后保证发布最终 viewport。
+- Terminal/App 传播 stdout backpressure；阻塞期间只保留最新 resize/dirty 意图，drain 后只重绘最终 frame。
+- renderer 将相邻单元格合并为连续 ANSI run；80×24 默认样式全帧相较逐单元格编码减少约 90.89% 输出。
+- Windows TTY 默认用 DEC 2026 synchronized-output 包装应用 frame，支持的宿主原子呈现重绘，降低缩放时 tearing。
+- 增加 resize burst、backpressure、ANSI 压缩、同步 frame 与真实 PTY 最终坐标回归。
+- npm `beta` 与 `latest` 均指向本版本。
+
 ## 0.1.0-beta.2
 
 - Windows TTY 自动合并 resize event 与 viewport polling，过滤重复或无效尺寸，并向应用发布稳定的 viewport 快照。
