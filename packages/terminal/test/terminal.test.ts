@@ -21,7 +21,9 @@ import type {
 interface MockStdout extends TerminalStdout {
   writes: string[];
   listenerCount(): number;
+  drainListenerCount(): number;
   emitResize(): void;
+  emitDrain(): void;
 }
 
 interface MockStdin extends TerminalStdin {
@@ -36,6 +38,7 @@ interface MockStdin extends TerminalStdin {
 
 function createMockStdout(): MockStdout {
   const resizeListeners = new Set<() => void>();
+  const drainListeners = new Set<() => void>();
 
   return {
     columns: 10,
@@ -44,21 +47,33 @@ function createMockStdout(): MockStdout {
     write(chunk: string) {
       this.writes.push(chunk);
     },
-    on(event: "resize", listener: () => void) {
+    on(event: "resize" | "drain", listener: () => void) {
       if (event === "resize") {
         resizeListeners.add(listener);
+      } else {
+        drainListeners.add(listener);
       }
     },
-    off(event: "resize", listener: () => void) {
+    off(event: "resize" | "drain", listener: () => void) {
       if (event === "resize") {
         resizeListeners.delete(listener);
+      } else {
+        drainListeners.delete(listener);
       }
     },
     listenerCount() {
       return resizeListeners.size;
     },
+    drainListenerCount() {
+      return drainListeners.size;
+    },
     emitResize() {
       for (const listener of [...resizeListeners]) {
+        listener();
+      }
+    },
+    emitDrain() {
+      for (const listener of [...drainListeners]) {
         listener();
       }
     }
@@ -456,9 +471,6 @@ test("write sends chunks to stdout and ignores empty chunks", () => {
 
 test(
   "write propagates stdout backpressure to the terminal host",
-  {
-    todo: "TerminalHost.write currently discards stdout.write(false)"
-  },
   () => {
     const stdout = createMockStdout();
     stdout.write = function writeBlocked(chunk: string): boolean {
@@ -467,14 +479,40 @@ test(
     };
     const terminal = createNodeTerminal({ stdout });
 
-    const accepted = (
-      terminal.write as unknown as (chunk: string) => boolean
-    )("frame");
+    const accepted = terminal.write("frame");
 
     assert.equal(accepted, false);
     assert.deepEqual(stdout.writes, ["frame"]);
   }
 );
+
+test("onDrain follows stdout drain subscription lifecycle", () => {
+  const stdout = createMockStdout();
+  const terminal = createNodeTerminal({ stdout });
+  let drains = 0;
+  const unsubscribe = terminal.onDrain?.(() => {
+    drains += 1;
+  });
+
+  assert.equal(stdout.drainListenerCount(), 0);
+  terminal.start();
+  assert.equal(stdout.drainListenerCount(), 1);
+  stdout.emitDrain();
+  assert.equal(drains, 1);
+
+  terminal.stop();
+  assert.equal(stdout.drainListenerCount(), 0);
+  stdout.emitDrain();
+  assert.equal(drains, 1);
+
+  terminal.start();
+  assert.equal(stdout.drainListenerCount(), 1);
+  unsubscribe?.();
+  stdout.emitDrain();
+  assert.equal(drains, 1);
+  assert.equal(stdout.drainListenerCount(), 0);
+  terminal.dispose();
+});
 
 test("start applies alternate screen cursor and raw mode lifecycle", () => {
   const stdout = createMockStdout();

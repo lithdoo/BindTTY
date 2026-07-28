@@ -1157,9 +1157,6 @@ test("terminal resize during write is serialized after the active frame", () => 
 
 test(
   "terminal output backpressure keeps only the latest resize frame",
-  {
-    todo: "App does not yet wait for terminal drain or collapse blocked frames"
-  },
   () => {
     const drainListeners = new Set<() => void>();
     const terminal = Object.assign(createMockTerminal(1, 1), {
@@ -1176,8 +1173,19 @@ test(
       }
     });
     const calls: Array<{ root: unknown; viewport: LayoutViewport }> = [];
+    const delegate = createYogaLayoutEngine();
+    const layoutEngine: LayoutEngine = {
+      layout(root, options) {
+        calls.push({
+          root,
+          viewport: options.viewport
+        });
+        return delegate.layout(root, options);
+      }
+    };
     const originalWrite = terminal.write.bind(terminal);
     let writeCount = 0;
+    const label = createSignal("ABCD");
 
     terminal.write = (chunk: string): boolean => {
       writeCount += 1;
@@ -1185,9 +1193,9 @@ test(
       return writeCount !== 2;
     };
 
-    const app = createApp(elementTemplate("text", { value: "ABCD" }), {
+    const app = createApp(elementTemplate("text", { value: label }), {
       terminal,
-      layoutEngine: createRecordingLayoutEngine(calls)
+      layoutEngine
     });
 
     app.start();
@@ -1196,6 +1204,7 @@ test(
     terminal.emitResize();
     terminal.setViewport({ width: 3, height: 1 });
     terminal.emitResize();
+    label.set("WXYZ");
     terminal.setViewport({ width: 4, height: 1 });
     terminal.emitResize();
 
@@ -1216,8 +1225,9 @@ test(
         { width: 4, height: 1 }
       ]
     );
-    assert.match(terminal.writes.at(-1) ?? "", /D/);
+    assert.match(terminal.writes.at(-1) ?? "", /Z/);
     app.dispose();
+    assert.equal(drainListeners.size, 0);
   }
 );
 

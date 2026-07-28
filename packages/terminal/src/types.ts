@@ -262,9 +262,14 @@ export interface TerminalHost {
   stop(): void;
   dispose(): void;
 
-  write(chunk: string): void;
+  /**
+   * Returns false when the underlying stdout accepted the chunk but requires
+   * callers to wait for drain before writing another frame.
+   */
+  write(chunk: string): boolean | void;
 
   onResize(listener: ResizeListener): Dispose;
+  onDrain?(listener: () => void): Dispose;
   onKey(listener: TerminalKeyListener): Dispose;
   onKeyboardCapabilitiesChange?(listener: KeyboardCapabilitiesListener): Dispose;
 }

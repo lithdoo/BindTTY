@@ -139,11 +139,13 @@ export function createNodeTerminal(
   let started = false;
   let disposed = false;
   const resizeListeners = new Set<ResizeListener>();
+  const drainListeners = new Set<() => void>();
   const keyListeners = new Set<TerminalKeyListener>();
   const keyboardCapabilitiesListeners = new Set<KeyboardCapabilitiesListener>();
   const platform = resolvePlatformAdapter(options);
   const inputTrace = createInputTraceListener(options.inputTrace);
   let detachStdin: Dispose = () => {};
+  let stdoutDrainAttached = false;
   let resizePollTimer: ReturnType<typeof setInterval> | undefined;
   let resizeFrameTimer: ReturnType<typeof setTimeout> | undefined;
   let resizeSettleTimer: ReturnType<typeof setTimeout> | undefined;
@@ -524,12 +526,49 @@ export function createNodeTerminal(
     setKeyboardCapabilities(fallbackProtocol);
   }
 
-  function write(chunk: string): void {
+  function write(chunk: string): boolean {
     if (disposed || chunk === "") {
+      return true;
+    }
+
+    return options.stdout.write(chunk) !== false;
+  }
+
+  function attachStdoutDrain(): void {
+    if (
+      stdoutDrainAttached ||
+      !started ||
+      drainListeners.size === 0
+    ) {
+      return;
+    }
+    const on = options.stdout.on as
+      | ((event: "drain", listener: () => void) => unknown)
+      | undefined;
+    if (!on) {
       return;
     }
 
-    options.stdout.write(chunk);
+    on.call(options.stdout, "drain", handleStdoutDrain);
+    stdoutDrainAttached = true;
+  }
+
+  function detachStdoutDrain(): void {
+    if (!stdoutDrainAttached) {
+      return;
+    }
+
+    const off = options.stdout.off as
+      | ((event: "drain", listener: () => void) => unknown)
+      | undefined;
+    off?.call(options.stdout, "drain", handleStdoutDrain);
+    stdoutDrainAttached = false;
+  }
+
+  function handleStdoutDrain(): void {
+    for (const listener of [...drainListeners]) {
+      listener();
+    }
   }
 
   const terminal: TerminalHost = {
@@ -626,6 +665,7 @@ export function createNodeTerminal(
       }
 
       options.stdout.on?.("resize", handleStdoutResize);
+      attachStdoutDrain();
       startWin32ResizePolling();
     },
 
@@ -637,6 +677,7 @@ export function createNodeTerminal(
       stopWin32ResizePolling();
       resetResizeCoordinator();
       options.stdout.off?.("resize", handleStdoutResize);
+      detachStdoutDrain();
       detachStdin();
       detachStdin = () => {};
 
@@ -669,6 +710,7 @@ export function createNodeTerminal(
 
       terminal.stop();
       resizeListeners.clear();
+      drainListeners.clear();
       keyListeners.clear();
       keyboardCapabilitiesListeners.clear();
       disposed = true;
@@ -684,6 +726,21 @@ export function createNodeTerminal(
       resizeListeners.add(listener);
       return () => {
         resizeListeners.delete(listener);
+      };
+    },
+
+    onDrain(listener: () => void): Dispose {
+      if (disposed) {
+        return () => {};
+      }
+
+      drainListeners.add(listener);
+      attachStdoutDrain();
+      return () => {
+        drainListeners.delete(listener);
+        if (drainListeners.size === 0) {
+          detachStdoutDrain();
+        }
       };
     },
 

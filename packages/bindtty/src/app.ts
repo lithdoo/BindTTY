@@ -83,10 +83,12 @@ export function createApp(
   let disposed = false;
   let flushUnsubscribe: Dispose | null = null;
   let terminalResizeUnsubscribe: Dispose | null = null;
+  let terminalDrainUnsubscribe: Dispose | null = null;
   let terminalKeyUnsubscribe: Dispose | null = null;
   let renderTransactionActive = false;
   let renderRequested = false;
   let pendingResizeViewport: AppViewport | null = null;
+  let outputBlocked = false;
 
   function handleResize(event?: TerminalResizeEvent): void {
     requestResize(event?.viewport ?? readViewport());
@@ -132,15 +134,26 @@ export function createApp(
     return { width: 80, height: 24 };
   }
 
-  function writePatch(patch: string): void {
+  function writePatch(patch: string): boolean {
     if (terminal) {
-      terminal.write(patch);
-      return;
+      const accepted = terminal.write(patch);
+      return accepted !== false || terminal.onDrain === undefined;
     }
 
     if ("stdout" in options) {
       options.stdout.write(patch);
     }
+
+    return true;
+  }
+
+  function handleTerminalDrain(): void {
+    if (disposed || !started || !outputBlocked) {
+      return;
+    }
+
+    outputBlocked = false;
+    flushRenderTransaction();
   }
 
   function renderFrame(viewport: AppViewport): string {
@@ -159,7 +172,7 @@ export function createApp(
     });
 
     if (patch !== "") {
-      writePatch(patch);
+      outputBlocked = !writePatch(patch);
     }
 
     runtime.clearDirty();
@@ -186,7 +199,7 @@ export function createApp(
   }
 
   function flushRenderTransaction(): string {
-    if (renderTransactionActive || disposed) {
+    if (renderTransactionActive || outputBlocked || disposed) {
       return "";
     }
 
@@ -255,6 +268,7 @@ export function createApp(
       });
       if (terminal) {
         terminalResizeUnsubscribe = terminal.onResize(handleResize);
+        terminalDrainUnsubscribe = terminal.onDrain?.(handleTerminalDrain) ?? null;
         terminalKeyUnsubscribe = terminal.onKey(handleKey);
       } else if ("stdout" in options) {
         options.stdout.on?.("resize", handleResize);
@@ -291,8 +305,11 @@ export function createApp(
       flushUnsubscribe = null;
       terminalResizeUnsubscribe?.();
       terminalResizeUnsubscribe = null;
+      terminalDrainUnsubscribe?.();
+      terminalDrainUnsubscribe = null;
       terminalKeyUnsubscribe?.();
       terminalKeyUnsubscribe = null;
+      outputBlocked = false;
       if (terminal) {
         terminal.stop();
       } else if ("stdout" in options) {
@@ -312,6 +329,7 @@ export function createApp(
       renderer.reset();
       renderRequested = false;
       pendingResizeViewport = null;
+      outputBlocked = false;
       terminal?.dispose();
     }
   };
