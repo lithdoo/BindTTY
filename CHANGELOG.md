@@ -2,6 +2,15 @@
 
 BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见行为变化；设计细节见 `doc/` 下对应 package/spec/widget 文档。
 
+## 0.1.0-beta.2
+
+- Windows TTY 自动合并 resize event 与 viewport polling，过滤重复或无效尺寸，并向应用发布稳定的 viewport 快照。
+- App 将窗口缩放纳入串行渲染事务，避免旧尺寸 frame 在新尺寸布局之后覆盖终端。
+- renderer 的 full repaint 在写入期间关闭 ANSI autowrap，避免 Win32/ConPTY 右下角写入触发意外滚屏。
+- 增加 ANSI screen model 与真实 PTY 精确坐标回归，覆盖 `40→8→12→6` 列连续缩放及 CJK/emoji 重排。
+- 增加 Windows Terminal/Console Host 实机窗口缩放验证手册。
+- npm `beta` 与 `latest` 均指向本版本。
+
 ## 0.1.0-beta.0
 
 - TextInput/Textarea caret 改用 ANSI inverse 并继承当前前景、背景色，移除硬编码黑白。
