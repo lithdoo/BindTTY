@@ -171,6 +171,9 @@ npm run test:e2e:real:win
 npm run test:e2e:real:wsl   # 需 WSL Ubuntu + Node.js
 ```
 
+Windows 下的窗口缩放、最终字符坐标与 PowerShell/Host 实机矩阵见
+[WINDOWS_RESIZE_VALIDATION.md](./WINDOWS_RESIZE_VALIDATION.md)。
+
 示例应用见 [examples/README.md](./examples/README.md)，其中 `@bindtty/example-yoga-dashboard` 展示 Yoga `gap` / `flexGrow` / `flexShrink` / `flexWrap` 与真实 runtime stats。
 
 ## 文档

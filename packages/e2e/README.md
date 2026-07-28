@@ -12,6 +12,9 @@ BindTTY 端到端测试，按目录区分两种运行方式：
 Windows 输入协议、PowerShell/host 实机矩阵与 trace 验收见
 [Windows 输入验收](../../doc/testing/WINDOWS_INPUT.md)。
 
+Windows Terminal/Console Host 窗口缩放、精确最终坐标和人工连续缩放门禁见
+[Windows 窗口缩放验证手册](../../WINDOWS_RESIZE_VALIDATION.md)。
+
 Windows 物理键盘基线通过以下命令采集：
 
 ```powershell
