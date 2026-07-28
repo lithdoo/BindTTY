@@ -175,10 +175,6 @@ export function createNodeTerminal(
   }
 
   function handleStdoutResize(): void {
-    if (resizePollTimer) {
-      return;
-    }
-
     publishViewportIfChanged("event");
   }
 

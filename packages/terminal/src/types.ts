@@ -238,8 +238,8 @@ export interface CreateNodeTerminalOptions {
    */
   inputTrace?: InputTraceOption;
   /**
-   * On Windows, poll stdout columns/rows when the resize event is unreliable.
-   * Defaults to 50ms on win32 TTY stdout; set 0 to disable.
+   * Poll stdout columns/rows as a fallback alongside resize events.
+   * Defaults to 50ms on win32 TTY stdout; set 0 to disable the fallback.
    */
   resizePollIntervalMs?: number;
 }

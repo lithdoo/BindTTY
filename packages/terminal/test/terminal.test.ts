@@ -1120,9 +1120,6 @@ test(
 
 test(
   "resize event remains authoritative while polling is enabled",
-  {
-    todo: "Windows polling currently suppresses Cursor-style resize events"
-  },
   () => {
     const stdout = createMockStdout();
     stdout.isTTY = true;
@@ -1200,7 +1197,39 @@ test(
   }
 );
 
-test("resize polling coalesces rapid changes into the latest viewport", async () => {
+test("resize polling detects the latest viewport when events are missing", async () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const terminal = createNodeTerminal({
+    stdout,
+    resizePollIntervalMs: 20
+  });
+  const events: TerminalResizeEvent[] = [];
+
+  terminal.onResize((event) => {
+    events.push(event);
+  });
+
+  terminal.start();
+  stdout.columns = 11;
+  stdout.columns = 12;
+  stdout.columns = 13;
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
+
+  terminal.stop();
+  assert.deepEqual(events, [
+    {
+      viewport: { width: 13, height: 3 },
+      previousViewport: { width: 10, height: 3 },
+      source: "poll"
+    }
+  ]);
+});
+
+test("resize event and polling fallback share one deduplicated viewport", async () => {
   const stdout = createMockStdout();
   stdout.isTTY = true;
   const terminal = createNodeTerminal({
@@ -1216,20 +1245,27 @@ test("resize polling coalesces rapid changes into the latest viewport", async ()
   terminal.start();
   stdout.columns = 11;
   stdout.emitResize();
-  stdout.columns = 12;
-  stdout.emitResize();
-  stdout.columns = 13;
-  stdout.emitResize();
 
   await new Promise((resolve) => {
-    setTimeout(resolve, 50);
+    setTimeout(resolve, 30);
+  });
+
+  stdout.columns = 12;
+
+  await new Promise((resolve) => {
+    setTimeout(resolve, 30);
   });
 
   terminal.stop();
   assert.deepEqual(events, [
     {
-      viewport: { width: 13, height: 3 },
+      viewport: { width: 11, height: 3 },
       previousViewport: { width: 10, height: 3 },
+      source: "event"
+    },
+    {
+      viewport: { width: 12, height: 3 },
+      previousViewport: { width: 11, height: 3 },
       source: "poll"
     }
   ]);
