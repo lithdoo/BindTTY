@@ -21,6 +21,7 @@ export interface CellStyle {
 }
 
 export interface FramePatch {
+  kind: "full" | "incremental";
   width: number;
   height: number;
   changes: CellChange[];

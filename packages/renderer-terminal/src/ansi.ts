@@ -1,6 +1,8 @@
 import type { CellStyle, FramePatch } from "./types.js";
 
 const RESET = "\x1b[0m";
+const DISABLE_AUTOWRAP = "\x1b[?7l";
+const ENABLE_AUTOWRAP = "\x1b[?7h";
 
 const foregroundColors = new Map<string, number>([
   ["black", 30],
@@ -60,7 +62,14 @@ export function encodeAnsiPatch(patch: FramePatch): string {
     output += change.cell.char;
   }
 
-  return output.length === 0 ? "" : output + RESET;
+  if (output.length === 0) {
+    return "";
+  }
+
+  const encodedPatch = output + RESET;
+  return patch.kind === "full"
+    ? DISABLE_AUTOWRAP + encodedPatch + ENABLE_AUTOWRAP
+    : encodedPatch;
 }
 
 function moveCursor(x: number, y: number): string {

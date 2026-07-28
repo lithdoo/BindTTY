@@ -20,6 +20,7 @@ test("diffFrames creates a full patch when previous frame is null", () => {
 
   const patch = diffFrames(null, next);
 
+  assert.equal(patch.kind, "full");
   assert.equal(patch.width, 2);
   assert.equal(patch.height, 2);
   assert.equal(patch.changes.length, 4);
@@ -44,6 +45,7 @@ test("diffFrames returns no changes for equal frames", () => {
   setCell(next, 0, 0, { char: "A", style: { bold: true } });
 
   assert.deepEqual(diffFrames(previous, next), {
+    kind: "incremental",
     width: 2,
     height: 1,
     changes: []
@@ -58,6 +60,7 @@ test("diffFrames reports changed cells", () => {
   setCell(next, 1, 0, { char: "B", style: {} });
 
   assert.deepEqual(diffFrames(previous, next), {
+    kind: "incremental",
     width: 3,
     height: 1,
     changes: [
@@ -113,6 +116,7 @@ test("diffFrames creates a full patch when frame size changes", () => {
   setCell(next, 1, 0, { char: "B", style: {} });
 
   assert.deepEqual(diffFrames(previous, next), {
+    kind: "full",
     width: 2,
     height: 1,
     changes: [
@@ -168,6 +172,7 @@ test("diffFrames expands dirty ranges around wide cells", () => {
   setCell(next, 1, 0, { char: "B", style: {} });
 
   assert.deepEqual(diffFrames(previous, next), {
+    kind: "incremental",
     width: 2,
     height: 1,
     changes: [
@@ -238,6 +243,7 @@ test("diffFrames ignores placeholder-only style changes", () => {
   };
 
   assert.deepEqual(diffFrames(previous, next), {
+    kind: "incremental",
     width: 2,
     height: 1,
     changes: []
@@ -253,6 +259,7 @@ test("diffFrames clears wide text when cells become blank", () => {
   setCell(next, 1, 0, { char: " ", style: {}, width: 1 });
 
   assert.deepEqual(diffFrames(previous, next), {
+    kind: "incremental",
     width: 2,
     height: 1,
     changes: [
@@ -346,6 +353,7 @@ test("diffFrames returns no changes for equal wide frames", () => {
   writeText(next, 0, 0, "中");
 
   assert.deepEqual(diffFrames(previous, next), {
+    kind: "incremental",
     width: 2,
     height: 1,
     changes: []
@@ -389,6 +397,6 @@ test("encodeAnsiPatch writes only leading cells from full wide frame patches", (
 
   assert.equal(
     encodeAnsiPatch(diffFrames(null, frame)),
-    "\x1b[1;1H\x1b[0m中\x1b[0m"
+    "\x1b[?7l\x1b[1;1H\x1b[0m中\x1b[0m\x1b[?7h"
   );
 });

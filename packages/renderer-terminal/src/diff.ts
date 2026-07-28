@@ -28,6 +28,7 @@ export function diffFrames(previous: Frame | null, next: Frame): FramePatch {
 
   if (!hasVisibleChange(dirtyCoordinates, previous, next)) {
     return {
+      kind: "incremental",
       width: next.width,
       height: next.height,
       changes: []
@@ -48,6 +49,7 @@ export function diffFrames(previous: Frame | null, next: Frame): FramePatch {
     });
 
   return {
+    kind: "incremental",
     width: next.width,
     height: next.height,
     changes
@@ -90,6 +92,7 @@ function createFullFramePatch(frame: Frame): FramePatch {
   }
 
   return {
+    kind: "full",
     width: frame.width,
     height: frame.height,
     changes

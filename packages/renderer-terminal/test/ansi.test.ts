@@ -6,6 +6,7 @@ import type { FramePatch } from "@bindtty/renderer-terminal";
 
 test("encodeAnsiPatch returns an empty string for empty patches", () => {
   const patch: FramePatch = {
+    kind: "full",
     width: 2,
     height: 1,
     changes: []
@@ -14,8 +15,32 @@ test("encodeAnsiPatch returns an empty string for empty patches", () => {
   assert.equal(encodeAnsiPatch(patch), "");
 });
 
+test("encodeAnsiPatch protects full patches from terminal autowrap", () => {
+  const patch: FramePatch = {
+    kind: "full",
+    width: 1,
+    height: 1,
+    changes: [
+      {
+        x: 0,
+        y: 0,
+        cell: {
+          char: "A",
+          style: {}
+        }
+      }
+    ]
+  };
+
+  assert.equal(
+    encodeAnsiPatch(patch),
+    "\x1b[?7l\x1b[1;1H\x1b[0mA\x1b[0m\x1b[?7h"
+  );
+});
+
 test("encodeAnsiPatch uses one-based cursor coordinates", () => {
   const patch: FramePatch = {
+    kind: "incremental",
     width: 4,
     height: 3,
     changes: [
@@ -35,6 +60,7 @@ test("encodeAnsiPatch uses one-based cursor coordinates", () => {
 
 test("encodeAnsiPatch encodes text style and colors", () => {
   const patch: FramePatch = {
+    kind: "incremental",
     width: 1,
     height: 1,
     changes: [
@@ -65,6 +91,7 @@ test("encodeAnsiPatch encodes text style and colors", () => {
 
 test("encodeAnsiPatch resets style before each changed cell and at the end", () => {
   const patch: FramePatch = {
+    kind: "incremental",
     width: 2,
     height: 1,
     changes: [
@@ -97,6 +124,7 @@ test("encodeAnsiPatch resets style before each changed cell and at the end", () 
 
 test("encodeAnsiPatch supports bright foreground and background colors", () => {
   const patch: FramePatch = {
+    kind: "incremental",
     width: 1,
     height: 1,
     changes: [
@@ -122,6 +150,7 @@ test("encodeAnsiPatch supports bright foreground and background colors", () => {
 
 test("encodeAnsiPatch throws for unsupported colors", () => {
   const foregroundPatch: FramePatch = {
+    kind: "incremental",
     width: 1,
     height: 1,
     changes: [
@@ -138,6 +167,7 @@ test("encodeAnsiPatch throws for unsupported colors", () => {
     ]
   };
   const backgroundPatch: FramePatch = {
+    kind: "incremental",
     width: 1,
     height: 1,
     changes: [
@@ -166,6 +196,7 @@ test("encodeAnsiPatch throws for unsupported colors", () => {
 
 test("encodeAnsiPatch skips wide placeholder cells", () => {
   const patch: FramePatch = {
+    kind: "incremental",
     width: 2,
     height: 1,
     changes: [
@@ -195,6 +226,7 @@ test("encodeAnsiPatch skips wide placeholder cells", () => {
 
 test("encodeAnsiPatch emits blank cells that clear old wide text", () => {
   const patch: FramePatch = {
+    kind: "incremental",
     width: 2,
     height: 1,
     changes: [
@@ -227,6 +259,7 @@ test("encodeAnsiPatch emits blank cells that clear old wide text", () => {
 
 test("encodeAnsiPatch sorts mixed wide changes and still skips placeholders", () => {
   const patch: FramePatch = {
+    kind: "incremental",
     width: 3,
     height: 1,
     changes: [
@@ -268,6 +301,7 @@ test("encodeAnsiPatch sorts mixed wide changes and still skips placeholders", ()
 
 test("encodeAnsiPatch ignores placeholder-only changes without moving the cursor", () => {
   const patch: FramePatch = {
+    kind: "incremental",
     width: 2,
     height: 1,
     changes: [

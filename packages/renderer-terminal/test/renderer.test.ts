@@ -71,7 +71,7 @@ test("TerminalRenderer renders a full patch on first render", () => {
 
   assert.equal(
     renderer.render(textLayout("A"), { viewport }),
-    "\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[1;3H\x1b[0m \x1b[0m"
+    "\x1b[?7l\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[1;3H\x1b[0m \x1b[0m\x1b[?7h"
   );
 });
 
@@ -91,7 +91,7 @@ test("TerminalRenderer paints focused state with inverse style", () => {
       viewport,
       isFocused: () => true
     }),
-    "\x1b[1;1H\x1b[0m\x1b[7mA\x1b[1;2H\x1b[0m \x1b[1;3H\x1b[0m \x1b[0m"
+    "\x1b[?7l\x1b[1;1H\x1b[0m\x1b[7mA\x1b[1;2H\x1b[0m \x1b[1;3H\x1b[0m \x1b[0m\x1b[?7h"
   );
 });
 
@@ -154,7 +154,7 @@ test("TerminalRenderer writes wide text once and skips placeholders", () => {
         height: 1
       }
     }),
-    "\x1b[1;1H\x1b[0m中\x1b[0m"
+    "\x1b[?7l\x1b[1;1H\x1b[0m中\x1b[0m\x1b[?7h"
   );
 });
 
@@ -166,7 +166,7 @@ test("TerminalRenderer reset forces the next render to be full", () => {
 
   assert.equal(
     renderer.render(textLayout("A"), { viewport }),
-    "\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[1;3H\x1b[0m \x1b[0m"
+    "\x1b[?7l\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[1;3H\x1b[0m \x1b[0m\x1b[?7h"
   );
 });
 
@@ -194,15 +194,12 @@ test("TerminalRenderer emits full patch when viewport size changes", () => {
         height: 1
       }
     }),
-    "\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[0m"
+    "\x1b[?7l\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[0m\x1b[?7h"
   );
 });
 
 test(
   "TerminalRenderer keeps rows at stable coordinates after a Win32 resize repaint",
-  {
-    todo: "full repaint must protect the bottom-right cell from immediate Win32 autowrap"
-  },
   () => {
     const renderer = createTerminalRenderer();
     const oldViewport = { width: 6, height: 2 };
