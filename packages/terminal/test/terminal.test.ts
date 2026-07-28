@@ -1052,6 +1052,37 @@ test("start registers stdout resize listener and emits resize events", () => {
   assert.equal(resizeCount, 1);
 });
 
+test(
+  "resize events publish only after the stdout viewport actually changes",
+  {
+    todo: "Win32 resize events must ignore stale dimensions and coalesce with polling"
+  },
+  async () => {
+    const stdout = createMockStdout();
+    stdout.isTTY = true;
+    const terminal = createNodeTerminal({
+      stdout,
+      resizePollIntervalMs: 10
+    });
+    let resizeCount = 0;
+
+    terminal.onResize(() => {
+      resizeCount += 1;
+    });
+
+    terminal.start();
+    stdout.emitResize();
+    stdout.columns = 20;
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 40);
+    });
+
+    terminal.stop();
+    assert.equal(resizeCount, 1);
+  }
+);
+
 test("onResize unsubscribe prevents future resize notifications", () => {
   const stdout = createMockStdout();
   const terminal = createNodeTerminal({ stdout });

@@ -8,6 +8,7 @@ import {
   paintLayout
 } from "@bindtty/renderer-terminal";
 import type { MountedElementNode, MountedNode } from "@bindtty/vnode";
+import { VirtualScreen } from "./virtual-screen.js";
 
 const viewport: LayoutViewport = {
   width: 3,
@@ -196,6 +197,27 @@ test("TerminalRenderer emits full patch when viewport size changes", () => {
     "\x1b[1;1H\x1b[0mA\x1b[1;2H\x1b[0m \x1b[0m"
   );
 });
+
+test(
+  "TerminalRenderer keeps rows at stable coordinates after a Win32 resize repaint",
+  {
+    todo: "full repaint must protect the bottom-right cell from immediate Win32 autowrap"
+  },
+  () => {
+    const renderer = createTerminalRenderer();
+    const oldViewport = { width: 6, height: 2 };
+    const resizedViewport = { width: 4, height: 2 };
+    const screen = new VirtualScreen(4, 2, { wrapAtEol: "immediate" });
+
+    renderer.render(textLayout("OLD"), { viewport: oldViewport });
+    screen.seed(["OLD ", "    "]);
+    screen.write(
+      renderer.render(textLayout("NEW"), { viewport: resizedViewport })
+    );
+
+    assert.deepEqual(screen.lines(), ["NEW ", "    "]);
+  }
+);
 
 test("paintLayout clips child text to node clip rects", () => {
   const child = layout(element("text", { value: "ABCDE" }), rect(0, 0, 5, 1));
