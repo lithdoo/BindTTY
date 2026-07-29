@@ -8,6 +8,7 @@ import { createTerminalRenderer } from "@bindtty/renderer-terminal";
 import { createRuntimeRoot, notifyElementLayout } from "@bindtty/runtime";
 import type {
   Dispose,
+  RuntimeFlushRecord,
   RuntimeLifecycleErrorHandler,
   RuntimeRoot
 } from "@bindtty/runtime";
@@ -17,13 +18,23 @@ import type {
   TerminalResizeEvent
 } from "@bindtty/terminal";
 import type { MountedElementNode, ViewTemplate } from "@bindtty/vnode";
+import {
+  createFrameCoordinator,
+  type FrameIntent,
+  type FrameIntentKind
+} from "./frame-coordinator.js";
+import {
+  createStdoutFrameSink,
+  createTerminalFrameSink,
+  type FrameSink
+} from "./frame-sink.js";
 
 export interface AppStdout {
   columns?: number;
   rows?: number;
   write(chunk: string): unknown;
-  on?(event: "resize", listener: () => void): unknown;
-  off?(event: "resize", listener: () => void): unknown;
+  on?(event: "resize" | "drain", listener: () => void): unknown;
+  off?(event: "resize" | "drain", listener: () => void): unknown;
 }
 
 export interface AppStdin {}
@@ -78,31 +89,125 @@ export function createApp(
   const renderer = createTerminalRenderer();
   const interaction = createInteractionController();
   const terminal = options.terminal;
+  const sink: FrameSink = terminal
+    ? createTerminalFrameSink(terminal)
+    : createStdoutFrameSink(options.stdout);
   let runtime: RuntimeRoot;
+  let cachedLayout: LayoutNode | null = null;
+  let cachedViewport: AppViewport | null = null;
+  let synchronousRuntimeFlush = false;
   let started = false;
   let disposed = false;
   let flushUnsubscribe: Dispose | null = null;
-  let terminalResizeUnsubscribe: Dispose | null = null;
-  let terminalDrainUnsubscribe: Dispose | null = null;
-  let terminalKeyUnsubscribe: Dispose | null = null;
-  let renderTransactionActive = false;
-  let renderRequested = false;
-  let pendingResizeViewport: AppViewport | null = null;
-  let outputBlocked = false;
+  let resizeUnsubscribe: Dispose | null = null;
+  let writableUnsubscribe: Dispose | null = null;
+  let keyUnsubscribe: Dispose | null = null;
 
-  function handleResize(event?: TerminalResizeEvent): void {
-    requestResize(event?.viewport ?? readViewport());
+  function readViewport(): AppViewport {
+    if (terminal) {
+      return terminal.viewport;
+    }
+    return {
+      width: options.stdout.columns ?? options.fallbackViewport?.width ?? 80,
+      height: options.stdout.rows ?? options.fallbackViewport?.height ?? 24
+    };
   }
 
   function refreshInteraction(): void {
     interaction.refresh(runtime.root);
   }
 
+  function consumeRuntimeRecord(record: RuntimeFlushRecord | null): void {
+    if (!record || record.dirtyNodes.length === 0) {
+      return;
+    }
+    coordinator.request({ kind: record.highestDirty });
+  }
+
+  function handleRuntimeRecord(record: RuntimeFlushRecord): void {
+    if (!synchronousRuntimeFlush) {
+      consumeRuntimeRecord(record);
+    }
+  }
+
+  function flushRuntimeIntent(): FrameIntentKind | null {
+    synchronousRuntimeFlush = true;
+    try {
+      return runtime.flushNow()?.highestDirty ?? null;
+    } finally {
+      synchronousRuntimeFlush = false;
+    }
+  }
+
+  function renderFrame(intent: FrameIntent): {
+    patch: string;
+    blocked: boolean;
+  } {
+    const viewport = intent.viewport ?? readViewport();
+    const needsInteraction =
+      intent.kind === "structure" ||
+      intent.kind === "viewport" ||
+      cachedLayout === null;
+    const needsLayout = intent.kind !== "paint" || cachedLayout === null;
+
+    if (needsInteraction) {
+      refreshInteraction();
+    }
+    if (intent.kind === "viewport") {
+      renderer.reset();
+    }
+    if (needsLayout) {
+      cachedLayout = layoutRoot(runtime.root, {
+        viewport,
+        engine: options.layoutEngine
+      });
+      cachedViewport = { ...viewport };
+    }
+
+    const patch = renderer.render(cachedLayout, {
+      viewport,
+      isFocused: (mounted) => interaction.isFocused(mounted)
+    });
+    let blocked = false;
+    if (patch !== "") {
+      blocked = sink.write(patch) === "blocked";
+    }
+
+    runtime.clearDirty();
+    if (needsLayout) {
+      dispatchLayout(cachedLayout);
+    }
+    return { patch, blocked };
+  }
+
+  const coordinator = createFrameCoordinator(renderFrame);
+
+  function requestRender(kind: FrameIntentKind = "paint"): string {
+    if (disposed) {
+      return "";
+    }
+    const runtimeKind = flushRuntimeIntent();
+    return coordinator.request({
+      kind: mergeIntentKind(kind, runtimeKind)
+    });
+  }
+
+  function requestResize(viewport: AppViewport): string {
+    if (disposed) {
+      return "";
+    }
+    flushRuntimeIntent();
+    return coordinator.request({ kind: "viewport", viewport });
+  }
+
+  function handleResize(event?: TerminalResizeEvent): void {
+    requestResize(event?.viewport ?? readViewport());
+  }
+
   function handleKey(event: TerminalKeyEvent): void {
     const result = interaction.handleKey(event);
-
     if (result.handled || result.dirtyNodes.length > 0) {
-      requestRender();
+      requestRender("paint");
     }
   }
 
@@ -110,141 +215,12 @@ export function createApp(
     if (disposed) {
       return { handled: false, dirtyNodes: [] };
     }
-
     refreshInteraction();
     const result = interaction.focus(target);
     if (result.handled || result.dirtyNodes.length > 0) {
-      requestRender();
+      requestRender("paint");
     }
     return result;
-  }
-
-  function readViewport(): AppViewport {
-    if (terminal) {
-      return terminal.viewport;
-    }
-
-    if ("stdout" in options) {
-      return {
-        width: options.stdout.columns ?? options.fallbackViewport?.width ?? 80,
-        height: options.stdout.rows ?? options.fallbackViewport?.height ?? 24
-      };
-    }
-
-    return { width: 80, height: 24 };
-  }
-
-  function writePatch(patch: string): boolean {
-    if (terminal) {
-      const accepted = terminal.write(patch);
-      return accepted !== false || terminal.onDrain === undefined;
-    }
-
-    if ("stdout" in options) {
-      options.stdout.write(patch);
-    }
-
-    return true;
-  }
-
-  function handleTerminalDrain(): void {
-    if (disposed || !started || !outputBlocked) {
-      return;
-    }
-
-    outputBlocked = false;
-    flushRenderTransaction();
-  }
-
-  function renderFrame(viewport: AppViewport): string {
-    if (disposed) {
-      return "";
-    }
-
-    refreshInteraction();
-    const layoutTree = layoutRoot(runtime.root, {
-      viewport,
-      engine: options.layoutEngine
-    });
-    const patch = renderer.render(layoutTree, {
-      viewport,
-      isFocused: (mounted) => interaction.isFocused(mounted)
-    });
-
-    if (patch !== "") {
-      outputBlocked = !writePatch(patch);
-    }
-
-    runtime.clearDirty();
-    dispatchLayout(layoutTree);
-    return patch;
-  }
-
-  function requestRender(): string {
-    if (disposed) {
-      return "";
-    }
-
-    renderRequested = true;
-    return flushRenderTransaction();
-  }
-
-  function requestResize(viewport: AppViewport): string {
-    if (disposed) {
-      return "";
-    }
-
-    pendingResizeViewport = { ...viewport };
-    return flushRenderTransaction();
-  }
-
-  function flushRenderTransaction(): string {
-    if (renderTransactionActive || outputBlocked || disposed) {
-      return "";
-    }
-
-    renderTransactionActive = true;
-    let lastPatch = "";
-
-    try {
-      while (renderRequested || pendingResizeViewport !== null) {
-        const resizeViewport = pendingResizeViewport;
-        pendingResizeViewport = null;
-        renderRequested = false;
-
-        if (resizeViewport !== null) {
-          runtime.flushNow();
-
-          if (pendingResizeViewport !== null) {
-            continue;
-          }
-
-          // The resize frame includes any dirty runtime state consumed above.
-          renderRequested = false;
-          renderer.reset();
-        }
-
-        lastPatch = renderFrame(resizeViewport ?? readViewport());
-      }
-    } finally {
-      renderTransactionActive = false;
-    }
-
-    return lastPatch;
-  }
-
-  function dispatchLayout(layout: LayoutNode | null): void {
-    if (!layout) {
-      return;
-    }
-
-    if (layout.mounted.kind === "element") {
-      notifyElementLayout(layout.mounted, layout);
-    }
-
-    for (const child of layout.children) {
-      dispatchLayout(child);
-    }
   }
 
   runtime = createRuntimeRoot(view, {
@@ -261,22 +237,57 @@ export function createApp(
         return;
       }
 
-      started = true;
-      terminal?.start();
-      flushUnsubscribe = runtime.onFlush(() => {
-        requestRender();
-      });
-      if (terminal) {
-        terminalResizeUnsubscribe = terminal.onResize(handleResize);
-        terminalDrainUnsubscribe = terminal.onDrain?.(handleTerminalDrain) ?? null;
-        terminalKeyUnsubscribe = terminal.onKey(handleKey);
-      } else if ("stdout" in options) {
-        options.stdout.on?.("resize", handleResize);
+      const rollbacks: Array<() => void> = [];
+      try {
+        if (terminal) {
+          rollbacks.push(() => terminal.stop());
+          terminal.start();
+        }
+
+        flushUnsubscribe = runtime.onFlush(handleRuntimeRecord);
+        rollbacks.push(() => flushUnsubscribe?.());
+
+        if (terminal) {
+          resizeUnsubscribe = terminal.onResize(handleResize);
+          rollbacks.push(() => resizeUnsubscribe?.());
+          keyUnsubscribe = terminal.onKey(handleKey);
+          rollbacks.push(() => keyUnsubscribe?.());
+        } else {
+          options.stdout.on?.("resize", handleResize);
+          rollbacks.push(() => options.stdout.off?.("resize", handleResize));
+        }
+
+        if (sink.onWritable) {
+          writableUnsubscribe = sink.onWritable(() => {
+            if (!disposed && started) {
+              coordinator.writable();
+            }
+          });
+          rollbacks.push(() => writableUnsubscribe?.());
+        }
+
+        started = true;
+        const viewport = readViewport();
+        if (
+          cachedViewport &&
+          cachedViewport.width === viewport.width &&
+          cachedViewport.height === viewport.height
+        ) {
+          requestRender("paint");
+        } else {
+          requestResize(viewport);
+        }
+      } catch (error) {
+        started = false;
+        coordinator.cancelPending();
+        const errors: unknown[] = [error];
+        runCleanups([...rollbacks].reverse(), errors);
+        clearSubscriptions();
+        throwErrors(errors, "App start and rollback failed");
       }
-      requestRender();
     },
 
-    render: requestRender,
+    render: () => requestRender("paint"),
 
     resize(): string {
       return requestResize(readViewport());
@@ -290,7 +301,6 @@ export function createApp(
       if (disposed) {
         return null;
       }
-
       refreshInteraction();
       return interaction.getFocusedId();
     },
@@ -301,20 +311,23 @@ export function createApp(
       }
 
       started = false;
-      flushUnsubscribe?.();
-      flushUnsubscribe = null;
-      terminalResizeUnsubscribe?.();
-      terminalResizeUnsubscribe = null;
-      terminalDrainUnsubscribe?.();
-      terminalDrainUnsubscribe = null;
-      terminalKeyUnsubscribe?.();
-      terminalKeyUnsubscribe = null;
-      outputBlocked = false;
-      if (terminal) {
-        terminal.stop();
-      } else if ("stdout" in options) {
-        options.stdout.off?.("resize", handleResize);
-      }
+      coordinator.cancelPending();
+      const errors: unknown[] = [];
+      runCleanups([
+        () => keyUnsubscribe?.(),
+        () => writableUnsubscribe?.(),
+        () => resizeUnsubscribe?.(),
+        () => flushUnsubscribe?.(),
+        () => {
+          if (terminal) {
+            terminal.stop();
+          } else {
+            options.stdout.off?.("resize", handleResize);
+          }
+        }
+      ], errors);
+      clearSubscriptions();
+      throwErrors(errors, "App stop failed");
     },
 
     dispose(): void {
@@ -322,21 +335,90 @@ export function createApp(
         return;
       }
 
-      app.stop();
+      const errors: unknown[] = [];
+      try {
+        app.stop();
+      } catch (error) {
+        collectError(errors, error);
+      }
       disposed = true;
-      runtime.dispose();
-      interaction.dispose();
-      renderer.reset();
-      renderRequested = false;
-      pendingResizeViewport = null;
-      outputBlocked = false;
-      terminal?.dispose();
+      coordinator.dispose();
+      runCleanups([
+        () => runtime.dispose(),
+        () => interaction.dispose(),
+        () => renderer.reset(),
+        () => terminal?.dispose()
+      ], errors);
+      cachedLayout = null;
+      cachedViewport = null;
+      throwErrors(errors, "App dispose failed");
     }
   };
+
+  function clearSubscriptions(): void {
+    flushUnsubscribe = null;
+    resizeUnsubscribe = null;
+    writableUnsubscribe = null;
+    keyUnsubscribe = null;
+  }
 
   if (options.autoStart === true) {
     app.start();
   }
-
   return app;
+}
+
+function mergeIntentKind(
+  requested: FrameIntentKind,
+  runtimeKind: FrameIntentKind | null
+): FrameIntentKind {
+  if (!runtimeKind) {
+    return requested;
+  }
+  const ranks: Record<FrameIntentKind, number> = {
+    paint: 1,
+    layout: 2,
+    structure: 3,
+    viewport: 4
+  };
+  return ranks[runtimeKind] > ranks[requested] ? runtimeKind : requested;
+}
+
+function dispatchLayout(layout: LayoutNode | null): void {
+  if (!layout) {
+    return;
+  }
+  if (layout.mounted.kind === "element") {
+    notifyElementLayout(layout.mounted, layout);
+  }
+  for (const child of layout.children) {
+    dispatchLayout(child);
+  }
+}
+
+function runCleanups(cleanups: Array<() => void>, errors: unknown[]): void {
+  for (const cleanup of cleanups) {
+    try {
+      cleanup();
+    } catch (error) {
+      collectError(errors, error);
+    }
+  }
+}
+
+function collectError(errors: unknown[], error: unknown): void {
+  if (error instanceof AggregateError) {
+    errors.push(...error.errors);
+  } else {
+    errors.push(error);
+  }
+}
+
+function throwErrors(errors: unknown[], message: string): void {
+  if (errors.length === 1) {
+    throw errors[0];
+  }
+  if (errors.length > 1) {
+    throw new AggregateError(errors, message);
+  }
 }

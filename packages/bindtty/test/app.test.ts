@@ -464,6 +464,59 @@ test("same-tick signal updates are coalesced by the runtime scheduler", async ()
   assert.doesNotMatch(stdout.writes[1], /B/);
 });
 
+test("paint-only updates reuse the previous LayoutNode", async () => {
+  const stdout = createMockStdout(4, 1);
+  const color = createSignal("red");
+  const calls: Array<{ root: unknown; viewport: LayoutViewport }> = [];
+  const app = createApp(
+    elementTemplate("text", { value: "A", color }),
+    {
+      stdout,
+      layoutEngine: createRecordingLayoutEngine(calls)
+    }
+  );
+
+  app.start();
+  color.set("blue");
+  await nextMicrotask();
+
+  assert.equal(calls.length, 1);
+  assert.equal(stdout.writes.length, 2);
+  app.dispose();
+});
+
+test("layout and structure updates rerun layout at their declared level", async () => {
+  const terminal = createMockTerminal(4, 1);
+  const value = createSignal("A");
+  const focusable = createSignal(true);
+  const calls: Array<{ root: unknown; viewport: LayoutViewport }> = [];
+  const app = createApp(
+    elementTemplate("text", {
+      id: "target",
+      value,
+      focusable,
+      onKey: () => false
+    }),
+    {
+      terminal,
+      layoutEngine: createRecordingLayoutEngine(calls)
+    }
+  );
+
+  app.start();
+  assert.equal(app.getFocusedId(), "target");
+
+  value.set("B");
+  await nextMicrotask();
+  assert.equal(calls.length, 2);
+
+  focusable.set(false);
+  await nextMicrotask();
+  assert.equal(calls.length, 3);
+  assert.equal(app.getFocusedId(), null);
+  app.dispose();
+});
+
 test("show branch switches render through the app flush path", async () => {
   const stdout = createMockStdout(1, 1);
   const visible = createSignal(false);
@@ -1236,6 +1289,130 @@ test(
   }
 );
 
+test("stdout FrameSink coalesces updates and resize while blocked", async () => {
+  const listeners = {
+    resize: new Set<() => void>(),
+    drain: new Set<() => void>()
+  };
+  const writes: string[] = [];
+  let writeCount = 0;
+  const stdout = {
+    columns: 2,
+    rows: 1,
+    write(chunk: string): boolean {
+      writes.push(chunk);
+      writeCount += 1;
+      return writeCount !== 2;
+    },
+    on(event: "resize" | "drain", listener: () => void): void {
+      listeners[event].add(listener);
+    },
+    off(event: "resize" | "drain", listener: () => void): void {
+      listeners[event].delete(listener);
+    },
+    emit(event: "resize" | "drain"): void {
+      for (const listener of [...listeners[event]]) {
+        listener();
+      }
+    }
+  };
+  const color = createSignal("red");
+  const value = createSignal("A");
+  const calls: Array<{ root: unknown; viewport: LayoutViewport }> = [];
+  const app = createApp(
+    elementTemplate("text", { value, color }),
+    {
+      stdout,
+      layoutEngine: createRecordingLayoutEngine(calls)
+    }
+  );
+
+  app.start();
+  color.set("blue");
+  await nextMicrotask();
+  assert.equal(writes.length, 2);
+
+  color.set("green");
+  value.set("B");
+  stdout.columns = 3;
+  stdout.emit("resize");
+  assert.equal(writes.length, 2);
+
+  stdout.emit("drain");
+  assert.equal(writes.length, 3);
+  assert.match(writes.at(-1) ?? "", /B/);
+  assert.deepEqual(
+    calls.map((call) => call.viewport.width),
+    [2, 3]
+  );
+
+  app.dispose();
+  assert.equal(listeners.resize.size, 0);
+  assert.equal(listeners.drain.size, 0);
+});
+
+test("a blocked stdout without drain support fails the FrameSink contract", () => {
+  const app = createApp(
+    elementTemplate("text", { value: "A" }),
+    {
+      stdout: {
+        columns: 1,
+        rows: 1,
+        write() {
+          return false;
+        }
+      }
+    }
+  );
+
+  assert.throws(
+    () => app.start(),
+    /Blocked FrameSink must provide onWritable/
+  );
+  assert.doesNotThrow(() => app.dispose());
+});
+
+test("coordinator recovers after layout and write errors", () => {
+  const stdout = createMockStdout(2, 1);
+  const delegate = createYogaLayoutEngine();
+  let failLayout = false;
+  const layoutEngine: LayoutEngine = {
+    layout(root, options) {
+      if (failLayout) {
+        failLayout = false;
+        throw new Error("layout failed");
+      }
+      return delegate.layout(root, options);
+    }
+  };
+  let failWrite = false;
+  const originalWrite = stdout.write.bind(stdout);
+  stdout.write = (chunk: string) => {
+    if (failWrite) {
+      failWrite = false;
+      throw new Error("write failed");
+    }
+    originalWrite(chunk);
+  };
+  const app = createApp(elementTemplate("text", { value: "A" }), {
+    stdout,
+    layoutEngine
+  });
+  app.start();
+
+  failLayout = true;
+  stdout.columns = 3;
+  assert.throws(() => app.resize(), /layout failed/);
+  assert.doesNotThrow(() => app.resize());
+
+  failWrite = true;
+  stdout.columns = 4;
+  assert.throws(() => app.resize(), /write failed/);
+  assert.doesNotThrow(() => app.resize());
+  assert.match(stdout.writes.at(-1) ?? "", /A/);
+  app.dispose();
+});
+
 test("terminal mode manual resize returns and writes the repaint patch", () => {
   const terminal = createMockTerminal(1, 1);
   const app = createApp(elementTemplate("text", { value: "A" }), { terminal });
@@ -1303,6 +1480,68 @@ test("terminal mode stop and restart control terminal lifecycle", () => {
   assert.equal(terminal.resizeListenerCount(), 1);
   assert.equal(terminal.keyListenerCount(), 1);
   assert.equal(terminal.writes.length, 2);
+});
+
+test("start failure rolls back previously registered terminal resources", () => {
+  const terminal = createMockTerminal();
+  const originalOnKey = terminal.onKey.bind(terminal);
+  terminal.onKey = () => {
+    throw new Error("key registration failed");
+  };
+  const app = createApp(elementTemplate("text", { value: "A" }), { terminal });
+
+  assert.throws(() => app.start(), /key registration failed/);
+  assert.equal(terminal.stopCalls, 1);
+  assert.equal(terminal.resizeListenerCount(), 0);
+  assert.equal(terminal.keyListenerCount(), 0);
+
+  terminal.onKey = originalOnKey;
+  assert.doesNotThrow(() => app.start());
+  assert.equal(terminal.startCalls, 2);
+  app.dispose();
+});
+
+test("stop continues cleanup and aggregates listener and terminal errors", () => {
+  const terminal = createMockTerminal();
+  const originalOnResize = terminal.onResize.bind(terminal);
+  const originalOnKey = terminal.onKey.bind(terminal);
+  const cleanupEvents: string[] = [];
+  terminal.onResize = (listener) => {
+    const dispose = originalOnResize(listener);
+    return () => {
+      dispose();
+      cleanupEvents.push("resize");
+      throw new Error("resize cleanup failed");
+    };
+  };
+  terminal.onKey = (listener) => {
+    const dispose = originalOnKey(listener);
+    return () => {
+      dispose();
+      cleanupEvents.push("key");
+      throw new Error("key cleanup failed");
+    };
+  };
+  terminal.stop = () => {
+    terminal.stopCalls += 1;
+    cleanupEvents.push("stop");
+    throw new Error("terminal stop failed");
+  };
+  const app = createApp(elementTemplate("text", { value: "A" }), { terminal });
+  app.start();
+
+  assert.throws(
+    () => app.stop(),
+    (error) => {
+      assert.ok(error instanceof AggregateError);
+      assert.equal(error.errors.length, 3);
+      return true;
+    }
+  );
+  assert.deepEqual(cleanupEvents, ["key", "resize", "stop"]);
+  assert.equal(terminal.resizeListenerCount(), 0);
+  assert.equal(terminal.keyListenerCount(), 0);
+  assert.doesNotThrow(() => app.dispose());
 });
 
 test("terminal mode dispose stops and disposes terminal", () => {
