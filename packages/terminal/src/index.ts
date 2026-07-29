@@ -19,6 +19,13 @@ export type {
   TerminalOutputOptions
 } from "./terminal-output.js";
 export {
+  DEFAULT_WIN32_RESIZE_MIN_FRAME_INTERVAL_MS,
+  DEFAULT_WIN32_RESIZE_POLL_INTERVAL_MS,
+  DEFAULT_WIN32_RESIZE_SETTLE_DELAY_MS,
+  resolveTerminalProfile
+} from "./terminal-profile.js";
+export type { ResolvedTerminalProfile } from "./terminal-profile.js";
+export {
   detectTerminalInputEnvironment,
   selectInputBackend
 } from "./backend-selection.js";

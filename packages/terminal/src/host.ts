@@ -5,11 +5,6 @@ import {
   type InputProtocol,
   type KeyboardCapabilities
 } from "@bindtty/input";
-import { resolvePlatformAdapter } from "./adapters/resolve.js";
-import {
-  detectTerminalInputEnvironment,
-  selectInputBackend
-} from "./backend-selection.js";
 import { ANSI } from "./ansi.js";
 import {
   createInputTraceListener,
@@ -20,6 +15,7 @@ import {
 } from "./input-trace.js";
 import { discoverNativeWin32InputProvider } from "./native-win32-provider.js";
 import { createTerminalOutput } from "./terminal-output.js";
+import { resolveTerminalProfile } from "./terminal-profile.js";
 import type {
   CreateNodeTerminalOptions,
   Dispose,
@@ -39,55 +35,10 @@ const defaultViewport: TerminalViewport = {
   height: 24
 };
 
-const win32ResizePollIntervalMs = 50;
-const win32ResizeMinFrameIntervalMs = 32;
-const win32ResizeSettleDelayMs = 100;
 const defaultKeyboardProbeTimeoutMs = 100;
 const kittyKeyboardResponse = /^\x1b\[\?(\d+)u$/;
 const kittyKeyboardLikeResponse = /^\x1b\[\?[^]*u$/;
 const primaryDeviceAttributesResponse = /^\x1b\[\??[\d;]*c$/;
-
-function normalizeDurationMs(
-  value: number | undefined,
-  fallback: number
-): number {
-  if (value === undefined) {
-    return fallback;
-  }
-
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-
-  return Math.max(0, Math.floor(value));
-}
-
-function readResizePollIntervalMs(
-  options: CreateNodeTerminalOptions
-): number {
-  return normalizeDurationMs(
-    options.resizePollIntervalMs,
-    process.platform === "win32" ? win32ResizePollIntervalMs : 0
-  );
-}
-
-function readResizeMinFrameIntervalMs(
-  options: CreateNodeTerminalOptions
-): number {
-  return normalizeDurationMs(
-    options.resizeMinFrameIntervalMs,
-    process.platform === "win32" ? win32ResizeMinFrameIntervalMs : 0
-  );
-}
-
-function readResizeSettleDelayMs(
-  options: CreateNodeTerminalOptions
-): number {
-  return normalizeDurationMs(
-    options.resizeSettleDelayMs,
-    process.platform === "win32" ? win32ResizeSettleDelayMs : 0
-  );
-}
 
 function shouldPollStdoutResize(
   stdout: CreateNodeTerminalOptions["stdout"],
@@ -142,15 +93,13 @@ export function createNodeTerminal(
   const resizeListeners = new Set<ResizeListener>();
   const keyListeners = new Set<TerminalKeyListener>();
   const keyboardCapabilitiesListeners = new Set<KeyboardCapabilitiesListener>();
-  const platform = resolvePlatformAdapter(options);
-  const synchronizedOutputEnabled =
-    options.synchronizedOutput ??
-    (platform.name === "win32" && options.stdout.isTTY === true);
+  const profile = resolveTerminalProfile(options);
+  const platform = profile.adapter;
   const inputTrace = createInputTraceListener(options.inputTrace);
   let detachStdin: Dispose = () => {};
   const output = createTerminalOutput({
     stdout: options.stdout,
-    synchronizedOutput: synchronizedOutputEnabled
+    synchronizedOutput: profile.output.synchronizedOutput
   });
   let resizePollTimer: ReturnType<typeof setInterval> | undefined;
   let resizeFrameTimer: ReturnType<typeof setTimeout> | undefined;
@@ -288,8 +237,8 @@ export function createNodeTerminal(
       return;
     }
 
-    const minFrameIntervalMs = readResizeMinFrameIntervalMs(options);
-    const settleDelayMs = readResizeSettleDelayMs(options);
+    const minFrameIntervalMs = profile.resize.minFrameIntervalMs;
+    const settleDelayMs = profile.resize.settleDelayMs;
     if (minFrameIntervalMs === 0 || lastResizePublishedAt === undefined) {
       pendingResize = undefined;
       clearResizeFrameTimer();
@@ -334,7 +283,7 @@ export function createNodeTerminal(
   }
 
   function startWin32ResizePolling(): void {
-    const intervalMs = readResizePollIntervalMs(options);
+    const intervalMs = profile.resize.pollIntervalMs;
 
     if (!shouldPollStdoutResize(options.stdout, intervalMs)) {
       return;
@@ -581,11 +530,7 @@ export function createNodeTerminal(
           ...options,
           inputTrace: inputTrace ?? false
         });
-        const environment = detectTerminalInputEnvironment(
-          options,
-          platform.name === "win32" ? { platform: "win32" } : {}
-        );
-        const selectedBackend = selectInputBackend(options, environment);
+        const selectedBackend = profile.inputBackend;
         activeStdinKind = stdinInput.kind;
         traceBackendSelection(
           inputTrace,

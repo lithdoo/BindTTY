@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 
-import { ANSI, createNodeTerminal, DefaultPlatformAdapter, discoverNativeWin32InputProvider, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, selectInputBackend, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
+import { ANSI, createNodeTerminal, DefaultPlatformAdapter, discoverNativeWin32InputProvider, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, resolveTerminalProfile, selectInputBackend, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
 import type {
   CreateNodeTerminalOptions,
   InputTraceRecord,
@@ -442,6 +442,28 @@ test("exports terminal host contract types", () => {
 
   assert.equal(options.stdout, stdout);
   assert.equal(host.viewport, viewport);
+});
+
+test("resolved terminal profile applies platform defaults once and preserves overrides", () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const profile = resolveTerminalProfile({
+    stdout,
+    platformAdapter: new Win32PlatformAdapter(),
+    synchronizedOutput: false,
+    resizePollIntervalMs: 7,
+    resizeMinFrameIntervalMs: 11,
+    resizeSettleDelayMs: 13
+  });
+
+  assert.equal(profile.platform, "win32");
+  assert.equal(profile.output.tty, true);
+  assert.equal(profile.output.synchronizedOutput, false);
+  assert.deepEqual(profile.resize, {
+    pollIntervalMs: 7,
+    minFrameIntervalMs: 11,
+    settleDelayMs: 13
+  });
 });
 
 test("createNodeTerminal does not touch streams before start", () => {
