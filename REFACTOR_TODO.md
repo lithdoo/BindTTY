@@ -1,6 +1,6 @@
 # BindTTY 系统性重构 TODO
 
-> 状态：M0、M1 已完成，待执行 M2
+> 状态：M0–M2 已完成，待执行 M3
 > 基线版本：`0.1.0-beta.3`  
 > 建立日期：2026-07-29  
 > 最近核对：2026-07-29  
@@ -21,6 +21,13 @@
 - [x] M1-05 有界文本缓存。
 - [x] M1-06 Basic scrollX。
 - [x] M1 阶段 gate：`752 passed / 2 skipped`，见基线记录。
+- [x] M2-01 响应式语义 ADR。
+- [x] M2-02 Characterization 与 target contract。
+- [x] M2-03 Lazy/stale computed。
+- [x] M2-04 事务队列与 `batch()`。
+- [x] M2-05 错误与循环防护。
+- [x] M2-06 单实例诊断。
+- [x] M2 阶段 gate：`766 passed / 2 skipped`，见基线记录。
 
 ## 1. 目标
 
@@ -282,43 +289,43 @@ Target contract（实现完成后必须启用）：
 
 以下测试记录修改前现状，提交时必须通过：
 
-- [ ] 增加 computed 初次 `get()`、缓存值和显式 listener 新旧值的测试。
-- [ ] 增加动态依赖切换测试。
-- [ ] 增加嵌套 computed/effect 测试。
-- [ ] 增加 derive/effect 抛错后的栈与订阅恢复测试。
-- [ ] 增加 effect cleanup 在 rerun/dispose 时执行的测试。
+- [x] 增加 computed 初次 `get()`、缓存值和显式 listener 新旧值的测试。
+- [x] 增加动态依赖切换测试。
+- [x] 增加嵌套 computed/effect 测试。
+- [x] 增加 derive/effect 抛错后的栈与订阅恢复测试。
+- [x] 增加 effect cleanup 在 rerun/dispose 时执行的测试。
 - [ ] 增加 mount/unmount 的现有 DOM-free MountedNode 生命周期测试。
-- [ ] 增加隔离安装与重复 `@bindtty/signal` 实例的行为/诊断测试。
+- [x] 增加隔离安装与重复 `@bindtty/signal` 实例的行为/诊断测试。
 
 以下 target contract tests 可以先标记 TODO/skip，但必须分别在 R1.2–R1.4 完成时启用：
 
-- [ ] computed 创建但没有消费者时不订阅上游。
-- [ ] computed 取消最后一个消费者后释放上游。
-- [ ] effect 不观察菱形依赖中间态。
-- [ ] `batch()` 内多次更新只执行一次 effect。
+- [x] computed 创建但没有消费者时不订阅上游。
+- [x] computed 取消最后一个消费者后释放上游。
+- [x] effect 不观察菱形依赖中间态。
+- [x] `batch()` 内多次更新只执行一次 effect。
 - [ ] widget/component unmount 后不再响应外部 signal。
 
 ### R1.2 Computed 模型
 
-- [ ] 将 computed 改为 lazy/stale 模型，或实现等价的一致性方案。
-- [ ] `get()` 在源更新后同步得到最终值。
-- [ ] 无消费者 computed 不持续订阅上游。
-- [ ] 最后一个消费者解绑后释放依赖。
-- [ ] 下游重新订阅时能够恢复依赖收集。
-- [ ] 保留动态依赖分支切换能力。
+- [x] 将 computed 改为 lazy/stale 模型，或实现等价的一致性方案。
+- [x] `get()` 在源更新后同步得到最终值。
+- [x] 无消费者 computed 不持续订阅上游。
+- [x] 最后一个消费者解绑后释放依赖。
+- [x] 下游重新订阅时能够恢复依赖收集。
+- [x] 保留动态依赖分支切换能力。
 
 ### R1.3 批处理与无 glitch 调度
 
-- [ ] 定义 `set()` 后同步 `get()`、显式 listener、effect 的正式时序。
-- [ ] 增加 `batch()`，或在内部实现等价事务边界。
-- [ ] 同一次 source 更新中 effect 不得观察到菱形图中间态。
-- [ ] computed 先失效，effect/listener 后执行。
-- [ ] 防止同一 computation 在同一事务中重复执行。
-- [ ] 明确循环依赖和递归 set 的错误策略。
-- [ ] 明确 effect/derive/listener 抛错时剩余队列、依赖图和 cleanup 的处理。
-- [ ] 文档说明外部 `subscribe()` 是否计入 computed consumer，以及无消费者 computed
+- [x] 定义 `set()` 后同步 `get()`、显式 listener、effect 的正式时序。
+- [x] 增加 `batch()`，或在内部实现等价事务边界。
+- [x] 同一次 source 更新中 effect 不得观察到菱形图中间态。
+- [x] computed 先失效，effect/listener 后执行。
+- [x] 防止同一 computation 在同一事务中重复执行。
+- [x] 明确循环依赖和递归 set 的错误策略。
+- [x] 明确 effect/derive/listener 抛错时剩余队列、依赖图和 cleanup 的处理。
+- [x] 文档说明外部 `subscribe()` 是否计入 computed consumer，以及无消费者 computed
       在单次 `get()` 后是否保留缓存和依赖。
-- [ ] 明确单实例 peer dependency 是否继续作为正确性前提，并提供 `npm ls` 或运行时
+- [x] 明确单实例 peer dependency 是否继续作为正确性前提，并提供 `npm ls` 或运行时
       诊断；不得让跨实例 signal 静默停止依赖追踪。
 
 ### R1.4 Reactive ownership

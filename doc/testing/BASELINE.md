@@ -131,3 +131,27 @@ M1 性能原始结果保存在
 963,016 bytes，降低约 63.3%。完整 frame median 从 115.401 ms 变为 95.245 ms；
 原子 paste 吞吐从约 20.11 亿变为 17.80 亿 UTF-16 code units/s。后两项容易受单机
 运行噪声影响，仅记录结果，不作为性能承诺或强制阈值。原子 paste 仍只产生一个事件。
+
+## M2 完成 gate
+
+2026-07-29 在相同 Linux/WSL、Node.js `v20.19.2` 环境完成验证：
+
+| 检查 | 结果 |
+| --- | --- |
+| `npm test` | 766 passed / 2 skipped，183.603 s |
+| `npm run check:dependencies` | passed |
+| `npm run smoke:consumer` | 13 个公开包通过，signal 单实例检查通过 |
+
+测试分层结果为：
+
+- unit：631 passed / 2 skipped；
+- integration：64 passed；
+- mock E2E：49 passed；
+- real PTY：22 passed。
+
+M2 相比 M1 新增 14 个 signal 契约测试，无新增 skip。性能原始结果保存在
+[`benchmarks/results/m2-linux-x64.json`](../../benchmarks/results/m2-linux-x64.json)。
+相同的 100,000 次 source set/effect fixture 从 M0 的约 112 万 operations/s 变为
+约 362 万 operations/s，单次实测提升约 223.7%；相对 M1 的约 280 万
+operations/s 提升约 29.3%。完整 frame、paste 和 cache 指标也继续记录，但不是 M2
+优化目标。所有单机 wall time 和 throughput 仅作为回归对照，不设跨机器强制阈值。
