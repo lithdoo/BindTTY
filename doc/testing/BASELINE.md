@@ -155,3 +155,29 @@ M2 相比 M1 新增 14 个 signal 契约测试，无新增 skip。性能原始�
 约 362 万 operations/s，单次实测提升约 223.7%；相对 M1 的约 280 万
 operations/s 提升约 29.3%。完整 frame、paste 和 cache 指标也继续记录，但不是 M2
 优化目标。所有单机 wall time 和 throughput 仅作为回归对照，不设跨机器强制阈值。
+
+## M3 完成 gate
+
+2026-07-29 在相同 Linux/WSL、Node.js `v20.19.2` 环境完成验证：
+
+| 检查 | 结果 |
+| --- | --- |
+| `npm test` | 779 passed / 2 skipped，180.078 s |
+| `npm run check:dependencies` | passed |
+| `npm run smoke:consumer` | 13 个公开包通过，runtime/signal dedupe 通过 |
+| `npm run benchmark:ownership` | 4,000 次 mount/dispose 后无残留 effect |
+
+测试分层结果为：
+
+- unit：644 passed / 2 skipped；
+- integration：64 passed；
+- mock E2E：49 passed；
+- real PTY：22 passed。
+
+M3 相比 M2 新增 13 个 owner、runtime 和 widget 卸载契约测试，无新增 skip。重复资源
+基准原始结果保存在
+[`benchmarks/results/m3-ownership-linux-x64.json`](../../benchmarks/results/m3-ownership-linux-x64.json)。
+fixture 连续执行两轮、每轮 2,000 次 component mount/dispose；强制 GC 后第一轮 retained
+heap 为 378,064 bytes，第二轮增量为 35,448 bytes。完成 4,000 次卸载后更新公共 source，
+残留 effect 执行数为 0。heap 数字仅用于同环境趋势观察，不设跨机器强制阈值；残留
+effect 必须为 0。

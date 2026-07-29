@@ -1,6 +1,6 @@
 # BindTTY 系统性重构 TODO
 
-> 状态：M0–M2 已完成，待执行 M3
+> 状态：M0–M3 已完成，待执行 M4
 > 基线版本：`0.1.0-beta.3`  
 > 建立日期：2026-07-29  
 > 最近核对：2026-07-29  
@@ -28,6 +28,12 @@
 - [x] M2-05 错误与循环防护。
 - [x] M2-06 单实例诊断。
 - [x] M2 阶段 gate：`766 passed / 2 skipped`，见基线记录。
+- [x] M3-01 Owner ADR 与底层 API。
+- [x] M3-02 Component owner。
+- [x] M3-03 Show/For ownership。
+- [x] M3-04 Widget cleanup。
+- [x] M3-05 App/runtime dispose。
+- [x] M3 阶段 gate：`779 passed / 2 skipped`，见基线记录。
 
 ## 1. 目标
 
@@ -294,7 +300,7 @@ Target contract（实现完成后必须启用）：
 - [x] 增加嵌套 computed/effect 测试。
 - [x] 增加 derive/effect 抛错后的栈与订阅恢复测试。
 - [x] 增加 effect cleanup 在 rerun/dispose 时执行的测试。
-- [ ] 增加 mount/unmount 的现有 DOM-free MountedNode 生命周期测试。
+- [x] 增加 mount/unmount 的现有 DOM-free MountedNode 生命周期测试。
 - [x] 增加隔离安装与重复 `@bindtty/signal` 实例的行为/诊断测试。
 
 以下 target contract tests 可以先标记 TODO/skip，但必须分别在 R1.2–R1.4 完成时启用：
@@ -303,7 +309,7 @@ Target contract（实现完成后必须启用）：
 - [x] computed 取消最后一个消费者后释放上游。
 - [x] effect 不观察菱形依赖中间态。
 - [x] `batch()` 内多次更新只执行一次 effect。
-- [ ] widget/component unmount 后不再响应外部 signal。
+- [x] widget/component unmount 后不再响应外部 signal。
 
 ### R1.2 Computed 模型
 
@@ -330,13 +336,13 @@ Target contract（实现完成后必须启用）：
 
 ### R1.4 Reactive ownership
 
-- [ ] 定义 component/runtime reactive owner。
-- [ ] 组件执行期间创建的 computed/effect 能注册到 owner。
-- [ ] Show 分支卸载时释放 owner。
-- [ ] For item 删除时释放 item owner。
-- [ ] App/runtime dispose 时释放全部 owner。
-- [ ] 处理返回 empty template 的 component cleanup。
-- [ ] 不要求每个 widget 手动维护一组 dispose 回调。
+- [x] 定义 component/runtime reactive owner。
+- [x] 组件执行期间创建的 computed/effect 能注册到 owner。
+- [x] Show 分支卸载时释放 owner。
+- [x] For item 删除时释放 item owner。
+- [x] App/runtime dispose 时释放全部 owner。
+- [x] 处理返回 empty template 的 component cleanup。
+- [x] 不要求每个 widget 手动维护一组 dispose 回调。
 
 验收：
 
