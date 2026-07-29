@@ -112,16 +112,22 @@ export function selectInputBackend(
   if (rawInputAvailable(options, environment)) {
     return {
       stdinAdapter: "raw",
-      reason: options.rawMode === true
-        ? "raw-mode-requested"
-        : "tty-raw-input-available",
+      reason:
+        options.rawMode === true
+          ? "raw-mode-requested"
+          : environment.platform === "win32"
+            ? "win32-input-provider-unavailable; using-raw-stdin"
+            : "tty-raw-input-available",
       enableRawMode: environment.stdinIsTTY && environment.canSetRawMode
     };
   }
 
   return {
     stdinAdapter: "readline",
-    reason: "non-tty-readline-fallback",
+    reason:
+      environment.platform === "win32"
+        ? "win32-input-provider-unavailable; using-readline"
+        : "non-tty-readline-fallback",
     enableRawMode: false
   };
 }

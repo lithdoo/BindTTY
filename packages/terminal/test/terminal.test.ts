@@ -209,7 +209,7 @@ test("input backend auto-selection owns Windows fallback policy", () => {
     })),
     {
       stdinAdapter: "raw",
-      reason: "tty-raw-input-available",
+      reason: "win32-input-provider-unavailable; using-raw-stdin",
       enableRawMode: true
     }
   );
@@ -221,7 +221,7 @@ test("input backend auto-selection owns Windows fallback policy", () => {
     })),
     {
       stdinAdapter: "readline",
-      reason: "non-tty-readline-fallback",
+      reason: "win32-input-provider-unavailable; using-readline",
       enableRawMode: false
     }
   );
@@ -2632,7 +2632,7 @@ test("Win32 terminal auto-selection owns raw mode lifecycle and trace reason", (
   assert.equal(stdin.keypressListenerCount(), 0);
   assert.equal(
     trace.find((record) => record.recordType === "backend")?.backend?.reason,
-    "tty-raw-input-available"
+    "win32-input-provider-unavailable; using-raw-stdin"
   );
 
   terminal.stop();

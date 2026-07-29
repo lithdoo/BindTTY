@@ -17,6 +17,8 @@
     "index.js",
     "index.cjs",
     "index.d.ts",
+    "loader.cjs",
+    "prebuilds",
     "binding.gyp",
     "src",
     "scripts"

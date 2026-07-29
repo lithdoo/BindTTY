@@ -40,6 +40,8 @@ export interface InputBackendSelection {
     | "explicit-win32-backend-unavailable; using-raw-stdin"
     | "explicit-win32-backend-unavailable; using-readline"
     | "win32-input-provider-available"
+    | "win32-input-provider-unavailable; using-raw-stdin"
+    | "win32-input-provider-unavailable; using-readline"
     | "tty-raw-input-available"
     | "raw-mode-requested"
     | "raw-mode-disabled"
@@ -190,6 +192,10 @@ export interface Win32InputProvider {
   /** Allows optional native bindings to reject redirected/non-console stdin. */
   isAvailable?(): boolean;
   attach(listener: (record: Win32KeyRecord) => void): Dispose;
+  getStats?(): {
+    queueCapacity: number;
+    droppedRecords: bigint;
+  };
 }
 
 export interface StdinInputAdapter {

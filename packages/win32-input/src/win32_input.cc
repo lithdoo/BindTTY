@@ -3,7 +3,16 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <atomic>
+#include <mutex>
 #include <new>
+#include <unordered_set>
+
+static constexpr size_t kDefaultQueueCapacity = 1024;
+static constexpr size_t kMinQueueCapacity = 16;
+static constexpr size_t kMaxQueueCapacity = 65536;
+static std::mutex g_provider_mutex;
+static std::unordered_set<HANDLE> g_attached_inputs;
+static std::atomic<uint64_t> g_dropped_records{0};
 
 struct KeyRecord {
   bool key_down;
@@ -22,7 +31,26 @@ struct ProviderState {
   HANDLE thread = nullptr;
   napi_threadsafe_function callback = nullptr;
   std::atomic<bool> stopped{false};
+  bool owns_input = false;
 };
+
+struct ProviderHandle {
+  ProviderState* state = nullptr;
+};
+
+static bool AcquireInput(HANDLE input) {
+  std::lock_guard<std::mutex> lock(g_provider_mutex);
+  return g_attached_inputs.insert(input).second;
+}
+
+static void ReleaseInput(ProviderState* state) {
+  if (state == nullptr || !state->owns_input) {
+    return;
+  }
+  std::lock_guard<std::mutex> lock(g_provider_mutex);
+  g_attached_inputs.erase(state->input);
+  state->owns_input = false;
+}
 
 static void ThrowLastError(napi_env env, const char* message) {
   DWORD code = GetLastError();
@@ -103,13 +131,15 @@ static DWORD WINAPI ReadLoop(LPVOID parameter) {
       if (copy == nullptr) {
         continue;
       }
-      if (
-        napi_call_threadsafe_function(
+      napi_status status = napi_call_threadsafe_function(
           state->callback,
           copy,
           napi_tsfn_nonblocking
-        ) != napi_ok
-      ) {
+        );
+      if (status != napi_ok) {
+        if (status == napi_queue_full) {
+          g_dropped_records.fetch_add(1);
+        }
         delete copy;
       }
     }
@@ -140,22 +170,40 @@ static void StopProvider(ProviderState* state) {
     CloseHandle(state->stop_event);
     state->stop_event = nullptr;
   }
+  ReleaseInput(state);
 }
 
 static void CleanupProvider(void* data) {
-  ProviderState* state = static_cast<ProviderState*>(data);
-  StopProvider(state);
-  delete state;
+  ProviderHandle* handle = static_cast<ProviderHandle*>(data);
+  if (handle->state != nullptr) {
+    StopProvider(handle->state);
+    delete handle->state;
+    handle->state = nullptr;
+  }
+  delete handle;
 }
 
 static napi_value Dispose(napi_env env, napi_callback_info info) {
   void* data = nullptr;
   napi_get_cb_info(env, info, nullptr, nullptr, nullptr, &data);
-  ProviderState* state = static_cast<ProviderState*>(data);
-  StopProvider(state);
+  ProviderHandle* handle = static_cast<ProviderHandle*>(data);
+  if (handle->state != nullptr) {
+    StopProvider(handle->state);
+    delete handle->state;
+    handle->state = nullptr;
+  }
   napi_value undefined;
   napi_get_undefined(env, &undefined);
   return undefined;
+}
+
+static napi_value GetStats(napi_env env, napi_callback_info) {
+  napi_value stats;
+  napi_create_object(env, &stats);
+  napi_value dropped;
+  napi_create_bigint_uint64(env, g_dropped_records.load(), &dropped);
+  napi_set_named_property(env, stats, "droppedRecords", dropped);
+  return stats;
 }
 
 static napi_value IsAvailable(napi_env env, napi_callback_info) {
@@ -171,13 +219,28 @@ static napi_value IsAvailable(napi_env env, napi_callback_info) {
 }
 
 static napi_value Attach(napi_env env, napi_callback_info info) {
-  size_t argc = 1;
-  napi_value argv[1];
+  size_t argc = 2;
+  napi_value argv[2];
   napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr);
   napi_valuetype type;
-  if (argc != 1 || napi_typeof(env, argv[0], &type) != napi_ok || type != napi_function) {
+  if (argc < 1 || napi_typeof(env, argv[0], &type) != napi_ok || type != napi_function) {
     napi_throw_type_error(env, nullptr, "listener must be a function");
     return nullptr;
+  }
+  uint32_t queue_capacity = static_cast<uint32_t>(kDefaultQueueCapacity);
+  if (argc >= 2) {
+    if (
+      napi_get_value_uint32(env, argv[1], &queue_capacity) != napi_ok ||
+      queue_capacity < kMinQueueCapacity ||
+      queue_capacity > kMaxQueueCapacity
+    ) {
+      napi_throw_range_error(
+        env,
+        nullptr,
+        "queueCapacity must be an integer between 16 and 65536"
+      );
+      return nullptr;
+    }
   }
 
   HANDLE input = GetStdHandle(STD_INPUT_HANDLE);
@@ -190,13 +253,22 @@ static napi_value Attach(napi_env env, napi_callback_info info) {
     napi_throw_error(env, nullptr, "Win32 console input is unavailable");
     return nullptr;
   }
+  if (!AcquireInput(input)) {
+    napi_throw_error(env, nullptr, "Win32 console input is already attached");
+    return nullptr;
+  }
 
   ProviderState* state = new (std::nothrow) ProviderState();
   if (state == nullptr) {
+    {
+      std::lock_guard<std::mutex> lock(g_provider_mutex);
+      g_attached_inputs.erase(input);
+    }
     napi_throw_error(env, nullptr, "Unable to allocate Win32 input provider");
     return nullptr;
   }
   state->input = input;
+  state->owns_input = true;
   state->original_mode = mode;
   DWORD native_mode = mode & ~(
     ENABLE_PROCESSED_INPUT |
@@ -205,6 +277,7 @@ static napi_value Attach(napi_env env, napi_callback_info info) {
     ENABLE_VIRTUAL_TERMINAL_INPUT
   );
   if (SetConsoleMode(input, native_mode) == FALSE) {
+    ReleaseInput(state);
     delete state;
     ThrowLastError(env, "Unable to enable Win32 console record input");
     return nullptr;
@@ -215,6 +288,7 @@ static napi_value Attach(napi_env env, napi_callback_info info) {
     if (state->mode_changed) {
       SetConsoleMode(input, mode);
     }
+    ReleaseInput(state);
     delete state;
     ThrowLastError(env, "Unable to create Win32 input stop event");
     return nullptr;
@@ -228,7 +302,7 @@ static napi_value Attach(napi_env env, napi_callback_info info) {
       argv[0],
       nullptr,
       resource_name,
-      0,
+      queue_capacity,
       1,
       nullptr,
       nullptr,
@@ -240,6 +314,7 @@ static napi_value Attach(napi_env env, napi_callback_info info) {
     if (state->mode_changed) {
       SetConsoleMode(input, mode);
     }
+    ReleaseInput(state);
     CloseHandle(state->stop_event);
     delete state;
     napi_throw_error(env, nullptr, "Unable to create Win32 input callback");
@@ -253,23 +328,32 @@ static napi_value Attach(napi_env env, napi_callback_info info) {
     if (state->mode_changed) {
       SetConsoleMode(input, mode);
     }
+    ReleaseInput(state);
     delete state;
     ThrowLastError(env, "Unable to start Win32 input thread");
     return nullptr;
   }
 
-  napi_add_env_cleanup_hook(env, CleanupProvider, state);
+  ProviderHandle* handle = new (std::nothrow) ProviderHandle{state};
+  if (handle == nullptr) {
+    StopProvider(state);
+    delete state;
+    napi_throw_error(env, nullptr, "Unable to allocate Win32 input handle");
+    return nullptr;
+  }
+  napi_add_env_cleanup_hook(env, CleanupProvider, handle);
   napi_value dispose;
-  napi_create_function(env, "dispose", NAPI_AUTO_LENGTH, Dispose, state, &dispose);
+  napi_create_function(env, "dispose", NAPI_AUTO_LENGTH, Dispose, handle, &dispose);
   return dispose;
 }
 
 NAPI_MODULE_INIT() {
   napi_property_descriptor properties[] = {
     { "isAvailable", nullptr, IsAvailable, nullptr, nullptr, nullptr, napi_default, nullptr },
-    { "attach", nullptr, Attach, nullptr, nullptr, nullptr, napi_default, nullptr }
+    { "attach", nullptr, Attach, nullptr, nullptr, nullptr, napi_default, nullptr },
+    { "getStats", nullptr, GetStats, nullptr, nullptr, nullptr, napi_default, nullptr }
   };
-  napi_define_properties(env, exports, 2, properties);
+  napi_define_properties(env, exports, 3, properties);
   return exports;
 }
 
