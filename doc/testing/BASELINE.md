@@ -240,3 +240,41 @@ DECRQM 暂不实现：当前采用已知 host profile、保守 fallback 与显�
 uncaught exception/unhandled rejection 不注册额外全局 handler，避免改变应用错误语义；
 同步 start/stop/dispose 回滚与 SIGINT/SIGTERM/SIGHUP 使用 best-effort 恢复。
 Windows Terminal、PowerShell、conhost/ConPTY 实机矩阵仍按计划留在 M7 执行。
+
+## M6 完成 gate
+
+2026-07-29 在相同 Linux/WSL、Node.js `v20.19.2` 环境完成验证：
+
+| 检查 | 结果 |
+| --- | --- |
+| `npm test` | 793 passed / 2 skipped，172.136 s |
+| `npm run check:element-metadata` | passed |
+| `npm run check:layout-props` | generated files clean |
+| `npm run check:dependencies` | passed |
+| `npm run smoke:consumer` | 13 个公开包通过 |
+| `npm run build:clean` | passed，149.539 s |
+| `npm run build:incremental` | 连续两轮通过，119.925 s / 123.100 s |
+| `npm run benchmark:renderer` | ordered/defensive-sort 字节一致 |
+
+测试分层结果为：
+
+- unit：651 passed / 2 skipped；
+- integration：71 passed；
+- mock E2E：49 passed；
+- real PTY：22 passed。
+
+Element required/children/dirty/category/alias/backend support 统一由 vnode metadata
+提供；runtime schema、layout validation/backend matrix 和生成文档从该模型派生。JSX
+保留表达 callback 与 `BindingValue<T>` 所需的显式值类型，并由
+`check:element-metadata` 阻止 canonical/alias 键漂移。
+
+Renderer benchmark 原始结果见
+[`benchmarks/results/m6-renderer-patches-linux-x64.json`](../../benchmarks/results/m6-renderer-patches-linux-x64.json)。
+80×24 full patch 的 ANSI encode median 从 0.184541 ms 降至 0.157011 ms，约 14.9%；
+10-cell incremental patch 从 0.003451 ms 降至 0.003192 ms，约 7.5%，两条路径输出
+字节数分别保持 2,249 和 193 不变。
+
+clean build 证明任务图不再依赖旧 dist；incremental 两轮结果可重复，但当前逐 project
+启动 tsc 的方式没有观察到加速，因此只记录正确性，不宣称性能收益。Basic engine 继续
+作为高级公共 fallback；持久 Yoga tree、进一步 Cell/style clone 优化和 encoder 跨帧
+状态留待独立 benchmark 证明收益后实施。

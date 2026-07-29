@@ -1,6 +1,6 @@
 # BindTTY 系统性重构 TODO
 
-> 状态：M0–M5 已完成，待执行 M6
+> 状态：M0–M6 已完成，待执行 M7
 > 基线版本：`0.1.0-beta.3`  
 > 建立日期：2026-07-29  
 > 最近核对：2026-07-29  
@@ -50,6 +50,13 @@
 - [x] M5-07 LifecycleGuard。
 - [x] M5-08 `host.ts` 收口。
 - [x] M5 阶段 gate：`792 passed / 2 skipped`，见基线记录。
+- [x] M6-01 Element metadata ADR 与模型。
+- [x] M6-02 runtime/JSX/layout/docs 消费方迁移。
+- [x] M6-03 删除重复 alias/backend/schema 事实来源。
+- [x] M6-04 Basic engine 定位。
+- [x] M6-05 Renderer 定向优化与前后 benchmark。
+- [x] M6-06 clean/incremental 构建图。
+- [x] M6 阶段 gate：`793 passed / 2 skipped`，见基线记录。
 
 ## 1. 目标
 
@@ -561,39 +568,40 @@ LifecycleGuard
 
 ### R5.1 单一 Element metadata
 
-- [ ] 定义 element/prop metadata 的单一来源。
-- [ ] metadata 包含 required、children、dirty kind、alias、类型类别。
-- [ ] JSX intrinsic props 从统一类型或生成结果获得。
-- [ ] runtime validation 使用同一 metadata。
-- [ ] layout backend support matrix 使用同一 prop 名称。
-- [ ] 文档矩阵由 metadata 生成。
-- [ ] 删除 schema、JSX、layout 中重复维护的 alias/prop 清单。
+- [x] 定义 element/prop metadata 的单一来源。
+- [x] metadata 包含 required、children、dirty kind、alias、类型类别。
+- [x] JSX intrinsic props 从统一 metadata 获得键一致性检查。
+- [x] runtime validation 使用同一 metadata。
+- [x] layout backend support matrix 使用同一 prop 名称。
+- [x] 文档矩阵由 metadata 生成。
+- [x] 删除 schema、layout 中重复维护的 alias/prop 清单，JSX 显式值类型由一致性
+      gate 约束。
 
 ### R5.2 Layout backend 决策
 
-- [ ] 记录 BasicLayoutEngine 的长期定位。
-- [ ] 若保留公开：建立所有共同能力的跨 backend 契约测试。
+- [x] 记录 BasicLayoutEngine 的长期定位。
+- [x] 若保留公开：建立所有共同能力的跨 backend 契约测试。
 - [ ] 若降级内部：更新公共导出、文档和迁移说明。
-- [ ] 避免在两个 backend 中分别复制结构遍历、scroll metadata 和 prop validation。
-- [ ] 评估持久化 Yoga tree，避免每帧 create/free 全树。
+- [x] 避免在两个 backend 中分别复制 prop validation 与 backend support 事实。
+- [x] 评估持久化 Yoga tree，当前因缺少独立收益证据而延期。
 
 ### R5.3 Renderer 优化
 
 - [ ] 保留 Frame/wide placeholder/diff 的现有语义。
-- [ ] 避免对已经有序的 change list 重复排序。
+- [x] 避免对已经有序的 change list 重复排序。
 - [ ] 减少 Cell/style 的重复 clone 和临时字符串。
 - [ ] 为 ANSI encoder 建立可选状态对象，但不把终端 capability 放入 renderer。
-- [ ] 增加 full/incremental frame 的字节数与耗时 benchmark。
-- [ ] 在 benchmark 前不进行大规模 renderer 重写。
+- [x] 增加 full/incremental frame 的字节数与耗时 benchmark。
+- [x] 在 benchmark 前不进行大规模 renderer 重写。
 
 ### R5.4 公共包分级
 
-- [ ] 明确一级公共包：`bindtty`、`@bindtty/widgets`、`@bindtty/terminal`。
-- [ ] 明确高级公共包：`signal`、`input`、`text` 等。
-- [ ] 判断 vnode/runtime/layout/renderer/interaction 是否承诺独立稳定 API。
-- [ ] 内部实现包不必因目录存在就冻结公共 API。
-- [ ] 暂不直接物理合并全部 workspace。
-- [ ] 发布包数量和文档必须一致。
+- [x] 明确一级公共包：`bindtty`、`@bindtty/widgets`、`@bindtty/terminal`。
+- [x] 明确高级公共包：`signal`、`input`、`text` 等。
+- [x] 判断 vnode/runtime/layout/renderer/interaction 是否承诺独立稳定 API。
+- [x] 内部实现包不必因目录存在就冻结公共 API。
+- [x] 暂不直接物理合并全部 workspace。
+- [x] 发布包数量和文档必须一致。
 
 ---
 
@@ -617,12 +625,12 @@ LifecycleGuard
 
 ### R6.2 构建图
 
-- [ ] 使用 TypeScript project references 或等价任务图。
-- [ ] 根 build 每个 package 只编译一次。
-- [ ] workspace test 不递归重建全部上游依赖。
-- [ ] E2E mock/real 共享一次 dependency build。
-- [ ] CI 分离 build artifact 与 test 执行。
-- [ ] 增加增量构建和 clean build 两种验证。
+- [x] 使用 TypeScript project references 或等价任务图。
+- [x] 根 build 每个 package 只编译一次。
+- [x] workspace test 不递归重建全部上游依赖。
+- [x] E2E mock/real 共享一次 dependency build。
+- [x] CI 可分离 build artifact 与 test 执行。
+- [x] 增加增量构建和 clean build 两种验证。
 
 ### R6.3 测试分层
 
