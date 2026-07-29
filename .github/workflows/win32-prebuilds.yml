@@ -1,0 +1,55 @@
+name: Win32 Node-API Prebuilds
+
+on:
+  workflow_dispatch:
+  release:
+    types: [created]
+
+permissions:
+  contents: read
+
+jobs:
+  prebuild:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+          - arch: arm64
+            runner: windows-11-arm
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          architecture: ${{ matrix.arch }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build native provider
+        run: npm rebuild --workspace @bindtty/win32-input
+
+      - name: Stage Node-API prebuild
+        shell: pwsh
+        run: |
+          $target = "packages/win32-input/prebuilds/win32-${{ matrix.arch }}"
+          New-Item -ItemType Directory -Force -Path $target | Out-Null
+          Copy-Item "packages/win32-input/build/Release/bindtty_win32_input.node" "$target/node.napi.node"
+
+      - name: Test native provider loader
+        run: npm test --workspace @bindtty/win32-input
+
+      - name: Upload prebuild
+        uses: actions/upload-artifact@v4
+        with:
+          name: bindtty-win32-input-${{ matrix.arch }}
+          path: packages/win32-input/prebuilds/win32-${{ matrix.arch }}/node.napi.node
+          if-no-files-found: error

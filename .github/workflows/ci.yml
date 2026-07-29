@@ -32,6 +32,12 @@ jobs:
       - name: Check layout prop matrix docs
         run: npm run check:layout-props
 
+      - name: Check element metadata
+        run: npm run check:element-metadata
+
+      - name: Check package dependencies
+        run: npm run check:dependencies
+
       - name: Test
         run: npm test
 
@@ -40,6 +46,12 @@ jobs:
 
       - name: Build docs
         run: npm run docs:build
+
+      - name: Validate tarball consumer
+        run: npm run smoke:consumer
+
+      - name: Validate release contents
+        run: npm run pack:dry-run
 
   windows-input:
     runs-on: windows-latest
