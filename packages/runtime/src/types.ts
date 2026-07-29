@@ -1,4 +1,8 @@
-import type { MountedElementNode, MountedNode } from "@bindtty/vnode";
+import type {
+  DirtyKind,
+  MountedElementNode,
+  MountedNode
+} from "@bindtty/vnode";
 
 export interface MountOptions {
   markInitiallyDirty?: boolean;
@@ -41,6 +45,7 @@ export interface RuntimeRoot {
 export interface RuntimeFlushRecord {
   root: MountedNode | null;
   dirtyNodes: MountedNode[];
+  highestDirty: DirtyKind;
 }
 
 export type RuntimeFlushListener = (record: RuntimeFlushRecord) => void;

@@ -56,6 +56,7 @@ test("signal prop updates queue a microtask flush", async () => {
   assert.equal(records[0]?.root, runtime.root);
   assert.equal(records[0]?.dirtyNodes.length, 1);
   assert.equal(records[0]?.dirtyNodes[0], runtime.root);
+  assert.equal(records[0]?.highestDirty, "layout");
   assert.equal(runtime.root?.kind, "element");
   assert.equal(runtime.root.props.value, "B");
 });
@@ -197,6 +198,7 @@ test("flush includes multiple dirty nodes in one record", () => {
   const record = runtime.flushNow();
 
   assert.deepEqual(record?.dirtyNodes, [firstNode, secondNode]);
+  assert.equal(record?.highestDirty, "layout");
 });
 
 test("multiple RuntimeRoot instances keep scheduler queues isolated", async () => {

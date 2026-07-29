@@ -1,5 +1,6 @@
 import type { MountedNode } from "@bindtty/vnode";
 import { isDisposed } from "./dispose.js";
+import { getHighestDirtyKind } from "./dirty.js";
 import type {
   Dispose,
   RuntimeFlushListener,
@@ -42,7 +43,8 @@ export function createRuntimeScheduler(
 
     const record: RuntimeFlushRecord = {
       root: getRoot(),
-      dirtyNodes: nodes
+      dirtyNodes: nodes,
+      highestDirty: getHighestDirtyKind(nodes)
     };
 
     for (const listener of Array.from(listeners)) {

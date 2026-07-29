@@ -14,13 +14,13 @@ export interface ElementSchema {
 }
 
 const commonElementProps: Record<string, PropSchema> = {
-  id: { dirty: "paint" },
+  id: { dirty: "structure" },
   ref: {},
   focusStyle: { dirty: "paint" },
-  focusable: { dirty: "paint" },
-  onKeyCapture: { dirty: "paint" },
-  onKey: { dirty: "paint" },
-  onFocusChange: { dirty: "paint" }
+  focusable: { dirty: "structure" },
+  onKeyCapture: { dirty: "structure" },
+  onKey: { dirty: "structure" },
+  onFocusChange: { dirty: "structure" }
 };
 
 const commonYogaItemProps: Record<string, PropSchema> = {
@@ -84,7 +84,7 @@ export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
       ...commonYogaContainerProps,
       ...commonYogaSizeProps,
       ...commonYogaMarginProps,
-      border: { dirty: "paint" },
+      border: { dirty: "layout" },
       padding: { dirty: "layout" },
       paddingX: { dirty: "layout" },
       "padding-x": { dirty: "layout" },
