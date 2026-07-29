@@ -1,6 +1,10 @@
+import {
+  elementMetadata,
+  type ElementDirtyKind
+} from "./element-metadata.js";
 import type { IntrinsicElementTag } from "./types.js";
 
-export type DirtyKind = "structure" | "layout" | "paint";
+export type DirtyKind = ElementDirtyKind;
 
 export interface PropSchema {
   required?: boolean;
@@ -13,143 +17,24 @@ export interface ElementSchema {
   props?: Record<string, PropSchema>;
 }
 
-const commonElementProps: Record<string, PropSchema> = {
-  id: { dirty: "structure" },
-  ref: {},
-  focusStyle: { dirty: "paint" },
-  focusable: { dirty: "structure" },
-  onKeyCapture: { dirty: "structure" },
-  onKey: { dirty: "structure" },
-  onFocusChange: { dirty: "structure" }
-};
-
-const commonYogaItemProps: Record<string, PropSchema> = {
-  flexGrow: { dirty: "layout" },
-  "flex-grow": { dirty: "layout" },
-  flexShrink: { dirty: "layout" },
-  "flex-shrink": { dirty: "layout" }
-};
-
-const commonYogaContainerProps: Record<string, PropSchema> = {
-  gap: { dirty: "layout" },
-  flexWrap: { dirty: "layout" },
-  "flex-wrap": { dirty: "layout" },
-  alignItems: { dirty: "layout" },
-  "align-items": { dirty: "layout" },
-  justifyContent: { dirty: "layout" },
-  "justify-content": { dirty: "layout" }
-};
-
-const commonYogaSizeProps: Record<string, PropSchema> = {
-  minWidth: { dirty: "layout" },
-  "min-width": { dirty: "layout" },
-  minHeight: { dirty: "layout" },
-  "min-height": { dirty: "layout" },
-  maxWidth: { dirty: "layout" },
-  "max-width": { dirty: "layout" },
-  maxHeight: { dirty: "layout" },
-  "max-height": { dirty: "layout" }
-};
-
-const commonYogaMarginProps: Record<string, PropSchema> = {
-  margin: { dirty: "layout" },
-  marginX: { dirty: "layout" },
-  "margin-x": { dirty: "layout" },
-  marginY: { dirty: "layout" },
-  "margin-y": { dirty: "layout" },
-  marginTop: { dirty: "layout" },
-  "margin-top": { dirty: "layout" },
-  marginRight: { dirty: "layout" },
-  "margin-right": { dirty: "layout" },
-  marginBottom: { dirty: "layout" },
-  "margin-bottom": { dirty: "layout" },
-  marginLeft: { dirty: "layout" },
-  "margin-left": { dirty: "layout" }
-};
-
-export const elementSchemas: Record<IntrinsicElementTag, ElementSchema> = {
-  screen: {
-    acceptsChildren: true,
-    props: {
-      ...commonElementProps,
-      ...commonYogaItemProps,
-      ...commonYogaContainerProps
+/** Compatibility view derived from the authoritative element metadata. */
+export const elementSchemas = Object.fromEntries(
+  Object.entries(elementMetadata).map(([tag, metadata]) => [
+    tag,
+    {
+      acceptsChildren: metadata.acceptsChildren,
+      requiredProps: Object.entries(metadata.props)
+        .filter(([name, prop]) => name === prop.canonical && prop.required)
+        .map(([name]) => name),
+      props: Object.fromEntries(
+        Object.entries(metadata.props).map(([name, prop]) => [
+          name,
+          { required: prop.required, dirty: prop.dirty }
+        ])
+      )
     }
-  },
-  box: {
-    acceptsChildren: true,
-    props: {
-      ...commonElementProps,
-      ...commonYogaItemProps,
-      ...commonYogaContainerProps,
-      ...commonYogaSizeProps,
-      ...commonYogaMarginProps,
-      border: { dirty: "layout" },
-      padding: { dirty: "layout" },
-      paddingX: { dirty: "layout" },
-      "padding-x": { dirty: "layout" },
-      paddingY: { dirty: "layout" },
-      "padding-y": { dirty: "layout" },
-      paddingTop: { dirty: "layout" },
-      "padding-top": { dirty: "layout" },
-      paddingRight: { dirty: "layout" },
-      "padding-right": { dirty: "layout" },
-      paddingBottom: { dirty: "layout" },
-      "padding-bottom": { dirty: "layout" },
-      paddingLeft: { dirty: "layout" },
-      "padding-left": { dirty: "layout" },
-      height: { dirty: "layout" },
-      width: { dirty: "layout" },
-      overflow: { dirty: "layout" },
-      scrollX: { dirty: "layout" },
-      scrollY: { dirty: "layout" }
-    }
-  },
-  vstack: {
-    acceptsChildren: true,
-    props: {
-      ...commonElementProps,
-      ...commonYogaItemProps,
-      ...commonYogaContainerProps,
-      ...commonYogaSizeProps,
-      ...commonYogaMarginProps
-    }
-  },
-  hstack: {
-    acceptsChildren: true,
-    props: {
-      ...commonElementProps,
-      ...commonYogaItemProps,
-      ...commonYogaContainerProps,
-      ...commonYogaSizeProps,
-      ...commonYogaMarginProps
-    }
-  },
-  text: {
-    acceptsChildren: false,
-    requiredProps: ["value"],
-    props: {
-      ...commonElementProps,
-      ...commonYogaItemProps,
-      value: { required: true, dirty: "layout" },
-      wrap: { dirty: "layout" },
-      ...commonYogaSizeProps,
-      ...commonYogaMarginProps,
-      color: { dirty: "paint" },
-      bold: { dirty: "paint" }
-    }
-  },
-  spacer: {
-    acceptsChildren: false,
-    props: {
-      ...commonElementProps,
-      ...commonYogaItemProps,
-      size: { dirty: "layout" },
-      ...commonYogaSizeProps,
-      ...commonYogaMarginProps
-    }
-  }
-};
+  ])
+) as Record<IntrinsicElementTag, ElementSchema>;
 
 export function getElementSchema(tag: IntrinsicElementTag): ElementSchema {
   return elementSchemas[tag];
@@ -159,5 +44,5 @@ export function getPropDirtyKind(
   tag: IntrinsicElementTag,
   propName: string
 ): DirtyKind {
-  return elementSchemas[tag].props?.[propName]?.dirty ?? "paint";
+  return elementMetadata[tag].props[propName]?.dirty ?? "paint";
 }

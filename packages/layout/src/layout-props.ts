@@ -1,210 +1,42 @@
 import { readTextWrapMode } from "@bindtty/text";
-import type { MountedElementNode } from "@bindtty/vnode";
+import {
+  elementMetadata,
+  layoutPropMetadata,
+  type MountedElementNode
+} from "@bindtty/vnode";
 import { toNonNegativeNumber } from "./measure.js";
 export type LayoutOverflow = "visible" | "clip";
 
 export type LayoutElementTag = MountedElementNode["tag"];
 
-const yogaMinMaxSizeProps = [
-  "minWidth",
-  "minHeight",
-  "maxWidth",
-  "maxHeight"
-] as const;
+export const yogaSupportedPropsByTag = supportedPropsByTag("yoga");
+export const basicSupportedPropsByTag = supportedPropsByTag("basic");
 
-const yogaBoxEdgePaddingProps = [
-  "paddingX",
-  "paddingY",
-  "paddingTop",
-  "paddingRight",
-  "paddingBottom",
-  "paddingLeft"
-] as const;
+export const futureLayoutProps = new Set<string>(
+  Object.entries(layoutPropMetadata)
+    .filter(([, metadata]) => metadata.future !== false)
+    .map(([name]) => name)
+);
 
-const yogaMarginProps = [
-  "margin",
-  "marginX",
-  "marginY",
-  "marginTop",
-  "marginRight",
-  "marginBottom",
-  "marginLeft"
-] as const;
+export const layoutPropAliases = new Map<string, string>(
+  Object.values(layoutPropMetadata).flatMap((metadata) =>
+    (metadata.aliases ?? []).map((alias) => [alias, metadata.canonical] as const)
+  )
+);
 
-const yogaLayoutItemTags = [
-  ...yogaMinMaxSizeProps,
-  ...yogaMarginProps
-] as const;
+export const nonLayoutProps = new Set<string>(
+  Object.values(elementMetadata).flatMap((element) =>
+    Object.entries(element.props)
+      .filter(([name, metadata]) =>
+        name === metadata.canonical && metadata.backends === undefined
+      )
+      .map(([name]) => name)
+  )
+);
 
-export const yogaSupportedPropsByTag: Record<LayoutElementTag, ReadonlySet<string>> = {
-  screen: new Set([
-    "gap",
-    "flexWrap",
-    "justifyContent",
-    "alignItems",
-    "flexGrow",
-    "flexShrink"
-  ]),
-  vstack: new Set([
-    "gap",
-    "flexWrap",
-    "justifyContent",
-    "alignItems",
-    "flexGrow",
-    "flexShrink",
-    ...yogaLayoutItemTags
-  ]),
-  hstack: new Set([
-    "gap",
-    "flexWrap",
-    "justifyContent",
-    "alignItems",
-    "flexGrow",
-    "flexShrink",
-    ...yogaLayoutItemTags
-  ]),
-  box: new Set([
-    "padding",
-    "border",
-    "height",
-    "width",
-    "overflow",
-    "scrollX",
-    "scrollY",
-    "gap",
-    "flexWrap",
-    "justifyContent",
-    "alignItems",
-    "flexGrow",
-    "flexShrink",
-    ...yogaLayoutItemTags,
-    ...yogaBoxEdgePaddingProps
-  ]),
-  text: new Set([
-    "value",
-    "wrap",
-    "color",
-    "bold",
-    "flexGrow",
-    "flexShrink",
-    ...yogaLayoutItemTags
-  ]),
-  spacer: new Set(["size", "flexGrow", "flexShrink", ...yogaLayoutItemTags])
-};
-
-export const basicSupportedPropsByTag: Record<LayoutElementTag, ReadonlySet<string>> = {
-  screen: new Set(),
-  vstack: new Set(),
-  hstack: new Set(),
-  box: new Set([
-    "padding",
-    "border",
-    "height",
-    "width",
-    "overflow",
-    "scrollX",
-    "scrollY"
-  ]),
-  text: new Set(["value", "wrap", "color", "bold"]),
-  spacer: new Set(["size"])
-};
-
-export const futureLayoutProps = new Set<string>([
-  "width",
-  "height",
-  "minWidth",
-  "minHeight",
-  "maxWidth",
-  "maxHeight",
-  "paddingX",
-  "paddingY",
-  "paddingTop",
-  "paddingRight",
-  "paddingBottom",
-  "paddingLeft",
-  "margin",
-  "marginX",
-  "marginY",
-  "marginTop",
-  "marginRight",
-  "marginBottom",
-  "marginLeft",
-  "gap",
-  "flexDirection",
-  "flexWrap",
-  "justifyContent",
-  "alignItems",
-  "flexGrow",
-  "flexShrink"
-]);
-
-export const layoutPropAliases = new Map<string, string>([
-  ["padding-top", "paddingTop"],
-  ["padding-right", "paddingRight"],
-  ["padding-bottom", "paddingBottom"],
-  ["padding-left", "paddingLeft"],
-  ["padding-x", "paddingX"],
-  ["padding-y", "paddingY"],
-  ["margin-top", "marginTop"],
-  ["margin-right", "marginRight"],
-  ["margin-bottom", "marginBottom"],
-  ["margin-left", "marginLeft"],
-  ["margin-x", "marginX"],
-  ["margin-y", "marginY"],
-  ["flex-direction", "flexDirection"],
-  ["flex-wrap", "flexWrap"],
-  ["justify-content", "justifyContent"],
-  ["align-items", "alignItems"],
-  ["flex-grow", "flexGrow"],
-  ["flex-shrink", "flexShrink"],
-  ["min-width", "minWidth"],
-  ["min-height", "minHeight"],
-  ["max-width", "maxWidth"],
-  ["max-height", "maxHeight"]
-]);
-
-export const nonLayoutProps = new Set<string>([
-  "id",
-  "focusStyle",
-  "focusable",
-  "onKeyCapture",
-  "onKey",
-  "onFocusChange"
-]);
-
-export const matrixLayoutProps = [
-  "width",
-  "height",
-  "minWidth",
-  "minHeight",
-  "maxWidth",
-  "maxHeight",
-  "padding",
-  "paddingX",
-  "paddingY",
-  "paddingTop",
-  "paddingRight",
-  "paddingBottom",
-  "paddingLeft",
-  "margin",
-  "marginX",
-  "marginY",
-  "marginTop",
-  "marginRight",
-  "marginBottom",
-  "marginLeft",
-  "border",
-  "overflow",
-  "scrollX",
-  "scrollY",
-  "gap",
-  "flexWrap",
-  "justifyContent",
-  "alignItems",
-  "flexGrow",
-  "flexShrink",
-  "flexDirection"
-] as const;
+export const matrixLayoutProps = Object.freeze(
+  Object.keys(layoutPropMetadata)
+) as readonly (keyof typeof layoutPropMetadata)[];
 
 export type MatrixLayoutProp = (typeof matrixLayoutProps)[number];
 
@@ -348,4 +180,22 @@ export function validateElementProps(
 
 function hasOwn(object: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(object, key);
+}
+
+function supportedPropsByTag(
+  backend: "basic" | "yoga"
+): Record<LayoutElementTag, ReadonlySet<string>> {
+  return Object.fromEntries(
+    Object.entries(elementMetadata).map(([tag, element]) => [
+      tag,
+      new Set(
+        Object.entries(element.props)
+          .filter(([name, metadata]) =>
+            name === metadata.canonical &&
+            metadata.backends?.includes(backend)
+          )
+          .map(([name]) => name)
+      )
+    ])
+  ) as unknown as Record<LayoutElementTag, ReadonlySet<string>>;
 }

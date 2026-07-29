@@ -3,6 +3,8 @@ import test from 'node:test';
 
 import {
   elementTemplate,
+  elementMetadata,
+  elementSchemas,
   forTemplate,
   fragmentTemplate,
   isReadableSignal,
@@ -11,6 +13,23 @@ import {
   resolveBindingValue,
   showTemplate
 } from '../dist/index.js';
+
+test('element schema is a lossless compatibility projection of metadata', () => {
+  for (const [tag, metadata] of Object.entries(elementMetadata)) {
+    const schema = elementSchemas[tag];
+    assert.equal(schema.acceptsChildren, metadata.acceptsChildren);
+    assert.deepEqual(
+      schema.requiredProps,
+      Object.entries(metadata.props)
+        .filter(([name, prop]) => name === prop.canonical && prop.required)
+        .map(([name]) => name)
+    );
+    for (const [name, prop] of Object.entries(metadata.props)) {
+      assert.equal(schema.props[name].dirty, prop.dirty);
+      assert.equal(schema.props[name].required, prop.required);
+    }
+  }
+});
 
 function signal(value) {
   return {

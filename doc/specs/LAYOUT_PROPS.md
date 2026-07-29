@@ -37,21 +37,21 @@
 
 <!-- layout-props:matrix:yoga:start -->
 
-| prop | screen | vstack | hstack | box | text | spacer |
+| prop | screen | box | vstack | hstack | text | spacer |
 | --- | --- | --- | --- | --- | --- | --- |
-| `width` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
-| `height` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
+| `width` | ⛔ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
+| `height` | ⛔ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
 | `minWidth` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `minHeight` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `maxWidth` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `maxHeight` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `padding` | — | — | — | ✅ | — | — |
-| `paddingX` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
-| `paddingY` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
-| `paddingTop` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
-| `paddingRight` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
-| `paddingBottom` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
-| `paddingLeft` | ⛔ | ⛔ | ⛔ | ✅ | ⛔ | ⛔ |
+| `padding` | — | ✅ | — | — | — | — |
+| `paddingX` | ⛔ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
+| `paddingY` | ⛔ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
+| `paddingTop` | ⛔ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
+| `paddingRight` | ⛔ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
+| `paddingBottom` | ⛔ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
+| `paddingLeft` | ⛔ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
 | `margin` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `marginX` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `marginY` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -59,10 +59,10 @@
 | `marginRight` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `marginBottom` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `marginLeft` | ⛔ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| `border` | — | — | — | ✅ | — | — |
-| `overflow` | — | — | — | ✅ | — | — |
-| `scrollX` | — | — | — | ✅ | — | — |
-| `scrollY` | — | — | — | ✅ | — | — |
+| `border` | — | ✅ | — | — | — | — |
+| `overflow` | — | ✅ | — | — | — | — |
+| `scrollX` | — | ✅ | — | — | — | — |
+| `scrollY` | — | ✅ | — | — | — | — |
 | `gap` | ✅ | ✅ | ✅ | ✅ | ⛔ | ⛔ |
 | `flexWrap` | ✅ | ✅ | ✅ | ✅ | ⛔ | ⛔ |
 | `justifyContent` | ✅ | ✅ | ✅ | ✅ | ⛔ | ⛔ |
@@ -99,9 +99,9 @@
 | tag | 已支持 props |
 | --- | --- |
 | `screen` | （无 layout props） |
+| `box` | `border`, `height`, `overflow`, `padding`, `scrollX`, `scrollY`, `width` |
 | `vstack` | （无 layout props） |
 | `hstack` | （无 layout props） |
-| `box` | `border`, `height`, `overflow`, `padding`, `scrollX`, `scrollY`, `width` |
 | `text` | `bold`, `color`, `value`, `wrap` |
 | `spacer` | `size` |
 

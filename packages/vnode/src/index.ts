@@ -40,6 +40,17 @@ export {
 } from "./template/schema.js";
 
 export type { DirtyKind, ElementSchema, PropSchema } from "./template/schema.js";
+export {
+  elementMetadata,
+  layoutPropMetadata
+} from "./template/element-metadata.js";
+export type {
+  ElementDirtyKind,
+  ElementMetadata,
+  ElementPropCategory,
+  ElementPropMetadata,
+  LayoutBackendName
+} from "./template/element-metadata.js";
 
 export type {
   MountedBinding,
