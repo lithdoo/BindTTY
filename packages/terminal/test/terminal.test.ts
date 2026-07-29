@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 
-import { ANSI, createLifecycleGuard, createNodeTerminal, DefaultPlatformAdapter, discoverNativeWin32InputProvider, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, resolveTerminalProfile, selectInputBackend, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
+import { ANSI, createLifecycleGuard, createNodeTerminal, createResizeCoordinator, DefaultPlatformAdapter, discoverNativeWin32InputProvider, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, resolveTerminalProfile, selectInputBackend, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
 import type {
   CreateNodeTerminalOptions,
   InputTraceRecord,
@@ -496,6 +496,56 @@ test("LifecycleGuard shares process hooks across terminal instances", () => {
   assert.equal(process.listenerCount("SIGTERM"), baseline + 1);
   second.stop();
   assert.equal(process.listenerCount("SIGTERM"), baseline);
+});
+
+test("ResizeCoordinator publishes the final burst sample with an injected clock", () => {
+  const stdout = createMockStdout();
+  const timers = new Map<number, () => void>();
+  let now = 0;
+  let nextTimer = 1;
+  const resize = createResizeCoordinator({
+    stdout,
+    pollIntervalMs: 0,
+    minFrameIntervalMs: 32,
+    settleDelayMs: 100,
+    clock: {
+      now: () => now,
+      setTimeout(callback) {
+        const id = nextTimer++;
+        timers.set(id, callback);
+        return id;
+      },
+      clearTimeout(handle) {
+        timers.delete(handle as number);
+      },
+      setInterval() {
+        throw new Error("polling is disabled");
+      },
+      clearInterval() {}
+    }
+  });
+  const viewports: TerminalViewport[] = [];
+  resize.onResize((event) => viewports.push(event.viewport));
+  resize.start();
+
+  stdout.columns = 20;
+  stdout.emitResize();
+  now = 5;
+  stdout.columns = 30;
+  stdout.emitResize();
+  now = 10;
+  stdout.columns = 40;
+  stdout.emitResize();
+  const finalTimer = [...timers.entries()].at(-1)!;
+  timers.delete(finalTimer[0]);
+  finalTimer[1]();
+
+  assert.deepEqual(viewports, [
+    { width: 20, height: 3 },
+    { width: 40, height: 3 }
+  ]);
+  resize.dispose();
+  assert.equal(timers.size, 0);
 });
 
 test("createNodeTerminal does not touch streams before start", () => {
