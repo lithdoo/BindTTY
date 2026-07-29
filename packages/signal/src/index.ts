@@ -2,6 +2,8 @@ export type Dispose = () => void;
 export type SignalListener<T> = (value: T, previousValue: T) => void;
 export type EffectCleanup = void | Dispose;
 
+import { registerOwnedCleanup } from "./owner.js";
+
 interface ReactiveSubscriber {
   invalidate(): void;
 }
@@ -302,12 +304,18 @@ export function computed<T>(derive: () => T): ReadableSignal<T> {
     }
   };
 
-  return {
+  const readable: ReadableSignal<T> = {
     get() {
+      if (computation.disposed) {
+        throw new Error("Reactive computation has been disposed");
+      }
       trackDependency(source);
       return recompute();
     },
     subscribe(listener) {
+      if (computation.disposed) {
+        throw new Error("Reactive computation has been disposed");
+      }
       const wasDormant = !hasConsumers();
       listeners.add(listener);
       if (wasDormant) {
@@ -322,6 +330,21 @@ export function computed<T>(derive: () => T): ReadableSignal<T> {
       };
     }
   };
+
+  registerOwnedCleanup(() => {
+    if (computation.disposed) {
+      return;
+    }
+    computation.disposed = true;
+    pendingJobs.delete(notifyListeners);
+    pendingJobAborts.delete(notifyListeners);
+    cleanupDependencies(computation);
+    subscribers.clear();
+    listeners.clear();
+    notificationPending = false;
+  });
+
+  return readable;
 }
 
 export function effect(runEffect: () => EffectCleanup): Dispose {
@@ -351,7 +374,7 @@ export function effect(runEffect: () => EffectCleanup): Dispose {
 
   run();
 
-  return () => {
+  const dispose = (): void => {
     if (computation.disposed) {
       return;
     }
@@ -365,4 +388,7 @@ export function effect(runEffect: () => EffectCleanup): Dispose {
       finalCleanup();
     }
   };
+
+  registerOwnedCleanup(dispose);
+  return dispose;
 }

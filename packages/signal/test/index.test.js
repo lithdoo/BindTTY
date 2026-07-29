@@ -2,6 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { batch, computed, createSignal, effect } from '../dist/index.js';
+import {
+  createReactiveOwner,
+  disposeReactiveOwner,
+  getCurrentOwner,
+  runWithOwner
+} from '../dist/internal.js';
 
 test('signal stores values and notifies subscribers', () => {
   // 基础 signal 应该支持读取、写入，以及显式订阅。
@@ -367,4 +373,96 @@ test('recursive listener updates stop at the transaction job limit', () => {
     /Reactive update cycle exceeded 1000 jobs/
   );
   unsubscribe();
+});
+
+test('reactive owners dispose children and cleanups in reverse creation order', () => {
+  const events = [];
+  const parent = createReactiveOwner();
+
+  runWithOwner(parent, () => {
+    effect(() => () => events.push('parent:first'));
+    const child = createReactiveOwner();
+    runWithOwner(child, () => {
+      effect(() => () => events.push('child'));
+    });
+    effect(() => () => events.push('parent:last'));
+  });
+
+  disposeReactiveOwner(parent);
+  disposeReactiveOwner(parent);
+
+  assert.deepEqual(events, ['child', 'parent:last', 'parent:first']);
+});
+
+test('owner disposal continues after cleanup errors and aggregates them', () => {
+  const owner = createReactiveOwner();
+  const events = [];
+  runWithOwner(owner, () => {
+    effect(() => () => {
+      events.push('first');
+      throw new Error('first failed');
+    });
+    effect(() => () => {
+      events.push('second');
+      throw new Error('second failed');
+    });
+  });
+
+  assert.throws(
+    () => disposeReactiveOwner(owner),
+    (error) => {
+      assert.ok(error instanceof AggregateError);
+      assert.equal(error.errors.length, 2);
+      return true;
+    }
+  );
+  assert.deepEqual(events, ['second', 'first']);
+});
+
+test('runWithOwner restores the owner stack after errors', () => {
+  const owner = createReactiveOwner();
+  assert.throws(
+    () => runWithOwner(owner, () => {
+      assert.equal(getCurrentOwner(), owner);
+      throw new Error('owner body failed');
+    }),
+    /owner body failed/
+  );
+  assert.equal(getCurrentOwner(), undefined);
+  disposeReactiveOwner(owner);
+  assert.throws(
+    () => runWithOwner(owner, () => {}),
+    /disposed reactive owner/
+  );
+});
+
+test('owned computed and effect release their source dependencies', () => {
+  const source = createSignal(0);
+  const owner = createReactiveOwner();
+  let derivedRuns = 0;
+  let effectRuns = 0;
+  let derived;
+
+  runWithOwner(owner, () => {
+    derived = computed(() => {
+      derivedRuns += 1;
+      return source.get() * 2;
+    });
+    effect(() => {
+      effectRuns += 1;
+      derived.get();
+    });
+  });
+
+  assert.equal(derivedRuns, 1);
+  assert.equal(effectRuns, 1);
+  source.set(1);
+  assert.equal(derivedRuns, 2);
+  assert.equal(effectRuns, 2);
+
+  disposeReactiveOwner(owner);
+  source.set(2);
+  assert.equal(derivedRuns, 2);
+  assert.equal(effectRuns, 2);
+  assert.throws(() => derived.get(), /computation has been disposed/);
 });
