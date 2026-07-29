@@ -1,5 +1,5 @@
 export { createApp } from "./app.js";
-export { createSignal, computed, effect } from "@bindtty/signal";
+export { batch, createSignal, computed, effect } from "@bindtty/signal";
 export type {
   AppStdin,
   AppStdout,

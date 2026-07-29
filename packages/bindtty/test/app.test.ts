@@ -3,6 +3,7 @@ import test from "node:test";
 import { stripVTControlCharacters } from "node:util";
 
 import {
+  batch,
   computed,
   createApp,
   createSignal,
@@ -250,6 +251,7 @@ test("bindtty exports signal primitives", () => {
   assert.equal(typeof createSignal, "function");
   assert.equal(typeof computed, "function");
   assert.equal(typeof effect, "function");
+  assert.equal(typeof batch, "function");
 });
 
 test("createApp returns lifecycle methods without rendering by default", () => {

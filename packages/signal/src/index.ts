@@ -2,22 +2,19 @@ export type Dispose = () => void;
 export type SignalListener<T> = (value: T, previousValue: T) => void;
 export type EffectCleanup = void | Dispose;
 
-// ReactiveSource 是“可被追踪的依赖源”。signal 和 computed 都会实现它：
-// 当某个 computed/effect 在执行期间读取这个源时，当前 computation 会订阅它。
+interface ReactiveSubscriber {
+  invalidate(): void;
+}
+
 interface ReactiveSource {
   addSubscriber(subscriber: ReactiveSubscriber): void;
   removeSubscriber(subscriber: ReactiveSubscriber): void;
 }
 
-// 内部订阅者不关心新旧值，只关心“依赖变了，需要重新执行”。
-type ReactiveSubscriber = () => void;
-
-interface ReactiveComputation {
-  // 当前 computation 上一次运行时读取过的所有依赖。
-  // 每次重新运行前会清空并重新收集，以支持 if/else 这种动态依赖。
+interface ReactiveComputation extends ReactiveSubscriber {
   dependencies: Set<ReactiveSource>;
+  collectingDependencies?: Set<ReactiveSource>;
   disposed: boolean;
-  run: ReactiveSubscriber;
 }
 
 export interface ReadableSignal<T> {
@@ -29,76 +26,145 @@ export interface Signal<T> extends ReadableSignal<T> {
   set(value: T): void;
 }
 
+const MAX_TRANSACTION_JOBS = 1_000;
 const computationStack: ReactiveComputation[] = [];
+const pendingJobs = new Set<() => void>();
+const pendingJobAborts = new Map<() => void, () => void>();
+let transactionDepth = 0;
+let flushing = false;
 
 function getActiveComputation(): ReactiveComputation | undefined {
   return computationStack[computationStack.length - 1];
 }
 
+function trackDependency(source: ReactiveSource): void {
+  const computation = getActiveComputation();
+  if (!computation || computation.disposed) {
+    return;
+  }
+
+  const dependencies = computation.collectingDependencies ?? computation.dependencies;
+  if (dependencies.has(source)) {
+    return;
+  }
+
+  dependencies.add(source);
+  source.addSubscriber(computation);
+}
+
+function runTracked<T>(computation: ReactiveComputation, body: () => T): T {
+  const previousDependencies = computation.dependencies;
+  const nextDependencies = new Set<ReactiveSource>();
+  computation.collectingDependencies = nextDependencies;
+  computationStack.push(computation);
+
+  try {
+    const result = body();
+    for (const dependency of previousDependencies) {
+      if (!nextDependencies.has(dependency)) {
+        dependency.removeSubscriber(computation);
+      }
+    }
+    computation.dependencies = nextDependencies;
+    return result;
+  } catch (error) {
+    for (const dependency of nextDependencies) {
+      if (!previousDependencies.has(dependency)) {
+        dependency.removeSubscriber(computation);
+      }
+    }
+    throw error;
+  } finally {
+    computationStack.pop();
+    computation.collectingDependencies = undefined;
+  }
+}
+
 function cleanupDependencies(computation: ReactiveComputation): void {
-  // 重新运行前先解除旧依赖，否则条件分支切换后会继续响应已经不再读取的 signal。
   for (const dependency of computation.dependencies) {
-    dependency.removeSubscriber(computation.run);
+    dependency.removeSubscriber(computation);
   }
   computation.dependencies.clear();
 }
 
-function trackDependency(source: ReactiveSource): void {
-  const computation = getActiveComputation();
-  if (!computation || computation.disposed || computation.dependencies.has(source)) {
+function enqueue(job: () => void, abort?: () => void): void {
+  pendingJobs.add(job);
+  if (abort) {
+    pendingJobAborts.set(job, abort);
+  }
+}
+
+function flushJobs(): void {
+  if (flushing || transactionDepth > 0) {
     return;
   }
 
-  computation.dependencies.add(source);
-  source.addSubscriber(computation.run);
-}
-
-function createComputation(runBody: () => void): ReactiveComputation {
-  const computation: ReactiveComputation = {
-    dependencies: new Set(),
-    disposed: false,
-    run: () => {
-      if (computation.disposed) {
-        return;
+  flushing = true;
+  let completedJobs = 0;
+  try {
+    while (pendingJobs.size > 0) {
+      const job = pendingJobs.values().next().value as (() => void) | undefined;
+      if (!job) {
+        break;
       }
-
-      cleanupDependencies(computation);
-      // 用栈而不是单个全局变量，是为了支持 computed/effect 嵌套执行。
-      // 栈顶永远是当前正在收集依赖的 computation。
-      computationStack.push(computation);
-      try {
-        runBody();
-      } finally {
-        // 即使 runBody 抛错，也必须弹栈，否则后续 get() 会被错误地追踪到旧 computation。
-        computationStack.pop();
+      pendingJobs.delete(job);
+      pendingJobAborts.delete(job);
+      completedJobs += 1;
+      if (completedJobs > MAX_TRANSACTION_JOBS) {
+        throw new Error(
+          `Reactive update cycle exceeded ${MAX_TRANSACTION_JOBS} jobs`
+        );
       }
+      job();
     }
-  };
-
-  return computation;
-}
-
-function notifySubscribers(subscribers: Set<ReactiveSubscriber>): void {
-  // 复制一份再遍历，避免 subscriber 执行时增删订阅者导致本轮通知顺序变得不可预测。
-  for (const subscriber of [...subscribers]) {
-    subscriber();
+  } catch (error) {
+    for (const job of pendingJobs) {
+      pendingJobAborts.get(job)?.();
+    }
+    pendingJobs.clear();
+    pendingJobAborts.clear();
+    throw error;
+  } finally {
+    flushing = false;
   }
 }
 
-function notifyListeners<T>(
-  listeners: Set<SignalListener<T>>,
-  value: T,
-  previousValue: T
-): void {
-  for (const listener of [...listeners]) {
-    listener(value, previousValue);
+function runInTransaction<T>(callback: () => T): T {
+  transactionDepth += 1;
+  try {
+    return callback();
+  } finally {
+    transactionDepth -= 1;
+    if (transactionDepth === 0) {
+      flushJobs();
+    }
   }
+}
+
+export function batch<T>(callback: () => T): T {
+  return runInTransaction(callback);
 }
 
 export function createSignal<T>(initialValue: T): Signal<T> {
   let currentValue = initialValue;
   const subscribers = new Set<ReactiveSubscriber>();
   const listeners = new Set<SignalListener<T>>();
+  let pendingPreviousValue: T;
+  let listenerPending = false;
+
+  const notifyListeners = (): void => {
+    if (!listenerPending) {
+      return;
+    }
+    listenerPending = false;
+    const previousValue = pendingPreviousValue;
+    if (Object.is(previousValue, currentValue)) {
+      return;
+    }
+    for (const listener of [...listeners]) {
+      listener(currentValue, previousValue);
+    }
+  };
 
   const source: ReactiveSource = {
     addSubscriber(subscriber) {
@@ -111,7 +177,6 @@ export function createSignal<T>(initialValue: T): Signal<T> {
 
   return {
     get() {
-      // 如果当前处在 computed/effect 执行中，这次读取会把当前 signal 记录为依赖。
       trackDependency(source);
       return currentValue;
     },
@@ -120,12 +185,22 @@ export function createSignal<T>(initialValue: T): Signal<T> {
         return;
       }
 
-      const previousValue = currentValue;
-      currentValue = value;
-      // 先通知响应式订阅者，让 computed/effect 重新计算；
-      // 再通知显式 subscribe(listener)，让用户拿到稳定的新旧值。
-      notifySubscribers(subscribers);
-      notifyListeners(listeners, currentValue, previousValue);
+      runInTransaction(() => {
+        const previousValue = currentValue;
+        currentValue = value;
+        if (listeners.size > 0 && !listenerPending) {
+          pendingPreviousValue = previousValue;
+          listenerPending = true;
+        }
+        for (const subscriber of [...subscribers]) {
+          subscriber.invalidate();
+        }
+        if (listeners.size > 0) {
+          enqueue(notifyListeners, () => {
+            listenerPending = false;
+          });
+        }
+      });
     },
     subscribe(listener) {
       listeners.add(listener);
@@ -138,51 +213,112 @@ export function createSignal<T>(initialValue: T): Signal<T> {
 
 export function computed<T>(derive: () => T): ReadableSignal<T> {
   let initialized = false;
+  let stale = true;
+  let computing = false;
   let currentValue: T;
+  let pendingPreviousValue: T;
+  let notificationPending = false;
   const subscribers = new Set<ReactiveSubscriber>();
   const listeners = new Set<SignalListener<T>>();
 
-  const source: ReactiveSource = {
-    addSubscriber(subscriber) {
-      subscribers.add(subscriber);
-    },
-    removeSubscriber(subscriber) {
-      subscribers.delete(subscriber);
+  const hasConsumers = (): boolean => subscribers.size > 0 || listeners.size > 0;
+
+  const computation: ReactiveComputation = {
+    dependencies: new Set(),
+    disposed: false,
+    invalidate() {
+      if (stale) {
+        return;
+      }
+      stale = true;
+      if (initialized && listeners.size > 0 && !notificationPending) {
+        pendingPreviousValue = currentValue;
+        notificationPending = true;
+      }
+      for (const subscriber of [...subscribers]) {
+        subscriber.invalidate();
+      }
+      if (listeners.size > 0) {
+        enqueue(notifyListeners, () => {
+          notificationPending = false;
+        });
+      }
     }
   };
 
-  const computation = createComputation(() => {
-    const nextValue = derive();
-    if (initialized && Object.is(currentValue, nextValue)) {
+  const recompute = (): T => {
+    if (computing) {
+      throw new Error("Reactive computed cycle detected");
+    }
+    if (!stale && hasConsumers()) {
+      return currentValue!;
+    }
+
+    computing = true;
+    try {
+      const nextValue = runInTransaction(() => runTracked(computation, derive));
+      currentValue = nextValue;
+      initialized = true;
+      stale = false;
+      return currentValue;
+    } finally {
+      computing = false;
+      if (!hasConsumers()) {
+        cleanupDependencies(computation);
+        stale = true;
+      }
+    }
+  };
+
+  const notifyListeners = (): void => {
+    if (!notificationPending) {
       return;
     }
-
-    const previousValue = currentValue;
-    currentValue = nextValue;
-    const hadPreviousValue = initialized;
-    initialized = true;
-
-    if (hadPreviousValue) {
-      // computed 初次求值只是建立缓存和依赖，不应触发订阅者。
-      // 只有后续依赖变化且派生值真的改变时，才向下游传播。
-      notifySubscribers(subscribers);
-      notifyListeners(listeners, currentValue, previousValue);
+    notificationPending = false;
+    const previousValue = pendingPreviousValue;
+    const value = recompute();
+    if (Object.is(previousValue, value)) {
+      return;
     }
-  });
+    for (const listener of [...listeners]) {
+      listener(value, previousValue);
+    }
+  };
 
-  // 创建 computed 时立即求值，这样它会马上收集依赖并拥有可同步读取的缓存值。
-  computation.run();
+  const source: ReactiveSource = {
+    addSubscriber(subscriber) {
+      const wasDormant = !hasConsumers();
+      subscribers.add(subscriber);
+      if (wasDormant) {
+        recompute();
+      }
+    },
+    removeSubscriber(subscriber) {
+      subscribers.delete(subscriber);
+      if (!hasConsumers()) {
+        cleanupDependencies(computation);
+        stale = true;
+      }
+    }
+  };
 
   return {
     get() {
-      // computed 本身也可以作为另一个 computed/effect 的依赖源。
       trackDependency(source);
-      return currentValue!;
+      return recompute();
     },
     subscribe(listener) {
+      const wasDormant = !hasConsumers();
       listeners.add(listener);
+      if (wasDormant) {
+        recompute();
+      }
       return () => {
         listeners.delete(listener);
+        if (!hasConsumers()) {
+          cleanupDependencies(computation);
+          stale = true;
+        }
       };
     }
   };
@@ -191,29 +327,42 @@ export function computed<T>(derive: () => T): ReadableSignal<T> {
 export function effect(runEffect: () => EffectCleanup): Dispose {
   let cleanup: EffectCleanup;
 
-  const computation = createComputation(() => {
-    if (cleanup) {
-      // effect 重新运行前先清理上一次运行创建的外部资源。
-      cleanup();
-      cleanup = undefined;
+  const run = (): void => {
+    if (computation.disposed) {
+      return;
     }
-    cleanup = runEffect();
-  });
+    if (cleanup) {
+      const previousCleanup = cleanup;
+      cleanup = undefined;
+      previousCleanup();
+    }
+    cleanup = runInTransaction(() => runTracked(computation, runEffect));
+  };
 
-  // effect 的语义是“立即运行一次”，并在运行期间收集依赖。
-  computation.run();
+  const computation: ReactiveComputation = {
+    dependencies: new Set(),
+    disposed: false,
+    invalidate() {
+      if (!computation.disposed) {
+        enqueue(run);
+      }
+    }
+  };
+
+  run();
 
   return () => {
     if (computation.disposed) {
       return;
     }
-
     computation.disposed = true;
+    pendingJobs.delete(run);
+    pendingJobAborts.delete(run);
     cleanupDependencies(computation);
     if (cleanup) {
-      // dispose 时也要执行最后一次 cleanup，防止事件监听、定时器等资源泄漏。
-      cleanup();
+      const finalCleanup = cleanup;
       cleanup = undefined;
+      finalCleanup();
     }
   };
 }
