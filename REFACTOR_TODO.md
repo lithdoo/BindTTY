@@ -1,6 +1,6 @@
 # BindTTY 系统性重构 TODO
 
-> 状态：M0–M3 已完成，待执行 M4
+> 状态：M0–M4 已完成，待执行 M5
 > 基线版本：`0.1.0-beta.3`  
 > 建立日期：2026-07-29  
 > 最近核对：2026-07-29  
@@ -34,6 +34,13 @@
 - [x] M3-04 Widget cleanup。
 - [x] M3-05 App/runtime dispose。
 - [x] M3 阶段 gate：`779 passed / 2 skipped`，见基线记录。
+- [x] M4-01 Dirty 语义 ADR。
+- [x] M4-02 App 消费 RuntimeFlushRecord。
+- [x] M4-03 LayoutNode 复用。
+- [x] M4-04 FrameSink。
+- [x] M4-05 FrameCoordinator。
+- [x] M4-06 AppLifecycle。
+- [x] M4 阶段 gate：`786 passed / 2 skipped`，见基线记录。
 
 ## 1. 目标
 
@@ -355,25 +362,25 @@ Target contract（实现完成后必须启用）：
 
 ### R2.1 失效记录
 
-- [ ] App 的 runtime flush listener 不再丢弃参数，正式消费 `RuntimeFlushRecord`。
-- [ ] 汇总 dirty node 的最高失效等级。
-- [ ] 定义 `paint < layout < structure < viewport` 的升级规则。
-- [ ] 节点 dispose 后不保留 pending invalidation。
-- [ ] resize 与 runtime dirty 合并时只提交最终意图。
-- [ ] 第一版明确采用全 App 最高 dirty 等级；subtree 增量布局仅保留数据入口，不作为
+- [x] App 的 runtime flush listener 不再丢弃参数，正式消费 `RuntimeFlushRecord`。
+- [x] 汇总 dirty node 的最高失效等级。
+- [x] 定义 `paint < layout < structure < viewport` 的升级规则。
+- [x] 节点 dispose 后不保留 pending invalidation。
+- [x] resize 与 runtime dirty 合并时只提交最终意图。
+- [x] 第一版明确采用全 App 最高 dirty 等级；subtree 增量布局仅保留数据入口，不作为
       本阶段完成条件。
-- [ ] 建立 prop → dirty kind 的最小注册表，R5.1 再将其并入统一 metadata。
+- [x] 建立 prop → dirty kind 的最小注册表，R5.1 再将其并入统一 metadata。
 
 ### R2.2 布局复用
 
-- [ ] paint-only 更新复用上次 LayoutNode。
-- [ ] layout dirty 重新计算布局。
-- [ ] structure dirty 重建布局结构。
-- [ ] viewport 变化强制重新布局和完整 repaint。
-- [ ] `onLayout` 触发的 signal 更新进入下一事务，不递归当前事务。
-- [ ] 为复用 LayoutNode 增加生命周期与陈旧引用测试。
-- [ ] 明确文本/value/style 变化何时从 paint 升级为 intrinsic layout。
-- [ ] 明确 focus、handler、ref 和 focusability 变化是否属于 structure 或独立索引 dirty。
+- [x] paint-only 更新复用上次 LayoutNode。
+- [x] layout dirty 重新计算布局。
+- [x] structure dirty 重建布局结构。
+- [x] viewport 变化强制重新布局和完整 repaint。
+- [x] `onLayout` 触发的 signal 更新进入下一事务，不递归当前事务。
+- [x] 为复用 LayoutNode 增加生命周期与陈旧引用测试。
+- [x] 明确文本/value/style 变化何时从 paint 升级为 intrinsic layout。
+- [x] 明确 focus、handler、ref 和 focusability 变化是否属于 structure 或独立索引 dirty。
 
 ### R2.3 FrameCoordinator
 
@@ -381,26 +388,26 @@ Target contract（实现完成后必须启用）：
 R4.5 LifecycleGuard。App 不得直接理解 cursor、alt screen、raw mode 或 keyboard
 protocol。
 
-- [ ] 从 `createApp` 提取显式 FrameCoordinator。
-- [ ] 使用明确状态：`idle | rendering | blocked | disposed`。
-- [ ] pending intent 保存 dirty 等级和最新 viewport。
-- [ ] backpressure 阻塞期间只保留最新意图。
-- [ ] drain 后只渲染一次最终状态。
-- [ ] render 中发生 resize、signal update、dispose 时都有确定语义。
-- [ ] render/layout/write 抛错后状态机能够恢复或安全停止。
-- [ ] App 在 `terminal.start()` 抛错后恢复 `started=false` 并回滚已注册资源。
-- [ ] start 过程中部分 listener 注册失败时按逆序执行 best-effort rollback。
-- [ ] stop/dispose 中单项清理失败不得阻止其他 listener、runtime、interaction、
+- [x] 从 `createApp` 提取显式 FrameCoordinator。
+- [x] 使用明确状态：`idle | rendering | blocked | disposed`。
+- [x] pending intent 保存 dirty 等级和最新 viewport。
+- [x] backpressure 阻塞期间只保留最新意图。
+- [x] drain 后只渲染一次最终状态。
+- [x] render 中发生 resize、signal update、dispose 时都有确定语义。
+- [x] render/layout/write 抛错后状态机能够恢复或安全停止。
+- [x] App 在 `terminal.start()` 抛错后恢复 `started=false` 并回滚已注册资源。
+- [x] start 过程中部分 listener 注册失败时按逆序执行 best-effort rollback。
+- [x] stop/dispose 中单项清理失败不得阻止其他 listener、runtime、interaction、
       renderer 和 terminal 资源继续释放。
-- [ ] 明确多个清理错误采用首个错误、AggregateError 或 lifecycle callback 的契约。
+- [x] 明确多个清理错误采用首个错误、AggregateError 或 lifecycle callback 的契约。
 
 ### R2.4 输出接口统一
 
-- [ ] stdout 模式与 TerminalHost 模式使用统一 FrameSink。
-- [ ] 定义 `accepted/blocked` 的一致返回契约。
-- [ ] 能返回 blocked 的 sink 必须提供 writable/drain 通知。
-- [ ] App 不再通过可选 `onDrain` 猜测背压能力。
-- [ ] 增加 stdout-only 背压测试。
+- [x] stdout 模式与 TerminalHost 模式使用统一 FrameSink。
+- [x] 定义 `accepted/blocked` 的一致返回契约。
+- [x] 能返回 blocked 的 sink 必须提供 writable/drain 通知。
+- [x] App 不再通过可选 `onDrain` 猜测背压能力。
+- [x] 增加 stdout-only 背压测试。
 
 ---
 

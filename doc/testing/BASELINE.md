@@ -181,3 +181,34 @@ fixture 连续执行两轮、每轮 2,000 次 component mount/dispose；强制 G
 heap 为 378,064 bytes，第二轮增量为 35,448 bytes。完成 4,000 次卸载后更新公共 source，
 残留 effect 执行数为 0。heap 数字仅用于同环境趋势观察，不设跨机器强制阈值；残留
 effect 必须为 0。
+
+## M4 完成 gate
+
+2026-07-29 在相同 Linux/WSL、Node.js `v20.19.2` 环境完成验证：
+
+| 检查 | 结果 |
+| --- | --- |
+| `npm test` | 786 passed / 2 skipped，162.041 s |
+| `npm run check:dependencies` | passed |
+| `npm run smoke:consumer` | 13 个公开包通过 |
+| `npm run benchmark:baseline` | passed |
+| `npm run benchmark:frames` | paint/layout/structure intent 契约通过 |
+
+测试分层结果为：
+
+- unit：644 passed / 2 skipped；
+- integration：71 passed；
+- mock E2E：49 passed；
+- real PTY：22 passed。
+
+M4 相比 M3 新增 7 个 App 调度、布局复用、stdout 背压、错误恢复和 lifecycle 测试，
+无新增 skip。通用性能原始结果保存在
+[`benchmarks/results/m4-linux-x64.json`](../../benchmarks/results/m4-linux-x64.json)：
+完整 frame median 为 80.205 ms，相比 M0 的 115.401 ms 单次实测降低约 30.5%。
+该初始完整帧指标容易受运行噪声影响，不代表增量调度收益。
+
+M4 新增的分级 fixture 保存在
+[`benchmarks/results/m4-frame-intents-linux-x64.json`](../../benchmarks/results/m4-frame-intents-linux-x64.json)。
+100 次 paint-only 更新只调用 1 次 layout（初始布局），而 layout 与 structure fixture
+各调用 101 次。M0 没有分级 fixture，因此本次结果作为后续里程碑的首份增量调度基线；
+吞吐数字只作同环境趋势观察，layout 调用次数是强制契约。
