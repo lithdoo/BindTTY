@@ -1,0 +1,36 @@
+{
+  "recordedAt": "2026-07-29T04:04:59.042Z",
+  "environment": {
+    "node": "v20.19.2",
+    "platform": "linux",
+    "arch": "x64",
+    "iterations": {
+      "signalSets": 100000,
+      "fullFrames": 10,
+      "frameRows": 200,
+      "pasteCodeUnits": 100000,
+      "cacheEntries": 5000
+    }
+  },
+  "signal": {
+    "durationMs": 89.30558699999995,
+    "operationsPerSecond": 1119750.7721437411
+  },
+  "fullFrame": {
+    "medianDurationMs": 115.40147999999999,
+    "minDurationMs": 89.09162800000013,
+    "maxDurationMs": 464.18936400000007,
+    "patchBytes": 22586
+  },
+  "longPaste": {
+    "durationMs": 0.04973500000005515,
+    "codeUnitsPerSecond": 2010656479.3382752,
+    "eventCount": 1
+  },
+  "cacheHeap": {
+    "beforeBytes": 7948216,
+    "afterBytes": 10575440,
+    "retainedDeltaBytes": 2627224,
+    "gcExposed": true
+  }
+}

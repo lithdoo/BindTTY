@@ -6,11 +6,11 @@ import {
   type Template
 } from "@bindtty/vnode";
 import type {
+  BindTTYKeyEvent,
   InteractionKeyBinding,
   InteractionKeyHandler,
   InteractionNodeFocusChangeEvent
 } from "@bindtty/interaction";
-import type { TerminalKeyEvent } from "@bindtty/terminal";
 import {
   TEXTAREA_DEFAULT_MAX_ROWS,
   TEXTAREA_DEFAULT_MIN_ROWS,
@@ -373,7 +373,7 @@ function createTextareaOnKey(
 }
 
 function reduceKey(
-  event: TerminalKeyEvent,
+  event: BindTTYKeyEvent,
   state: TextareaEditState,
   layout: TextareaLayout
 ): TextareaEditState | null {
@@ -410,7 +410,7 @@ function reduceKey(
 }
 
 function handleDisabledNavigation(
-  event: TerminalKeyEvent,
+  event: BindTTYKeyEvent,
   currentState: TextareaEditState,
   layout: TextareaLayout,
   state: ReturnType<typeof createSignal<TextareaEditState>>
@@ -576,7 +576,7 @@ function readSubmitKeys(props: TextareaProps): readonly TextareaSubmitKey[] {
   return readBindingValue(props.submitKeys) ?? TEXTAREA_DEFAULT_SUBMIT_KEYS;
 }
 
-function isSubmitKey(event: TerminalKeyEvent, submitKeys: readonly TextareaSubmitKey[]): boolean {
+function isSubmitKey(event: BindTTYKeyEvent, submitKeys: readonly TextareaSubmitKey[]): boolean {
   if (event.kind !== "key") {
     return false;
   }
@@ -596,7 +596,7 @@ function isSubmitKey(event: TerminalKeyEvent, submitKeys: readonly TextareaSubmi
 }
 
 function isTextareaTextInput(
-  event: TerminalKeyEvent
-): event is Extract<TerminalKeyEvent, { kind: "text" }> {
+  event: BindTTYKeyEvent
+): event is Extract<BindTTYKeyEvent, { kind: "text" }> {
   return event.kind === "text";
 }
