@@ -11,8 +11,9 @@ import {
   truncateStart
 } from "./truncate.js";
 import { hardWrapLine, wordWrapLine } from "./wrap.js";
+import { TextLruCache } from "./cache.js";
 
-const layoutCache = new Map<string, TextLayout>();
+export const layoutCache = new TextLruCache<TextLayout>();
 
 export function layoutText(
   text: string,
@@ -37,7 +38,7 @@ export function layoutText(
     lines
   };
 
-  layoutCache.set(cacheKey, layout);
+  layoutCache.set(cacheKey, layout, cacheKey.length);
   return layout;
 }
 

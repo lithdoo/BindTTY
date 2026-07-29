@@ -1,7 +1,8 @@
 import type { TextMeasure } from "./types.js";
 import { measureTextWidth } from "./width.js";
+import { TextLruCache } from "./cache.js";
 
-const measureCache = new Map<string, TextMeasure>();
+export const measureCache = new TextLruCache<TextMeasure>();
 
 export function measureText(text: string): TextMeasure {
   const cached = measureCache.get(text);
@@ -20,6 +21,6 @@ export function measureText(text: string): TextMeasure {
     height: text === "" ? 0 : lines.length
   };
 
-  measureCache.set(text, measure);
+  measureCache.set(text, measure, text.length);
   return measure;
 }

@@ -2,13 +2,17 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  clearTextCaches,
+  getTextCacheStats,
   layoutText,
   measureText,
   measureTextWidth,
   readTextWrapMode,
   segmentText,
   sliceTextByWidth,
-  wordWrapLine
+  wordWrapLine,
+  TEXT_CACHE_MAX_CODE_UNITS,
+  TEXT_CACHE_MAX_ENTRIES
 } from "@bindtty/text";
 
 test("measureTextWidth measures ASCII length", () => {
@@ -451,4 +455,45 @@ test("layoutText truncate modes handle emoji width boundaries", () => {
     height: 1,
     lines: ["…🙂"]
   });
+});
+
+test("text caches remain bounded under high-cardinality input", () => {
+  clearTextCaches();
+  for (let index = 0; index < TEXT_CACHE_MAX_ENTRIES + 100; index += 1) {
+    const text = `layout-${index}`;
+    layoutText(text, { width: 5, wrap: "hard" });
+    measureText(`measure-${index}`);
+  }
+
+  const stats = getTextCacheStats();
+  assert.equal(stats.layout.entries, TEXT_CACHE_MAX_ENTRIES);
+  assert.equal(stats.measure.entries, TEXT_CACHE_MAX_ENTRIES);
+  assert.ok(stats.layout.codeUnits <= TEXT_CACHE_MAX_CODE_UNITS);
+  assert.ok(stats.measure.codeUnits <= TEXT_CACHE_MAX_CODE_UNITS);
+  assert.ok(stats.layout.evictions > 0);
+  assert.ok(stats.measure.evictions > 0);
+});
+
+test("oversized text results are correct but not admitted to caches", () => {
+  clearTextCaches();
+  const text = "x".repeat(TEXT_CACHE_MAX_CODE_UNITS + 1);
+  assert.deepEqual(layoutText(text, { width: 0, wrap: "hard" }), {
+    width: 0,
+    height: 0,
+    lines: []
+  });
+  assert.equal(getTextCacheStats().layout.entries, 0);
+});
+
+test("cache hits and recomputation after eviction return equal results", () => {
+  clearTextCaches();
+  const expected = layoutText("abcdef", { width: 3, wrap: "hard" });
+  layoutText("abcdef", { width: 3, wrap: "hard" });
+  assert.equal(getTextCacheStats().layout.hits, 1);
+
+  for (let index = 0; index < TEXT_CACHE_MAX_ENTRIES + 1; index += 1) {
+    layoutText(`evict-${index}`);
+  }
+  const actual = layoutText("abcdef", { width: 3, wrap: "hard" });
+  assert.deepEqual(actual, expected);
 });

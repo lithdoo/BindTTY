@@ -16,6 +16,8 @@ BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见�
   `unknown` 事件并丢弃到 paste terminator，避免未结束 paste 无限占用内存。
 - Kitty 与 modifyOtherKeys codepoint 在转换前验证 Unicode scalar value，畸形或
   超范围输入降级为 `unknown`，不再可能由 `String.fromCodePoint()` 抛错。
+- `layoutText` 与 `measureText` 改用模块级有界 LRU，各自最多保留 2,048 条和
+  1,048,576 个 UTF-16 code unit；新增 cache stats/clear 诊断 API。
 
 ## 0.1.0-beta.3
 
