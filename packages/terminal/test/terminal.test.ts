@@ -2001,6 +2001,55 @@ test("createNodeTerminal publishes standalone Escape using the configured ambigu
   assert.deepEqual(events, [semanticKey("escape", "\x1b")]);
 });
 
+test("InputSession times out pending SS3 and clears parser timers across restart", () => {
+  const stdout = createMockStdout();
+  const stdin = createMockStdin();
+  const callbacks = new Map<number, () => void>();
+  let nextTimer = 1;
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    keyboardProtocol: "legacy",
+    escapeAmbiguityTimeoutMs: 25,
+    inputClock: {
+      setTimeout(callback, delayMs) {
+        assert.equal(delayMs, 25);
+        const id = nextTimer++;
+        callbacks.set(id, callback);
+        return id;
+      },
+      clearTimeout(handle) {
+        callbacks.delete(handle as number);
+      }
+    }
+  });
+  const events: TerminalKeyEvent[] = [];
+  terminal.onKey((event) => events.push(event));
+  terminal.start();
+
+  stdin.emitData("\x1bO");
+  assert.equal(callbacks.size, 1);
+  const pendingSs3Timer = callbacks.keys().next().value!;
+  callbacks.get(pendingSs3Timer)?.();
+  callbacks.delete(pendingSs3Timer);
+  assert.equal(events[0]?.kind, "unknown");
+  assert.equal(events[0]?.sequence, "\x1bO");
+
+  stdin.emitData("\x1b[13;");
+  assert.equal(callbacks.size, 1);
+  terminal.stop();
+  assert.equal(callbacks.size, 0);
+  terminal.start();
+  stdin.emitData("5u");
+  terminal.stop();
+
+  assert.deepEqual(
+    events.slice(1).map((event) => event.kind === "text" ? event.text : event.kind),
+    ["5", "u"]
+  );
+});
+
 test("TerminalHost onKey publishes bracketed paste as one semantic event", () => {
   const stdout = createMockStdout();
   const stdin = createMockStdin();

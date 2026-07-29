@@ -14,7 +14,8 @@ export class DefaultPlatformAdapter implements PlatformTerminalAdapter {
     if (selectInputBackend(options).stdinAdapter === "raw") {
       return new RawStdinInput(options.inputTrace, {
         escapeAmbiguityTimeoutMs: options.escapeAmbiguityTimeoutMs,
-        maxPasteCodeUnits: options.maxPasteCodeUnits
+        maxPasteCodeUnits: options.maxPasteCodeUnits,
+        clock: options.inputClock
       });
     }
 

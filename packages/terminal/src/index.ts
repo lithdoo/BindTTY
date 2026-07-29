@@ -31,6 +31,12 @@ export type {
   ResizeCoordinator,
   ResizeCoordinatorOptions
 } from "./resize-coordinator.js";
+export { createInputSession } from "./input-session.js";
+export type {
+  InputSession,
+  InputSessionClock,
+  InputSessionOptions
+} from "./input-session.js";
 export {
   detectTerminalInputEnvironment,
   selectInputBackend

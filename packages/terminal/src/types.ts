@@ -233,6 +233,8 @@ export interface CreateNodeTerminalOptions {
    */
   keyboardProtocol?: KeyboardProtocolOption;
   keyboardProbeTimeoutMs?: number;
+  /** Injectable clock shared by parser pending timeouts and protocol probes. */
+  inputClock?: import("./input-session.js").InputSessionClock;
   /**
    * Time to wait for bytes following ESC in the raw backend before publishing
    * a standalone Escape key. Defaults to 30ms.
