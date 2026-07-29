@@ -7,6 +7,7 @@ import {
   showTemplate
 } from "@bindtty/vnode";
 import type { PublicTextWrapMode } from "@bindtty/text";
+import type { IntrinsicInteractionProps } from "@bindtty/interaction";
 import type {
   BindingValue,
   FunctionComponent,
@@ -19,65 +20,8 @@ import type { ForProps, JsxProps, JsxType, ShowProps } from "./types.js";
 
 export const Fragment = Symbol.for("bindtty.fragment");
 
-type InteractionFocusChangeReason =
-  | "initial"
-  | "next"
-  | "previous"
-  | "programmatic"
-  | "clear"
-  | "refresh";
-
-interface InteractionNodeFocusChangeEvent {
-  id: string;
-  focused: boolean;
-  reason: InteractionFocusChangeReason;
-}
-
-type KeyEventPhase = "capture" | "target" | "bubble";
-
-interface SemanticEventBase {
-  protocol:
-    | "kitty"
-    | "modify-other-keys"
-    | "windows-vt"
-    | "win32"
-    | "legacy-vt"
-    | "readline";
-  sequence?: string;
-}
-
-type BindTTYKeyEvent = (
-  | (SemanticEventBase & { kind: "text"; text: string })
-  | (SemanticEventBase & {
-      kind: "key";
-      key: string;
-      modifiers: {
-        ctrl: boolean;
-        alt: boolean;
-        shift: boolean;
-        meta: boolean;
-      };
-      repeat: number;
-    })
-  | (SemanticEventBase & { kind: "paste"; text: string })
-  | (SemanticEventBase & { kind: "unknown"; raw: string; reason: string })
-) & {
-  phase: KeyEventPhase;
-  propagationStopped: boolean;
-  stopPropagation(): void;
-};
-
-type InteractionKeyHandler = (event: BindTTYKeyEvent) => boolean | void;
-type InteractionKeyListener = InteractionKeyHandler | null | undefined;
-type InteractionKeyBinding = boolean | InteractionKeyHandler | null | undefined;
-
-interface IntrinsicInteractionProps {
-  id?: BindingValue<string | number>;
+interface IntrinsicRuntimeInteractionProps extends IntrinsicInteractionProps {
   ref?: MountedElementRefHandler | null | undefined;
-  focusable?: BindingValue<boolean>;
-  onKeyCapture?: BindingValue<InteractionKeyListener>;
-  onKey?: BindingValue<InteractionKeyBinding>;
-  onFocusChange?: (event: InteractionNodeFocusChangeEvent) => void;
 }
 
 interface IntrinsicPaintProps {
@@ -265,11 +209,11 @@ export namespace JSX {
   export type Element = Template;
 
   export interface IntrinsicElements {
-    screen: IntrinsicInteractionProps & IntrinsicYogaItemProps & IntrinsicYogaContainerProps & {
+    screen: IntrinsicRuntimeInteractionProps & IntrinsicYogaItemProps & IntrinsicYogaContainerProps & {
       children?: TemplateChildren;
     };
 
-    box: IntrinsicInteractionProps &
+    box: IntrinsicRuntimeInteractionProps &
       IntrinsicBoxStyleProps &
       IntrinsicYogaSizeProps &
       IntrinsicYogaMarginProps &
@@ -279,7 +223,7 @@ export namespace JSX {
       children?: TemplateChildren;
     };
 
-    vstack: IntrinsicInteractionProps &
+    vstack: IntrinsicRuntimeInteractionProps &
       IntrinsicYogaItemProps &
       IntrinsicYogaContainerProps &
       IntrinsicYogaSizeProps &
@@ -287,7 +231,7 @@ export namespace JSX {
       children?: TemplateChildren;
     };
 
-    hstack: IntrinsicInteractionProps &
+    hstack: IntrinsicRuntimeInteractionProps &
       IntrinsicYogaItemProps &
       IntrinsicYogaContainerProps &
       IntrinsicYogaSizeProps &
@@ -295,7 +239,7 @@ export namespace JSX {
       children?: TemplateChildren;
     };
 
-    text: IntrinsicInteractionProps &
+    text: IntrinsicRuntimeInteractionProps &
       IntrinsicPaintProps &
       IntrinsicYogaItemProps &
       IntrinsicYogaSizeProps &
@@ -305,7 +249,7 @@ export namespace JSX {
       children?: never;
     };
 
-    spacer: IntrinsicInteractionProps &
+    spacer: IntrinsicRuntimeInteractionProps &
       IntrinsicYogaItemProps &
       IntrinsicYogaSizeProps &
       IntrinsicYogaMarginProps & {

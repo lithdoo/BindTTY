@@ -1,4 +1,4 @@
-import type { TerminalKeyEvent } from "@bindtty/terminal";
+import type { SemanticInputEvent } from "@bindtty/input";
 import type { MountedElementNode, MountedNode } from "@bindtty/vnode";
 import {
   createKeyEvent,
@@ -301,7 +301,7 @@ export function createInteractionController(): InteractionController {
     );
   }
 
-  function runFallbackKeyAction(raw: TerminalKeyEvent): InteractionResult {
+  function runFallbackKeyAction(raw: SemanticInputEvent): InteractionResult {
     return runTabFallback(raw, moveFocus);
   }
 
@@ -334,7 +334,7 @@ export function createInteractionController(): InteractionController {
       return setFocusedEntry(nextEntry, reason, false);
     },
 
-    handleKey(event: TerminalKeyEvent): InteractionResult {
+    handleKey(event: SemanticInputEvent): InteractionResult {
       if (disposed) {
         return createEmptyResult(false);
       }

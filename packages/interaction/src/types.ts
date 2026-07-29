@@ -1,4 +1,4 @@
-import type { TerminalKeyEvent } from "@bindtty/terminal";
+import type { SemanticInputEvent } from "@bindtty/input";
 import type { BindingValue, MountedElementNode, MountedNode } from "@bindtty/vnode";
 
 export type InteractionFocusChangeReason =
@@ -31,7 +31,7 @@ export type InteractionFocusChangeListener = (
 
 export type KeyEventPhase = "capture" | "target" | "bubble";
 
-export type BindTTYKeyEvent = TerminalKeyEvent & {
+export type BindTTYKeyEvent = SemanticInputEvent & {
   phase: KeyEventPhase;
   propagationStopped: boolean;
   stopPropagation(): void;
@@ -68,7 +68,7 @@ export interface InteractionResult {
 
 export interface InteractionController {
   refresh(root: MountedNode | null): InteractionResult;
-  handleKey(event: TerminalKeyEvent): InteractionResult;
+  handleKey(event: SemanticInputEvent): InteractionResult;
   onFocusChange(listener: InteractionFocusChangeListener): () => void;
   focus(target: string | MountedElementNode): InteractionResult;
   focusNext(): InteractionResult;

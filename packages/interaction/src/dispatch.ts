@@ -1,4 +1,4 @@
-import type { TerminalKeyEvent } from "@bindtty/terminal";
+import type { SemanticInputEvent } from "@bindtty/input";
 import type { MountedElementNode } from "@bindtty/vnode";
 import { isShiftTabKey, isTabKey } from "./keyboard.js";
 import type {
@@ -9,7 +9,7 @@ import type {
   KeyEventPhase
 } from "./types.js";
 
-export function createKeyEvent(raw: TerminalKeyEvent): BindTTYKeyEvent {
+export function createKeyEvent(raw: SemanticInputEvent): BindTTYKeyEvent {
   const event: BindTTYKeyEvent = {
     ...raw,
     phase: "target",
@@ -61,7 +61,7 @@ export function dispatchTo(
 }
 
 export function runTabFallback(
-  raw: TerminalKeyEvent,
+  raw: SemanticInputEvent,
   moveFocus: (step: 1 | -1) => InteractionResult
 ): InteractionResult {
   if (isTabKey(raw)) {

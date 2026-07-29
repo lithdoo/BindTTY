@@ -1,24 +1,24 @@
-import type { TerminalKeyEvent } from "@bindtty/terminal";
+import type { SemanticInputEvent } from "@bindtty/input";
 
-export function isTabKey(event: TerminalKeyEvent): boolean {
+export function isTabKey(event: SemanticInputEvent): boolean {
   return event.kind === "key" && event.key === "tab";
 }
 
-export function isShiftTabKey(event: TerminalKeyEvent): boolean {
+export function isShiftTabKey(event: SemanticInputEvent): boolean {
   return isTabKey(event) &&
     event.kind === "key" &&
     event.modifiers.shift;
 }
 
-export function isEnterKey(event: TerminalKeyEvent): boolean {
+export function isEnterKey(event: SemanticInputEvent): boolean {
   return event.kind === "key" && event.key === "enter";
 }
 
-export function isEscapeKey(event: TerminalKeyEvent): boolean {
+export function isEscapeKey(event: SemanticInputEvent): boolean {
   return event.kind === "key" && event.key === "escape";
 }
 
-export function isArrowKey(event: TerminalKeyEvent): boolean {
+export function isArrowKey(event: SemanticInputEvent): boolean {
   return (
     event.kind === "key" &&
     (
@@ -31,7 +31,7 @@ export function isArrowKey(event: TerminalKeyEvent): boolean {
 }
 
 export function isTextInputKey(
-  event: TerminalKeyEvent
-): event is Extract<TerminalKeyEvent, { kind: "text" }> {
+  event: SemanticInputEvent
+): event is Extract<SemanticInputEvent, { kind: "text" }> {
   return event.kind === "text";
 }
