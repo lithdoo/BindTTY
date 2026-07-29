@@ -651,6 +651,40 @@ test("contentSize grows beyond contentRect when content overflows", () => {
   assert.deepEqual(yogaLayout?.scrollOffset, basicLayout?.scrollOffset);
 });
 
+test("BasicLayoutEngine clamps horizontal scroll to overflowing content", () => {
+  const root = createMountedElement(
+    "box",
+    {
+      width: 2,
+      height: 1,
+      overflow: "clip",
+      scrollX: 99
+    },
+    [createMountedText("ABCDE")]
+  );
+  const basicLayout = layoutRootWithBasic(root);
+
+  assert.deepEqual(basicLayout?.contentSize, {
+    width: 5,
+    height: 1
+  });
+  assert.deepEqual(basicLayout?.scrollOffset, {
+    x: 3,
+    y: 0
+  });
+});
+
+test("Basic and Yoga engines clamp negative horizontal scroll to zero", () => {
+  const root = createMountedElement(
+    "box",
+    { width: 2, height: 1, scrollX: -4 },
+    [createMountedText("ABCDE")]
+  );
+  const { basicLayout, yogaLayout } = layoutRootWithBasicAndYoga(root);
+  assert.equal(basicLayout?.scrollOffset?.x, 0);
+  assert.equal(yogaLayout?.scrollOffset?.x, 0);
+});
+
 test("YogaLayoutEngine dual-axis scroll keeps vertical contentSize when width is fixed", () => {
   const root = createMountedElement(
     "box",

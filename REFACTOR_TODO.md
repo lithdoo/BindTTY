@@ -232,10 +232,10 @@ Target contract（实现完成后必须启用）：
 
 ### R0.4 BasicLayoutEngine 契约修复
 
-- [ ] 增加 Basic engine `scrollX` 回归测试。
-- [ ] 修复 `scrollOffset.x` 始终为 `0` 的问题。
-- [ ] 对比 Basic/Yoga 共同声明能力的契约测试。
-- [ ] 明确 Basic engine 是公开 fallback 还是仅内部测试 engine。
+- [x] 增加 Basic engine `scrollX` 回归测试。
+- [x] 修复 `scrollOffset.x` 始终为 `0` 的问题。
+- [x] 对比 Basic/Yoga 共同声明能力的契约测试。
+- [x] 明确 Basic engine 是公开 fallback 还是仅内部测试 engine。
 
 ### R0.5 包依赖完整性
 

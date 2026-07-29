@@ -18,6 +18,8 @@ BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见�
   超范围输入降级为 `unknown`，不再可能由 `String.fromCodePoint()` 抛错。
 - `layoutText` 与 `measureText` 改用模块级有界 LRU，各自最多保留 2,048 条和
   1,048,576 个 UTF-16 code unit；新增 cache stats/clear 诊断 API。
+- BasicLayoutEngine 修复横向滚动始终为零的问题，`scrollX` 现在按内容宽度正确
+  clamp；Basic 在 0.1.x 继续作为公开 fallback/test engine。
 
 ## 0.1.0-beta.3
 

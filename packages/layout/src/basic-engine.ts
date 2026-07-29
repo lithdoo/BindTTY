@@ -266,10 +266,11 @@ function arrangeBox(
       width: contentRect.width,
       height: contentRect.height
     };
+    const maxX = clampNonNegative(contentSize.width - contentRect.width);
     const maxY = clampNonNegative(contentSize.height - contentRect.height);
 
     layout.scrollOffset = {
-      x: 0,
+      x: clamp(readScrollOffset(node.props.scrollX), 0, maxX),
       y: clamp(readScrollOffset(node.props.scrollY), 0, maxY)
     };
   }
