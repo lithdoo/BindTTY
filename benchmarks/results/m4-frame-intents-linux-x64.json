@@ -1,0 +1,27 @@
+{
+  "recordedAt": "2026-07-29T07:59:57.468Z",
+  "environment": {
+    "node": "v20.19.2",
+    "platform": "linux",
+    "arch": "x64",
+    "iterations": 100
+  },
+  "paint": {
+    "durationMs": 40.445456000000036,
+    "operationsPerSecond": 2472.4656337166757,
+    "layoutCalls": 1,
+    "writes": 101
+  },
+  "layout": {
+    "durationMs": 26.80110000000002,
+    "operationsPerSecond": 3731.1901377182253,
+    "layoutCalls": 101,
+    "writes": 101
+  },
+  "structure": {
+    "durationMs": 31.318624,
+    "operationsPerSecond": 3192.988299869113,
+    "layoutCalls": 101,
+    "writes": 101
+  }
+}
