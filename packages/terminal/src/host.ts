@@ -1,5 +1,6 @@
 import { ANSI } from "./ansi.js";
 import { createInputSession } from "./input-session.js";
+import { createLifecycleGuard } from "./lifecycle-guard.js";
 import { discoverNativeWin32InputProvider } from "./native-win32-provider.js";
 import { createResizeCoordinator } from "./resize-coordinator.js";
 import { createTerminalOutput } from "./terminal-output.js";
@@ -42,6 +43,9 @@ export function createNodeTerminal(
     writeRaw: (chunk) => output.writeRaw(chunk),
     onExitRequest: () => terminal.dispose()
   });
+  const lifecycle = createLifecycleGuard({
+    restore: restoreStartedComponents
+  });
 
   function writeRaw(chunk: string): boolean {
     return output.writeRaw(chunk);
@@ -75,6 +79,7 @@ export function createNodeTerminal(
         }
         output.start();
         resize.start();
+        lifecycle.start();
       } catch (error) {
         restoreStartedComponents();
         started = false;
@@ -86,19 +91,35 @@ export function createNodeTerminal(
       if (!started) {
         return;
       }
-      restoreStartedComponents();
-      started = false;
+      try {
+        lifecycle.stop();
+      } finally {
+        started = false;
+      }
     },
 
     dispose(): void {
       if (disposed) {
         return;
       }
-      terminal.stop();
-      resize.dispose();
-      input.dispose();
-      output.dispose();
+      const errors: unknown[] = [];
+      for (const cleanup of [
+        () => terminal.stop(),
+        () => lifecycle.dispose(),
+        () => resize.dispose(),
+        () => input.dispose(),
+        () => output.dispose()
+      ]) {
+        try {
+          cleanup();
+        } catch (error) {
+          errors.push(error);
+        }
+      }
       disposed = true;
+      if (errors.length > 0) {
+        throw new AggregateError(errors, "failed to dispose terminal");
+      }
     },
 
     write: present,

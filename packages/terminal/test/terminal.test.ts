@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 
-import { ANSI, createNodeTerminal, DefaultPlatformAdapter, discoverNativeWin32InputProvider, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, resolveTerminalProfile, selectInputBackend, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
+import { ANSI, createLifecycleGuard, createNodeTerminal, DefaultPlatformAdapter, discoverNativeWin32InputProvider, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, resolveTerminalProfile, selectInputBackend, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
 import type {
   CreateNodeTerminalOptions,
   InputTraceRecord,
@@ -464,6 +464,20 @@ test("resolved terminal profile applies platform defaults once and preserves ove
     minFrameIntervalMs: 11,
     settleDelayMs: 13
   });
+});
+
+test("LifecycleGuard shares process hooks across terminal instances", () => {
+  const baseline = process.listenerCount("SIGTERM");
+  const first = createLifecycleGuard({ restore() {} });
+  const second = createLifecycleGuard({ restore() {} });
+
+  first.start();
+  second.start();
+  assert.equal(process.listenerCount("SIGTERM"), baseline + 1);
+  first.stop();
+  assert.equal(process.listenerCount("SIGTERM"), baseline + 1);
+  second.stop();
+  assert.equal(process.listenerCount("SIGTERM"), baseline);
 });
 
 test("createNodeTerminal does not touch streams before start", () => {

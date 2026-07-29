@@ -37,6 +37,11 @@ export type {
   InputSessionClock,
   InputSessionOptions
 } from "./input-session.js";
+export { createLifecycleGuard } from "./lifecycle-guard.js";
+export type {
+  LifecycleGuard,
+  LifecycleGuardOptions
+} from "./lifecycle-guard.js";
 export {
   detectTerminalInputEnvironment,
   selectInputBackend
