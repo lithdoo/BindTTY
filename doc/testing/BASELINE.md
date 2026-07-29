@@ -107,3 +107,27 @@ npm run benchmark:baseline
 
 M0 数据只作为修改前对照，不作为 CI 强制阈值。M1 缓存和 paste 修复、M2 signal
 调度、M4 frame 调度都必须使用相同 fixture 给出前后结果。
+
+## M1 完成 gate
+
+2026-07-29 在与 M0 相同的 Linux/WSL、Node.js `v20.19.2` 环境完成验证：
+
+| 检查 | 结果 |
+| --- | --- |
+| `npm test` | 752 passed / 2 skipped，189.983 s |
+| `npm run check:dependencies` | passed |
+| `npm run smoke:consumer` | 13 个公开包全部通过 |
+
+测试分层结果为：
+
+- unit：617 passed / 2 skipped；
+- integration：64 passed；
+- mock E2E：49 passed；
+- real PTY：22 passed。
+
+M1 性能原始结果保存在
+[`benchmarks/results/m1-linux-x64.json`](../../benchmarks/results/m1-linux-x64.json)。
+相同 fixture 下，文本缓存 retained heap 从 M0 的 2,627,224 bytes 降至
+963,016 bytes，降低约 63.3%。完整 frame median 从 115.401 ms 变为 95.245 ms；
+原子 paste 吞吐从约 20.11 亿变为 17.80 亿 UTF-16 code units/s。后两项容易受单机
+运行噪声影响，仅记录结果，不作为性能承诺或强制阈值。原子 paste 仍只产生一个事件。

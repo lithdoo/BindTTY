@@ -1,6 +1,6 @@
 # BindTTY 系统性重构 TODO
 
-> 状态：已完成代码核对，待按里程碑执行  
+> 状态：M0、M1 已完成，待执行 M2
 > 基线版本：`0.1.0-beta.3`  
 > 建立日期：2026-07-29  
 > 最近核对：2026-07-29  
@@ -14,6 +14,13 @@
 - [x] M0-04 发布 dry-run。
 - [x] M0-05 最小性能基线。
 - [x] M0 阶段 gate：`731 passed / 2 skipped`，见基线记录。
+- [x] M1-01 Escape characterization 与最小 parser session。
+- [x] M1-02 Escape ambiguity timeout。
+- [x] M1-03 原子 paste。
+- [x] M1-04 输入容量与 malformed 防护。
+- [x] M1-05 有界文本缓存。
+- [x] M1-06 Basic scrollX。
+- [x] M1 阶段 gate：`752 passed / 2 skipped`，见基线记录。
 
 ## 1. 目标
 
@@ -157,13 +164,13 @@ M0 基线与发布护栏
 
 Characterization（修改前必须通过）：
 
-- [ ] 记录 Alt+字符及完整 CSI/SS3 在同一 chunk 中的现有解析行为。
-- [ ] 记录分片完整控制序列在补齐 final 后保持原子性的现有行为。
-- [ ] 记录 detach/reset 会清空 parser state 的现有行为。
+- [x] 记录 Alt+字符及完整 CSI/SS3 在同一 chunk 中的现有解析行为。
+- [x] 记录分片完整控制序列在补齐 final 后保持原子性的现有行为。
+- [x] 记录 detach/reset 会清空 parser state 的现有行为。
 
 Target contract（实现完成后必须启用）：
 
-- [ ] 独立 ESC 不再无限 pending，超时后产生 Escape 语义事件。
+- [x] 独立 ESC 不再无限 pending，超时后产生 Escape 语义事件。
 - [x] 增加 `RawStdinInput` 独立 Escape 回归测试。
 - [x] 增加 Escape 与 Alt+字符歧义测试。
 - [x] 增加分片 CSI/SS3 在超时前仍保持原子性的测试。
@@ -197,7 +204,7 @@ Target contract（实现完成后必须启用）：
 - [x] 明确 TerminalHost 是否提供临时 `pasteMode: "event" | "text"` 兼容选项。
 - [x] TextInput 一次插入完整 paste 文本。
 - [x] Textarea 一次插入完整 paste 文本并正确处理换行。
-- [ ] 为超大 paste 设置合理的容量或流控策略。
+- [x] 为超大 paste 设置合理的容量或流控策略。
 - [x] paste trace 继续保持内容脱敏。
 - [x] 增加大文本 paste 只触发一次编辑事务的测试。
 - [x] 增加直接订阅 `TerminalHost.onKey()` 时的 paste 语义契约测试。
@@ -420,7 +427,7 @@ M1 完成不依赖完整 InputSession 的 parser/tokenizer 安全项：
 - [x] bracketed paste 未结束时有容量保护。
 - [x] 保留 tokenizer 已有的 4096 UTF-16 code unit CSI 上限，并为普通 CSI、Kitty、
       modifyOtherKeys 增加超限契约测试。
-- [ ] 为 SS3 增加跨 chunk、缺失 final 和原子消费测试，不把 SS3 当作可变长度
+- [x] 为 SS3 增加跨 chunk、缺失 final 和原子消费测试，不把 SS3 当作可变长度
       CSI 处理。
 - [x] malformed input 产生 `unknown`，不得导致进程崩溃。
 
