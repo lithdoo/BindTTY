@@ -269,6 +269,8 @@ export interface CreateNodeTerminalOptions {
    * Defaults to 100ms on win32 and 0 elsewhere.
    */
   resizeSettleDelayMs?: number;
+  /** Injectable resize clock for deterministic hosts and tests. */
+  resizeClock?: import("./resize-coordinator.js").ResizeClock;
 }
 
 export interface TerminalHost {

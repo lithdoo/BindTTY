@@ -25,6 +25,12 @@ export {
   resolveTerminalProfile
 } from "./terminal-profile.js";
 export type { ResolvedTerminalProfile } from "./terminal-profile.js";
+export { createResizeCoordinator } from "./resize-coordinator.js";
+export type {
+  ResizeClock,
+  ResizeCoordinator,
+  ResizeCoordinatorOptions
+} from "./resize-coordinator.js";
 export {
   detectTerminalInputEnvironment,
   selectInputBackend
