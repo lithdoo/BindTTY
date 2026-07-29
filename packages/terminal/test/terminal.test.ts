@@ -1942,6 +1942,26 @@ test("createNodeTerminal with rawMode uses raw stdin parser", () => {
   assert.deepEqual(events.map((event) => event.kind === "key" ? event.key : event.kind), ["up"]);
   assert.equal(stdin.dataListenerCount(), 0);
 });
+
+test("createNodeTerminal publishes standalone Escape using the configured ambiguity timeout", async () => {
+  const stdout = createMockStdout();
+  const stdin = createMockStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    rawMode: true,
+    escapeAmbiguityTimeoutMs: 0
+  });
+  const events: TerminalKeyEvent[] = [];
+  terminal.onKey((event) => events.push(event));
+  terminal.start();
+
+  stdin.emitData("\x1b");
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  terminal.stop();
+
+  assert.deepEqual(events, [semanticKey("escape", "\x1b")]);
+});
 test("stdinInputAdapter injection selects a fixed stdin reader", () => {
   const stdout = createMockStdout();
   const stdin = createMockStdin();
@@ -2032,6 +2052,103 @@ test("RawStdinInput detach discards an incomplete parser sequence", () => {
   assert.deepEqual(
     secondEvents.map((event) => event.kind === "text" ? event.text : event.kind),
     ["5", "u"]
+  );
+});
+
+test("RawStdinInput publishes standalone Escape after the ambiguity timeout", () => {
+  const stdin = new PassThrough();
+  const callbacks = new Map<number, () => void>();
+  let nextTimer = 1;
+  const adapter = new RawStdinInput(undefined, {
+    escapeAmbiguityTimeoutMs: 25,
+    clock: {
+      setTimeout(callback, delayMs) {
+        assert.equal(delayMs, 25);
+        const id = nextTimer++;
+        callbacks.set(id, callback);
+        return id;
+      },
+      clearTimeout(handle) {
+        callbacks.delete(handle as number);
+      }
+    }
+  });
+  const events: TerminalKeyEvent[] = [];
+  const detach = adapter.attach(stdin, (event) => events.push(event));
+
+  stdin.write("\x1b");
+  assert.deepEqual(events, []);
+  assert.equal(callbacks.size, 1);
+  callbacks.values().next().value?.();
+
+  assert.deepEqual(events, [semanticKey("escape", "\x1b")]);
+  detach();
+});
+
+test("RawStdinInput cancels the ambiguity timer when a split CSI completes", () => {
+  const stdin = new PassThrough();
+  const callbacks = new Map<number, () => void>();
+  let nextTimer = 1;
+  const adapter = new RawStdinInput(undefined, {
+    escapeAmbiguityTimeoutMs: 30,
+    clock: {
+      setTimeout(callback) {
+        const id = nextTimer++;
+        callbacks.set(id, callback);
+        return id;
+      },
+      clearTimeout(handle) {
+        callbacks.delete(handle as number);
+      }
+    }
+  });
+  const events: TerminalKeyEvent[] = [];
+  const detach = adapter.attach(stdin, (event) => events.push(event));
+
+  stdin.write("\x1b[13;");
+  assert.equal(callbacks.size, 1);
+  stdin.write("5u");
+
+  assert.equal(callbacks.size, 0);
+  assert.deepEqual(events, [
+    semanticKey("enter", "\x1b[13;5u", { ctrl: true })
+  ]);
+  detach();
+});
+
+test("RawStdinInput detach cancels a pending ambiguity timer", () => {
+  const stdin = new PassThrough();
+  const callbacks = new Map<number, () => void>();
+  const adapter = new RawStdinInput(undefined, {
+    clock: {
+      setTimeout(callback) {
+        callbacks.set(1, callback);
+        return 1;
+      },
+      clearTimeout(handle) {
+        callbacks.delete(handle as number);
+      }
+    }
+  });
+  const events: TerminalKeyEvent[] = [];
+  const detach = adapter.attach(stdin, (event) => events.push(event));
+
+  stdin.write("\x1b");
+  assert.equal(callbacks.size, 1);
+  detach();
+
+  assert.equal(callbacks.size, 0);
+  assert.deepEqual(events, []);
+});
+
+test("RawStdinInput rejects invalid ambiguity timeout values", () => {
+  assert.throws(
+    () => new RawStdinInput(undefined, { escapeAmbiguityTimeoutMs: -1 }),
+    /finite non-negative/
+  );
+  assert.throws(
+    () => new RawStdinInput(undefined, { escapeAmbiguityTimeoutMs: Number.NaN }),
+    /finite non-negative/
   );
 });
 

@@ -8,13 +8,29 @@ import {
   traceRawInput
 } from "../input-trace.js";
 import { createInputParserSession } from "../input-parser-session.js";
+import type { InputParserSessionClock } from "../input-parser-session.js";
+
+export const DEFAULT_ESCAPE_AMBIGUITY_TIMEOUT_MS = 30;
+
+export interface RawStdinInputOptions {
+  escapeAmbiguityTimeoutMs?: number;
+  clock?: InputParserSessionClock;
+}
 
 export class RawStdinInput implements StdinInputAdapter {
   readonly kind = "raw" as const;
   private readonly trace;
 
-  constructor(trace?: InputTraceOption) {
+  private readonly options: RawStdinInputOptions;
+
+  constructor(trace?: InputTraceOption, options: RawStdinInputOptions = {}) {
     this.trace = createInputTraceListener(trace);
+    const timeoutMs =
+      options.escapeAmbiguityTimeoutMs ?? DEFAULT_ESCAPE_AMBIGUITY_TIMEOUT_MS;
+    if (!Number.isFinite(timeoutMs) || timeoutMs < 0) {
+      throw new RangeError("escapeAmbiguityTimeoutMs must be a finite non-negative number");
+    }
+    this.options = { ...options, escapeAmbiguityTimeoutMs: timeoutMs };
   }
 
   prepare(_stdin: Readable): void {}
@@ -23,7 +39,11 @@ export class RawStdinInput implements StdinInputAdapter {
     stdin: Readable,
     onKey: (event: TerminalKeyEvent) => void
   ): Dispose {
-    const session = createInputParserSession(onKey);
+    const session = createInputParserSession(onKey, {
+      escapeFlushMode: "escape",
+      pendingTimeoutMs: this.options.escapeAmbiguityTimeoutMs,
+      clock: this.options.clock
+    });
     let pasteTraceOpen = false;
     let traceSuffix = "";
     const handler = (chunk: Buffer | string): void => {

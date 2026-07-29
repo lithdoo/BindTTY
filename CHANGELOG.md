@@ -2,6 +2,13 @@
 
 BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见行为变化；设计细节见 `doc/` 下对应 package/spec/widget 文档。
 
+## Unreleased
+
+- raw stdin backend 增加默认 30ms、可配置的 Escape ambiguity timeout；独立 ESC
+  稳定发布为语义 Escape key，同时保持 Alt、CSI、SS3、Kitty 与 modifyOtherKeys
+  分片序列的原子解析。
+- raw input detach/reset 会取消 pending timer 并清理 parser state。
+
 ## 0.1.0-beta.3
 
 - Windows resize event 与 polling fallback 并行工作并共享 viewport 去重，不再因存在事件监听而禁用轮询兜底。

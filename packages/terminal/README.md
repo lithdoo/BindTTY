@@ -59,6 +59,11 @@ non-TTY. Applications do not inspect PowerShell, Windows Terminal, or Console
 Host. `inputBackend: "readline" | "raw" | "win32"` is available only as an
 explicit diagnostic or compatibility override.
 
+The raw backend waits up to `escapeAmbiguityTimeoutMs` (default `30`) for bytes
+following `ESC`, so a standalone Escape key and an Alt/control sequence remain
+distinguishable. The value must be a finite non-negative number. Pending timers
+are cleared when input detaches.
+
 Set `BINDTTY_INPUT_TRACE=1` to write an optional JSONL diagnostic trace.
 `BINDTTY_INPUT_TRACE_FILE` selects the destination. The trace records a safe
 environment snapshot, backend selection reason, capabilities, raw input or

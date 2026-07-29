@@ -233,6 +233,11 @@ export interface CreateNodeTerminalOptions {
    */
   keyboardProtocol?: KeyboardProtocolOption;
   keyboardProbeTimeoutMs?: number;
+  /**
+   * Time to wait for bytes following ESC in the raw backend before publishing
+   * a standalone Escape key. Defaults to 30ms.
+   */
+  escapeAmbiguityTimeoutMs?: number;
   platformAdapter?: PlatformTerminalAdapter;
   stdinInputAdapter?: StdinInputAdapter;
   /** Native Win32 console record source, normally supplied by the optional binding. */

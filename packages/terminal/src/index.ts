@@ -1,6 +1,10 @@
 export { ANSI } from "./ansi.js";
 export { DefaultPlatformAdapter } from "./adapters/default-platform.js";
-export { RawStdinInput } from "./adapters/raw-stdin.js";
+export {
+  DEFAULT_ESCAPE_AMBIGUITY_TIMEOUT_MS,
+  RawStdinInput
+} from "./adapters/raw-stdin.js";
+export type { RawStdinInputOptions } from "./adapters/raw-stdin.js";
 export { ReadlineStdinInput } from "./adapters/readline-stdin.js";
 export { resolvePlatformAdapter } from "./adapters/resolve.js";
 export { Win32PlatformAdapter } from "./adapters/win32-platform.js";

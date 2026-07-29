@@ -164,15 +164,15 @@ Characterization（修改前必须通过）：
 Target contract（实现完成后必须启用）：
 
 - [ ] 独立 ESC 不再无限 pending，超时后产生 Escape 语义事件。
-- [ ] 增加 `RawStdinInput` 独立 Escape 回归测试。
-- [ ] 增加 Escape 与 Alt+字符歧义测试。
-- [ ] 增加分片 CSI/SS3 在超时前仍保持原子性的测试。
-- [ ] 先提取最小 parser session（parser + timer + reset），在该层实现可配置的
+- [x] 增加 `RawStdinInput` 独立 Escape 回归测试。
+- [x] 增加 Escape 与 Alt+字符歧义测试。
+- [x] 增加分片 CSI/SS3 在超时前仍保持原子性的测试。
+- [x] 先提取最小 parser session（parser + timer + reset），在该层实现可配置的
       escape ambiguity timeout；R3.2 再把它扩展为完整 InputSession。
-- [ ] 超时后独立 `ESC` 必须产生语义 `key: escape`。
-- [ ] detach/reset 时清理 pending timer 和 parser state。
-- [ ] 记录 escape ambiguity timeout 的默认毫秒值、合法范围和显式 override。
-- [ ] 使用注入 clock/timer 测试 timeout，不依赖真实等待。
+- [x] 超时后独立 `ESC` 必须产生语义 `key: escape`。
+- [x] detach/reset 时清理 pending timer 和 parser state。
+- [x] 记录 escape ambiguity timeout 的默认毫秒值、合法范围和显式 override。
+- [x] 使用注入 clock/timer 测试 timeout，不依赖真实等待。
 
 验收：
 

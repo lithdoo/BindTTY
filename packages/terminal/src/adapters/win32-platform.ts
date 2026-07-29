@@ -27,7 +27,9 @@ export class Win32PlatformAdapter extends DefaultPlatformAdapter {
     }
 
     if (selection.stdinAdapter === "raw") {
-      return new RawStdinInput(options.inputTrace);
+      return new RawStdinInput(options.inputTrace, {
+        escapeAmbiguityTimeoutMs: options.escapeAmbiguityTimeoutMs
+      });
     }
 
     return new ReadlineStdinInput();
