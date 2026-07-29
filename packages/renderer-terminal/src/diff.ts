@@ -27,12 +27,12 @@ export function diffFrames(previous: Frame | null, next: Frame): FramePatch {
     .sort((left, right) => left.y - right.y || left.x - right.x);
 
   if (!hasVisibleChange(dirtyCoordinates, previous, next)) {
-    return {
+    return orderedPatch({
       kind: "incremental",
       width: next.width,
       height: next.height,
       changes: []
-    };
+    });
   }
 
   const changes = dirtyCoordinates
@@ -48,12 +48,12 @@ export function diffFrames(previous: Frame | null, next: Frame): FramePatch {
         : [];
     });
 
-  return {
+  return orderedPatch({
     kind: "incremental",
     width: next.width,
     height: next.height,
     changes
-  };
+  });
 }
 
 function hasVisibleChange(
@@ -91,12 +91,20 @@ function createFullFramePatch(frame: Frame): FramePatch {
     }
   }
 
-  return {
+  return orderedPatch({
     kind: "full",
     width: frame.width,
     height: frame.height,
     changes
-  };
+  });
+}
+
+function orderedPatch(patch: FramePatch): FramePatch {
+  Object.defineProperty(patch, "ordered", {
+    value: true,
+    enumerable: false
+  });
+  return patch;
 }
 
 function markChangedCell(

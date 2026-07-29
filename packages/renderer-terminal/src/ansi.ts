@@ -54,7 +54,13 @@ export function encodeAnsiPatch(patch: FramePatch): string {
   let expectedY = -1;
   let activeStyle = "";
 
-  for (const change of [...patch.changes].sort((left, right) => left.y - right.y || left.x - right.x)) {
+  const changes = patch.ordered === true
+    ? patch.changes
+    : [...patch.changes].sort(
+        (left, right) => left.y - right.y || left.x - right.x
+      );
+
+  for (const change of changes) {
     if (change.cell.width === 0) {
       continue;
     }

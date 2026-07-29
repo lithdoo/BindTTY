@@ -25,6 +25,8 @@ export interface FramePatch {
   width: number;
   height: number;
   changes: CellChange[];
+  /** Internal producer hint; omitted public patches retain defensive sorting. */
+  ordered?: boolean;
 }
 
 export interface CellChange {

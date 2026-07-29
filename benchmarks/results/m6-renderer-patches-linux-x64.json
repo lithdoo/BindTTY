@@ -1,0 +1,36 @@
+{
+  "recordedAt": "2026-07-29T09:37:27.485Z",
+  "environment": {
+    "node": "v20.19.2",
+    "platform": "linux",
+    "arch": "x64",
+    "warmup": 200,
+    "samples": 1000,
+    "viewport": {
+      "width": 80,
+      "height": 24
+    }
+  },
+  "full": {
+    "ordered": {
+      "medianDurationMs": 0.15701100000001134,
+      "bytes": 2249
+    },
+    "defensiveSort": {
+      "medianDurationMs": 0.1845410000000811,
+      "bytes": 2249
+    },
+    "changes": 1920
+  },
+  "incremental": {
+    "ordered": {
+      "medianDurationMs": 0.003192000000126427,
+      "bytes": 193
+    },
+    "defensiveSort": {
+      "medianDurationMs": 0.003451000000040949,
+      "bytes": 193
+    },
+    "changes": 10
+  }
+}

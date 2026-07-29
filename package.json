@@ -13,6 +13,7 @@
     "benchmark:baseline": "npm run build:packages && node --expose-gc benchmarks/baseline.mjs",
     "benchmark:ownership": "npm run build:packages && node --expose-gc benchmarks/ownership.mjs",
     "benchmark:frames": "npm run build:packages && node benchmarks/frame-intents.mjs",
+    "benchmark:renderer": "npm run build:packages && node benchmarks/renderer-patches.mjs",
     "build:examples": "npm run build --workspace @bindtty/example-counter && npm run build --workspace @bindtty/example-form && npm run build --workspace @bindtty/example-textarea && npm run build --workspace @bindtty/example-log-viewer && npm run build --workspace @bindtty/example-yoga-dashboard && npm run build --workspace @bindtty/example-wide-text",
     "pack:dry-run": "node scripts/publish-packages.mjs --dry-run",
     "check:dependencies": "node scripts/check-package-dependencies.mjs",
