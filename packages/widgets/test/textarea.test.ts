@@ -127,6 +127,20 @@ function callOnKey(
   return handler(event);
 }
 
+function paste(text: string): BindTTYKeyEvent {
+  const event: BindTTYKeyEvent = {
+    kind: "paste",
+    text,
+    protocol: "legacy-vt",
+    phase: "target",
+    propagationStopped: false,
+    stopPropagation() {
+      event.propagationStopped = true;
+    }
+  };
+  return event;
+}
+
 function readRenderLines(template: ElementTemplate): readonly TextareaRenderLine[] {
   const viewport = childElement(template, 0);
   const lines: TextareaRenderLine[] = [];
@@ -469,6 +483,25 @@ test("Textarea edits controlled multiline value and submits with Ctrl Enter", ()
   assert.equal(callOnKey(onKey, key("\r", { name: "return", ctrl: true })), true);
   assert.deepEqual(submits, ["h\ni"]);
   assert.equal(value.get(), "h\ni");
+});
+
+test("Textarea inserts multiline paste in one controlled edit transaction", () => {
+  const value = createSignal("tail");
+  const changes: string[] = [];
+  const template = asElement(
+    Textarea({
+      value,
+      onChange(nextValue) {
+        changes.push(nextValue);
+        value.set(nextValue);
+      }
+    })
+  );
+  const onKey = readOnKeyHandler(template);
+
+  assert.equal(callOnKey(onKey, paste("A中🙂\ne\u0301")), true);
+  assert.equal(value.get(), "tailA中🙂\ne\u0301");
+  assert.deepEqual(changes, ["tailA中🙂\ne\u0301"]);
 });
 
 test("Textarea treats Alt Enter as a newline instead of Meta Enter submit", () => {

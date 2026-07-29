@@ -263,6 +263,30 @@ test("TextInput inserts printable input as a controlled component", () => {
   assert.equal(resolveSignal<string>(before.props.value), "ab");
 });
 
+test("TextInput inserts paste in one controlled edit transaction", () => {
+  const value = createSignal("ab");
+  const changes: string[] = [];
+  const pasteText = "中🙂e\u0301".repeat(2_000);
+  const template = asElement(
+    TextInput({
+      value,
+      onChange(nextValue) {
+        changes.push(nextValue);
+        value.set(nextValue);
+      }
+    })
+  );
+  const handler = readOnKeyHandler(template);
+
+  callOnKey(handler, {
+    kind: "paste",
+    text: pasteText,
+    protocol: "legacy-vt"
+  });
+
+  assert.deepEqual(changes, [`${pasteText}ab`]);
+});
+
 test("TextInput never inserts non-text semantic events even when input is printable", () => {
   const changes: string[] = [];
   const template = asElement(

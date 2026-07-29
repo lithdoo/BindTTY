@@ -41,6 +41,7 @@ export class RawStdinInput implements StdinInputAdapter {
   ): Dispose {
     const session = createInputParserSession(onKey, {
       escapeFlushMode: "escape",
+      pasteMode: "event",
       pendingTimeoutMs: this.options.escapeAmbiguityTimeoutMs,
       clock: this.options.clock
     });

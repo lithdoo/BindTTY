@@ -229,7 +229,7 @@ function createTextInputOnKey(
     const segments = segmentText(value);
     const position = clamp(cursor.get(), 0, segments.length);
 
-    if (isTextInputKey(event)) {
+    if (isTextInputKey(event) || event.kind === "paste") {
       const inputSegments = segmentText(event.text);
       const nextValue =
         joinSegments(segments.slice(0, position)) +

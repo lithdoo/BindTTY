@@ -8,6 +8,10 @@ BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见�
   稳定发布为语义 Escape key，同时保持 Alt、CSI、SS3、Kitty 与 modifyOtherKeys
   分片序列的原子解析。
 - raw input detach/reset 会取消 pending timer 并清理 parser state。
+- raw backend 的 bracketed paste 改为单个语义 `paste` 事件；TextInput 与 Textarea
+  在一次编辑事务中插入完整文本，不再按 grapheme 触发大量同步更新。直接使用
+  `@bindtty/input` parser 的调用方仍保留原默认行为，也可显式使用
+  `pasteMode: "event"`。
 
 ## 0.1.0-beta.3
 

@@ -597,6 +597,6 @@ function isSubmitKey(event: BindTTYKeyEvent, submitKeys: readonly TextareaSubmit
 
 function isTextareaTextInput(
   event: BindTTYKeyEvent
-): event is Extract<BindTTYKeyEvent, { kind: "text" }> {
-  return event.kind === "text";
+): event is Extract<BindTTYKeyEvent, { kind: "text" | "paste" }> {
+  return event.kind === "text" || event.kind === "paste";
 }

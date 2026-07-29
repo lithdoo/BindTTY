@@ -185,23 +185,23 @@ Target contract（实现完成后必须启用）：
 
 Characterization（修改前必须通过）：
 
-- [ ] 保留 tokenizer 已有的单个 `PasteToken` 行为并增加跨 chunk characterization。
-- [ ] 记录公共 parser 默认将 paste 展开为 text events、`pasteMode: "event"` 发布单个
+- [x] 保留 tokenizer 已有的单个 `PasteToken` 行为并增加跨 chunk characterization。
+- [x] 记录公共 parser 默认将 paste 展开为 text events、`pasteMode: "event"` 发布单个
       paste event 的现有行为。
 
 Target contract（实现完成后必须启用）：
 
-- [ ] 增加 RawStdinInput 当前逐 text event 发布 paste 的问题复现测试。
-- [ ] `RawStdinInput` 默认将 bracketed paste 发布为单个语义 `paste` 事件。
-- [ ] 明确 `@bindtty/input` 公共 parser 的默认 paste 行为是否保持兼容。
-- [ ] 明确 TerminalHost 是否提供临时 `pasteMode: "event" | "text"` 兼容选项。
-- [ ] TextInput 一次插入完整 paste 文本。
-- [ ] Textarea 一次插入完整 paste 文本并正确处理换行。
+- [x] 增加 RawStdinInput 当前逐 text event 发布 paste 的问题复现测试。
+- [x] `RawStdinInput` 默认将 bracketed paste 发布为单个语义 `paste` 事件。
+- [x] 明确 `@bindtty/input` 公共 parser 的默认 paste 行为是否保持兼容。
+- [x] 明确 TerminalHost 是否提供临时 `pasteMode: "event" | "text"` 兼容选项。
+- [x] TextInput 一次插入完整 paste 文本。
+- [x] Textarea 一次插入完整 paste 文本并正确处理换行。
 - [ ] 为超大 paste 设置合理的容量或流控策略。
-- [ ] paste trace 继续保持内容脱敏。
-- [ ] 增加大文本 paste 只触发一次编辑事务的测试。
-- [ ] 增加直接订阅 `TerminalHost.onKey()` 时的 paste 语义契约测试。
-- [ ] 将 paste 行为变化写入 changelog 和 migration guide。
+- [x] paste trace 继续保持内容脱敏。
+- [x] 增加大文本 paste 只触发一次编辑事务的测试。
+- [x] 增加直接订阅 `TerminalHost.onKey()` 时的 paste 语义契约测试。
+- [x] 将 paste 行为变化写入 changelog 和 migration guide。
 
 验收：
 

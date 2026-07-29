@@ -64,6 +64,12 @@ following `ESC`, so a standalone Escape key and an Alt/control sequence remain
 distinguishable. The value must be a finite non-negative number. Pending timers
 are cleared when input detaches.
 
+Bracketed paste from the raw backend is dispatched through `TerminalHost.onKey`
+as one semantic `{ kind: "paste", text }` event. The lower-level
+`@bindtty/input` parser keeps its compatible default text-event mode; callers
+that want atomic paste there can select `pasteMode: "event"`. TerminalHost does
+not expose a legacy paste expansion option.
+
 Set `BINDTTY_INPUT_TRACE=1` to write an optional JSONL diagnostic trace.
 `BINDTTY_INPUT_TRACE_FILE` selects the destination. The trace records a safe
 environment snapshot, backend selection reason, capabilities, raw input or

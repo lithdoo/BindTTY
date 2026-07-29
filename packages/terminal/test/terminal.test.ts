@@ -1962,6 +1962,25 @@ test("createNodeTerminal publishes standalone Escape using the configured ambigu
 
   assert.deepEqual(events, [semanticKey("escape", "\x1b")]);
 });
+
+test("TerminalHost onKey publishes bracketed paste as one semantic event", () => {
+  const stdout = createMockStdout();
+  const stdin = createMockStdin();
+  const terminal = createNodeTerminal({ stdout, stdin, rawMode: true });
+  const events: TerminalKeyEvent[] = [];
+  terminal.onKey((event) => events.push(event));
+  terminal.start();
+
+  stdin.emitData("\x1b[200~first\n中🙂\x1b[201~");
+  terminal.stop();
+
+  assert.deepEqual(events, [{
+    kind: "paste",
+    text: "first\n中🙂",
+    protocol: "legacy-vt",
+    sequence: "\x1b[200~first\n中🙂\x1b[201~"
+  }]);
+});
 test("stdinInputAdapter injection selects a fixed stdin reader", () => {
   const stdout = createMockStdout();
   const stdin = createMockStdin();
@@ -2239,6 +2258,24 @@ test("RawStdinInput trace redacts bracketed paste across chunks", () => {
     ]
   );
   assert.equal(JSON.stringify(records).includes("secret"), false);
+});
+
+test("RawStdinInput publishes bracketed paste as one semantic event", () => {
+  const stdin = new PassThrough();
+  const adapter = new RawStdinInput();
+  const events: TerminalKeyEvent[] = [];
+  const detach = adapter.attach(stdin, (event) => events.push(event));
+
+  stdin.write("\x1b[200~A中🙂\n");
+  stdin.write("e\u0301\x1b[201~");
+  detach();
+
+  assert.deepEqual(events, [{
+    kind: "paste",
+    text: "A中🙂\ne\u0301",
+    protocol: "legacy-vt",
+    sequence: "\x1b[200~A中🙂\ne\u0301\x1b[201~"
+  }]);
 });
 
 test("mapWin32KeyRecord preserves F2 and Ctrl Enter semantics", () => {
