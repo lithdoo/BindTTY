@@ -39,6 +39,7 @@
     "capture:windows:pwsh": "npm run capture:windows:pwsh --workspace @bindtty/e2e",
     "gen:layout-props": "npm run build --workspace @bindtty/text && npm run build --workspace @bindtty/vnode && npm run build --workspace @bindtty/layout && node scripts/gen-layout-props-matrix.mjs",
     "check:layout-props": "npm run gen:layout-props && git diff --exit-code -- doc/specs/LAYOUT_PROPS.md",
+    "check:element-metadata": "npm run build --workspace @bindtty/vnode && node scripts/check-element-metadata.mjs",
     "docs:dev": "vitepress dev doc",
     "docs:build": "npm run gen:layout-props && vitepress build doc && node scripts/check-doc-chapter-nav.mjs",
     "docs:preview": "vitepress preview doc"
