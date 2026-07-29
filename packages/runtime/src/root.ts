@@ -3,6 +3,13 @@ import { clearDirty } from "./dirty.js";
 import { disposeMountedNode } from "./dispose.js";
 import { mountTemplate } from "./mount.js";
 import { createRuntimeScheduler } from "./scheduler.js";
+import {
+  collectErrors,
+  createRuntimeOwner,
+  disposeRuntimeOwner,
+  runWithRuntimeOwner,
+  throwCollectedErrors
+} from "./ownership.js";
 import type {
   Dispose,
   RuntimeFlushListener,
@@ -18,14 +25,30 @@ export function createRuntimeRoot(
   let root: MountedNode | null = null;
   let disposed = false;
   const scheduler = createRuntimeScheduler(() => root);
+  const owner = createRuntimeOwner();
 
-  root = mountTemplate(template, {
-    context: {
-      scheduler,
-      onLifecycleError: options.onLifecycleError,
-      elementActions: options.elementActions
+  try {
+    root = runWithRuntimeOwner(owner, () =>
+      mountTemplate(template, {
+        context: {
+          scheduler,
+          onLifecycleError: options.onLifecycleError,
+          elementActions: options.elementActions
+        }
+      })
+    );
+  } catch (error) {
+    scheduler.clear();
+    try {
+      disposeRuntimeOwner(owner);
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "Runtime mount and cleanup failed"
+      );
     }
-  });
+    throw error;
+  }
 
   return {
     get root() {
@@ -58,8 +81,19 @@ export function createRuntimeRoot(
       }
 
       disposed = true;
-      disposeMountedNode(root);
+      const errors: unknown[] = [];
+      try {
+        disposeMountedNode(root);
+      } catch (error) {
+        collectErrors(errors, error);
+      }
+      try {
+        disposeRuntimeOwner(owner);
+      } catch (error) {
+        collectErrors(errors, error);
+      }
       scheduler.clear();
+      throwCollectedErrors(errors);
     }
   };
 }

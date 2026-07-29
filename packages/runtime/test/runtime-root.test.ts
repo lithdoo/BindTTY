@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createSignal } from "@bindtty/signal";
+import { createSignal, effect } from "@bindtty/signal";
 import {
+  componentTemplate,
   elementTemplate,
   emptyTemplate,
   forTemplate,
@@ -461,6 +462,39 @@ test("RuntimeRoot.dispose is idempotent and prevents later signal updates", () =
 
   assert.equal(root.props.value, "A");
   assert.equal(runtime.flushNow(), null);
+});
+
+test("RuntimeRoot.dispose continues owner cleanup after multiple errors", () => {
+  const events: string[] = [];
+
+  function Owned(props: Record<string, unknown>): Template {
+    const name = String(props.name);
+    effect(() => () => {
+      events.push(name);
+      if (props.fail) {
+        throw new Error(`${name} failed`);
+      }
+    });
+    return elementTemplate("text", { value: name });
+  }
+
+  const runtime = createRuntimeRoot(fragmentTemplate([
+    componentTemplate<Record<string, unknown>>(Owned, { name: "first", fail: true }),
+    componentTemplate<Record<string, unknown>>(Owned, { name: "second", fail: false }),
+    componentTemplate<Record<string, unknown>>(Owned, { name: "third", fail: true })
+  ]));
+
+  assert.throws(
+    () => runtime.dispose(),
+    (error) => {
+      assert.ok(error instanceof AggregateError);
+      assert.equal(error.errors.length, 2);
+      return true;
+    }
+  );
+  assert.deepEqual(events, ["first", "second", "third"]);
+  assert.equal(runtime.flushNow(), null);
+  assert.doesNotThrow(() => runtime.dispose());
 });
 
 test("RuntimeRoot accepts component templates", () => {

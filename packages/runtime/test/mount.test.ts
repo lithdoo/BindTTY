@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createSignal } from "@bindtty/signal";
+import { computed, createSignal, effect } from "@bindtty/signal";
 import {
   componentTemplate,
   elementTemplate,
@@ -498,6 +498,61 @@ test("component errors bubble out of mount", () => {
   );
 });
 
+test("component owner disposes computed and effect with the mounted node", () => {
+  const source = createSignal(1);
+  let derivedRuns = 0;
+  let effectRuns = 0;
+
+  function OwnedComponent(): Template {
+    const value = computed(() => {
+      derivedRuns += 1;
+      return source.get() * 2;
+    });
+    effect(() => {
+      source.get();
+      effectRuns += 1;
+    });
+    return elementTemplate("text", { value });
+  }
+
+  const mounted = mountTemplate(componentTemplate(OwnedComponent, {}));
+  assert.equal(mounted?.kind, "element");
+  assert.equal(mounted.props.value, 2);
+  assert.equal(derivedRuns, 2);
+  assert.equal(effectRuns, 1);
+
+  source.set(2);
+  assert.equal(mounted.props.value, 4);
+  assert.equal(derivedRuns, 3);
+  assert.equal(effectRuns, 2);
+
+  mounted.dispose();
+  source.set(3);
+  assert.equal(mounted.props.value, 4);
+  assert.equal(derivedRuns, 3);
+  assert.equal(effectRuns, 2);
+});
+
+test("component owner cleans up empty and failed component mounts", () => {
+  const events: string[] = [];
+
+  const empty = mountTemplate(componentTemplate(() => {
+    effect(() => () => events.push("empty cleanup"));
+    return emptyTemplate();
+  }, {}));
+  assert.equal(empty, null);
+
+  assert.throws(
+    () => mountTemplate(componentTemplate(() => {
+      effect(() => () => events.push("failed cleanup"));
+      throw new Error("component failed");
+    }, {})),
+    /component failed/
+  );
+
+  assert.deepEqual(events, ["empty cleanup", "failed cleanup"]);
+});
+
 test("mounts show true branch and fallback branch", () => {
   const mountedTrue = mountTemplate(
     showTemplate({
@@ -562,6 +617,45 @@ test("show switches branches on signal update and disposes old branch", () => {
 
   oldTitle.set("Updated after dispose");
   assert.equal(oldBranch.props.value, "Visible");
+});
+
+test("show branch owners dispose old component effects on switch", () => {
+  const visible = createSignal(true);
+  const pulse = createSignal(0);
+  const runs = { visible: 0, hidden: 0 };
+
+  function Visible(): Template {
+    effect(() => {
+      pulse.get();
+      runs.visible += 1;
+    });
+    return elementTemplate("text", { value: "Visible" });
+  }
+
+  function Hidden(): Template {
+    effect(() => {
+      pulse.get();
+      runs.hidden += 1;
+    });
+    return elementTemplate("text", { value: "Hidden" });
+  }
+
+  const mounted = mountTemplate(showTemplate({
+    when: visible,
+    children: componentTemplate(Visible, {}),
+    fallback: componentTemplate(Hidden, {})
+  }));
+  assert.equal(mounted?.kind, "show");
+  assert.deepEqual(runs, { visible: 1, hidden: 0 });
+
+  pulse.set(1);
+  visible.set(false);
+  pulse.set(2);
+  assert.deepEqual(runs, { visible: 2, hidden: 2 });
+
+  mounted.dispose();
+  pulse.set(3);
+  assert.deepEqual(runs, { visible: 2, hidden: 2 });
 });
 
 test("show does not mark dirty when the selected branch template is unchanged", () => {
@@ -784,6 +878,37 @@ test("for reorders keyed items without rerendering reused nodes", () => {
   assert.equal(mounted.items[1]?.node, node1);
   assert.equal(mounted.items[0]?.node.kind, "element");
   assert.equal(mounted.items[0]?.node.props.value, "B");
+});
+
+test("for item owners survive reorder and dispose only removed item effects", () => {
+  const items = createSignal([{ id: 1 }, { id: 2 }]);
+  const pulse = createSignal(0);
+  const runs = new Map<number, number>();
+  const mounted = mountTemplate(forTemplate<{ id: number }>({
+    each: items,
+    key: (item) => item.id,
+    renderItem: (item) => {
+      effect(() => {
+        pulse.get();
+        runs.set(item.id, (runs.get(item.id) ?? 0) + 1);
+      });
+      return elementTemplate("text", { value: String(item.id) });
+    }
+  }));
+  assert.equal(mounted?.kind, "for");
+  assert.deepEqual([...runs], [[1, 1], [2, 1]]);
+
+  items.set([{ id: 2 }, { id: 1 }]);
+  pulse.set(1);
+  assert.deepEqual([...runs], [[1, 2], [2, 2]]);
+
+  items.set([{ id: 2 }]);
+  pulse.set(2);
+  assert.deepEqual([...runs], [[1, 2], [2, 3]]);
+
+  mounted.dispose();
+  pulse.set(3);
+  assert.deepEqual([...runs], [[1, 2], [2, 3]]);
 });
 
 test("for updates reused item references when keys are stable", () => {

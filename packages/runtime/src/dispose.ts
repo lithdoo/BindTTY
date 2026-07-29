@@ -7,6 +7,11 @@ import type {
   MountedShowNode
 } from "@bindtty/vnode";
 import { disposeElementApi } from "./element-api.js";
+import {
+  collectErrors,
+  disposeMountedNodeOwners,
+  throwCollectedErrors
+} from "./ownership.js";
 
 const disposedNodes = new WeakSet<MountedNode>();
 
@@ -17,20 +22,31 @@ export function disposeMountedNode(node: MountedNode | null): void {
 
   disposedNodes.add(node);
 
-  switch (node.kind) {
-    case "element":
-      disposeElementNode(node);
-      return;
-    case "fragment":
-      disposeFragmentNode(node);
-      return;
-    case "show":
-      disposeShowNode(node);
-      return;
-    case "for":
-      disposeForNode(node);
-      return;
+  const errors: unknown[] = [];
+  try {
+    switch (node.kind) {
+      case "element":
+        disposeElementNode(node);
+        break;
+      case "fragment":
+        disposeFragmentNode(node);
+        break;
+      case "show":
+        disposeShowNode(node);
+        break;
+      case "for":
+        disposeForNode(node);
+        break;
+    }
+  } catch (error) {
+    collectErrors(errors, error);
   }
+  try {
+    disposeMountedNodeOwners(node);
+  } catch (error) {
+    collectErrors(errors, error);
+  }
+  throwCollectedErrors(errors);
 }
 
 export function isDisposed(node: MountedNode): boolean {
@@ -38,35 +54,77 @@ export function isDisposed(node: MountedNode): boolean {
 }
 
 function disposeElementNode(node: MountedElementNode): void {
+  const errors: unknown[] = [];
   disposeElementApi(node);
-  disposeBindings(node.bindings);
+  try {
+    disposeBindings(node.bindings);
+  } catch (error) {
+    collectErrors(errors, error);
+  }
   for (const child of node.children) {
-    disposeMountedNode(child);
+    try {
+      disposeMountedNode(child);
+    } catch (error) {
+      collectErrors(errors, error);
+    }
   }
   node.bindings = {};
+  throwCollectedErrors(errors);
 }
 
 function disposeFragmentNode(node: MountedFragmentNode): void {
+  const errors: unknown[] = [];
   for (const child of node.children) {
-    disposeMountedNode(child);
+    try {
+      disposeMountedNode(child);
+    } catch (error) {
+      collectErrors(errors, error);
+    }
   }
+  throwCollectedErrors(errors);
 }
 
 function disposeShowNode(node: MountedShowNode): void {
-  node.binding?.dispose();
-  disposeMountedNode(node.activeBranch);
+  const errors: unknown[] = [];
+  try {
+    node.binding?.dispose();
+  } catch (error) {
+    collectErrors(errors, error);
+  }
+  try {
+    disposeMountedNode(node.activeBranch);
+  } catch (error) {
+    collectErrors(errors, error);
+  }
+  throwCollectedErrors(errors);
 }
 
 function disposeForNode(node: MountedForNode): void {
-  node.binding?.dispose();
+  const errors: unknown[] = [];
+  try {
+    node.binding?.dispose();
+  } catch (error) {
+    collectErrors(errors, error);
+  }
   for (const item of node.items) {
-    disposeMountedNode(item.node);
+    try {
+      disposeMountedNode(item.node);
+    } catch (error) {
+      collectErrors(errors, error);
+    }
   }
   node.items = [];
+  throwCollectedErrors(errors);
 }
 
 function disposeBindings(bindings: Record<string, MountedBinding>): void {
+  const errors: unknown[] = [];
   for (const binding of Object.values(bindings)) {
-    binding.dispose();
+    try {
+      binding.dispose();
+    } catch (error) {
+      collectErrors(errors, error);
+    }
   }
+  throwCollectedErrors(errors);
 }

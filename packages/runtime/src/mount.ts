@@ -18,6 +18,13 @@ import { createBinding, bindProps } from "./binding.js";
 import { disposeMountedNode } from "./dispose.js";
 import { markDirty } from "./dirty.js";
 import { notifyElementMounted, runElementRef } from "./element-api.js";
+import {
+  collectErrors,
+  mountControlWithOwner,
+  mountWithOwner,
+  throwCollectedErrors,
+  type ReactiveOwner
+} from "./ownership.js";
 import type { MountOptions } from "./types.js";
 
 export function mountTemplate(
@@ -44,50 +51,54 @@ function mountForTemplate(
   template: ForTemplate<unknown>,
   options: MountOptions
 ): MountedForNode<unknown> {
-  const node: MountedForNode<unknown> = {
-    kind: "for",
-    each: template.each,
-    items: mountForItems(template, resolveItems(template.each), options),
-    dirty: options.markInitiallyDirty ? "structure" : null,
-    dispose() {
-      disposeMountedNode(node);
+  return mountControlWithOwner((owner) => {
+    const node: MountedForNode<unknown> = {
+      kind: "for",
+      each: template.each,
+      items: mountForItems(template, resolveItems(template.each), options, owner),
+      dirty: options.markInitiallyDirty ? "structure" : null,
+      dispose() {
+        disposeMountedNode(node);
+      }
+    };
+
+    if (isReadableSignal(template.each)) {
+      node.binding = createBinding(template.each, (items) => {
+        updateForItems(node, template, items, options, owner);
+      });
     }
-  };
 
-  if (isReadableSignal(template.each)) {
-    node.binding = createBinding(template.each, (items) => {
-      updateForItems(node, template, items, options);
-    });
-  }
-
-  return node;
+    return node;
+  });
 }
 
 function mountShowTemplate(
   template: ShowTemplate,
   options: MountOptions
 ): MountedShowNode {
-  const node: MountedShowNode = {
-    kind: "show",
-    when: template.when,
-    activeBranch: null,
-    activeTemplate: null,
-    dirty: options.markInitiallyDirty ? "structure" : null,
-    dispose() {
-      disposeMountedNode(node);
+  return mountControlWithOwner((owner) => {
+    const node: MountedShowNode = {
+      kind: "show",
+      when: template.when,
+      activeBranch: null,
+      activeTemplate: null,
+      dirty: options.markInitiallyDirty ? "structure" : null,
+      dispose() {
+        disposeMountedNode(node);
+      }
+    };
+
+    const initialValue = resolveBoolean(template.when);
+    mountShowBranch(node, template, initialValue, options, owner);
+
+    if (isReadableSignal(template.when)) {
+      node.binding = createBinding(template.when, (value) => {
+        updateShowBranch(node, template, value, options, owner);
+      });
     }
-  };
 
-  const initialValue = resolveBoolean(template.when);
-  mountShowBranch(node, template, initialValue, options);
-
-  if (isReadableSignal(template.when)) {
-    node.binding = createBinding(template.when, (value) => {
-      updateShowBranch(node, template, value, options);
-    });
-  }
-
-  return node;
+    return node;
+  });
 }
 
 function mountElementTemplate(
@@ -173,25 +184,25 @@ function mountComponentTemplate(
   template: Extract<Template, { kind: "component" }>,
   options: MountOptions
 ): MountedNode | null {
-  const rendered = template.component(template.props);
-
-  if (!isTemplate(rendered)) {
-    throw new TypeError("Component returned invalid Template.");
-  }
-
-  return mountTemplate(rendered, options);
+  return mountWithOwner(() => {
+    const rendered = template.component(template.props);
+    if (!isTemplate(rendered)) {
+      throw new TypeError("Component returned invalid Template.");
+    }
+    return mountTemplate(rendered, options);
+  });
 }
 
 function mountForItems(
   template: ForTemplate<unknown>,
   items: readonly unknown[],
-  options: MountOptions
+  options: MountOptions,
+  owner: ReactiveOwner
 ): MountedForItemNode<unknown>[] {
   const mountedItems: MountedForItemNode<unknown>[] = [];
 
   items.forEach((item, index) => {
-    const childTemplate = template.renderItem(item, index);
-    const node = mountTemplate(childTemplate, options);
+    const node = mountForItem(template, item, index, options, owner);
 
     if (node) {
       mountedItems.push({
@@ -209,7 +220,8 @@ function updateForItems(
   node: MountedForNode<unknown>,
   template: ForTemplate<unknown>,
   nextItems: readonly unknown[],
-  options: MountOptions
+  options: MountOptions,
+  owner: ReactiveOwner
 ): void {
   const previousByKey = new Map<string | number, MountedForItemNode<unknown>>();
 
@@ -219,35 +231,54 @@ function updateForItems(
 
   const nextMountedItems: MountedForItemNode<unknown>[] = [];
   const reusedKeys = new Set<string | number>();
+  const newlyMountedNodes: MountedNode[] = [];
 
-  nextItems.forEach((item, index) => {
-    const key = getItemKey(template, item, index);
-    const previous = previousByKey.get(key);
+  try {
+    nextItems.forEach((item, index) => {
+      const key = getItemKey(template, item, index);
+      const previous = previousByKey.get(key);
 
-    if (previous) {
-      previous.item = item;
-      nextMountedItems.push(previous);
-      reusedKeys.add(key);
-      return;
+      if (previous) {
+        previous.item = item;
+        nextMountedItems.push(previous);
+        reusedKeys.add(key);
+        return;
+      }
+
+      const mounted = mountForItem(template, item, index, options, owner);
+
+      if (mounted) {
+        newlyMountedNodes.push(mounted);
+        nextMountedItems.push({ key, item, node: mounted });
+      }
+    });
+  } catch (error) {
+    const errors: unknown[] = [error];
+    for (const mounted of newlyMountedNodes) {
+      try {
+        disposeMountedNode(mounted);
+      } catch (cleanupError) {
+        collectErrors(errors, cleanupError);
+      }
     }
+    throwCollectedErrors(errors);
+  }
 
-    const childTemplate = template.renderItem(item, index);
-    const mounted = mountTemplate(childTemplate, options);
-
-    if (mounted) {
-      nextMountedItems.push({ key, item, node: mounted });
-    }
-  });
-
+  const errors: unknown[] = [];
   for (const previous of node.items) {
     if (!reusedKeys.has(previous.key)) {
-      disposeMountedNode(previous.node);
+      try {
+        disposeMountedNode(previous.node);
+      } catch (error) {
+        collectErrors(errors, error);
+      }
     }
   }
 
   node.items = nextMountedItems;
   markDirty(node, "structure");
   options.context?.scheduler.queueDirty(node);
+  throwCollectedErrors(errors);
 }
 
 function getItemKey(
@@ -262,7 +293,8 @@ function updateShowBranch(
   node: MountedShowNode,
   template: ShowTemplate,
   value: boolean,
-  options: MountOptions
+  options: MountOptions,
+  owner: ReactiveOwner
 ): void {
   const nextTemplate = selectShowTemplate(template, value);
 
@@ -270,22 +302,54 @@ function updateShowBranch(
     return;
   }
 
-  disposeMountedNode(node.activeBranch);
+  const errors: unknown[] = [];
+  try {
+    disposeMountedNode(node.activeBranch);
+  } catch (error) {
+    collectErrors(errors, error);
+  }
   node.activeTemplate = nextTemplate;
-  node.activeBranch = nextTemplate ? mountTemplate(nextTemplate, options) : null;
+  node.activeBranch = null;
+  if (nextTemplate) {
+    try {
+      node.activeBranch = mountWithOwner(
+        () => mountTemplate(nextTemplate, options),
+        owner
+      );
+    } catch (error) {
+      collectErrors(errors, error);
+    }
+  }
   markDirty(node, "structure");
   options.context?.scheduler.queueDirty(node);
+  throwCollectedErrors(errors);
 }
 
 function mountShowBranch(
   node: MountedShowNode,
   template: ShowTemplate,
   value: boolean,
-  options: MountOptions
+  options: MountOptions,
+  owner: ReactiveOwner
 ): void {
   const activeTemplate = selectShowTemplate(template, value);
   node.activeTemplate = activeTemplate;
-  node.activeBranch = activeTemplate ? mountTemplate(activeTemplate, options) : null;
+  node.activeBranch = activeTemplate
+    ? mountWithOwner(() => mountTemplate(activeTemplate, options), owner)
+    : null;
+}
+
+function mountForItem(
+  template: ForTemplate<unknown>,
+  item: unknown,
+  index: number,
+  options: MountOptions,
+  owner: ReactiveOwner
+): MountedNode | null {
+  return mountWithOwner(() => {
+    const childTemplate = template.renderItem(item, index);
+    return mountTemplate(childTemplate, options);
+  }, owner);
 }
 
 function selectShowTemplate(
