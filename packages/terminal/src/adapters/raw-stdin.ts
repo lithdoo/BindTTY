@@ -76,4 +76,13 @@ export class RawStdinInput implements StdinInputAdapter {
       traceSuffix = "";
     };
   }
+
+  attachRaw(
+    stdin: Readable,
+    onChunk: (chunk: Buffer | string) => void
+  ): Dispose {
+    const handler = (chunk: Buffer | string): void => onChunk(chunk);
+    stdin.on("data", handler);
+    return () => stdin.off("data", handler);
+  }
 }

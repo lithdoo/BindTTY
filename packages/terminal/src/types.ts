@@ -201,6 +201,15 @@ export interface StdinInputAdapter {
     stdin: import("node:stream").Readable,
     onKey: (event: TerminalKeyEvent) => void
   ): Dispose;
+
+  /**
+   * Optional raw-source channel. InputSession prefers this path so parsing,
+   * pending timeouts, paste state, protocol routing and trace share one owner.
+   */
+  attachRaw?(
+    stdin: import("node:stream").Readable,
+    onChunk: (chunk: Buffer | string) => void
+  ): Dispose;
 }
 
 export interface CreateNodeTerminalOptions {

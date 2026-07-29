@@ -10,8 +10,10 @@ import {
   traceBackendSelection,
   traceInputEvent,
   traceKeyboardCapabilities,
+  traceRawInput,
   traceTerminalEnvironment
 } from "./input-trace.js";
+import { createInputParserSession } from "./input-parser-session.js";
 import type { ResolvedTerminalProfile } from "./terminal-profile.js";
 import type {
   CreateNodeTerminalOptions,
@@ -286,7 +288,44 @@ export function createInputSession(
         } else if (options.stdin.isTTY) {
           backend.prepare(stdin);
         }
-        detachBackend = backend.attach(stdin, dispatch);
+        if (backend.kind === "raw" && backend.attachRaw) {
+          const parser = createInputParserSession(dispatch, {
+            escapeFlushMode: "escape",
+            pasteMode: "event",
+            maxPasteCodeUnits: options.maxPasteCodeUnits,
+            pendingTimeoutMs: options.escapeAmbiguityTimeoutMs ?? 30,
+            clock
+          });
+          let pasteTraceOpen = false;
+          let traceSuffix = "";
+          detachBackend = backend.attachRaw(stdin, (chunk) => {
+            const text = Buffer.isBuffer(chunk) ? chunk.toString("utf8") : chunk;
+            const combined = traceSuffix + text;
+            const openIndex = combined.lastIndexOf("\x1b[200~");
+            const closeIndex = combined.lastIndexOf("\x1b[201~");
+            const containsBoundary = openIndex >= 0 || closeIndex >= 0;
+            traceRawInput(
+              trace,
+              "raw",
+              chunk,
+              pasteTraceOpen || openIndex > closeIndex || containsBoundary
+            );
+            if (containsBoundary) {
+              pasteTraceOpen = openIndex > closeIndex;
+            }
+            traceSuffix = combined.slice(-5);
+            parser.push(chunk);
+          });
+          const detachRaw = detachBackend;
+          detachBackend = () => {
+            detachRaw();
+            parser.reset();
+            pasteTraceOpen = false;
+            traceSuffix = "";
+          };
+        } else {
+          detachBackend = backend.attach(stdin, dispatch);
+        }
       }
       if (requestedProtocol(options) === "auto") {
         startProtocol();
