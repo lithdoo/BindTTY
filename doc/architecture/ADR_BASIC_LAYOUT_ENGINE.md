@@ -10,7 +10,8 @@ set.
 
 BindTTY promises cross-backend contract tests only for capabilities declared by
 both engines. Basic rejects Yoga-only props instead of silently approximating
-them. Shared metadata and traversal deduplication remain R5 work.
+them. Backend support and aliases now come from the shared element metadata;
+engine implementations retain only their algorithms.
 
 ## Consequences
 
@@ -21,3 +22,6 @@ them. Shared metadata and traversal deduplication remain R5 work.
   migration note and changelog entry.
 - Backend-specific intrinsic sizing can differ where Yoga shrink/flex behavior
   is not part of Basic's declared capability set.
+- A persistent Yoga tree is deferred. Current runtime layout nodes are immutable
+  snapshots, while Yoga nodes require mutation and explicit lifetime ownership;
+  no benchmark yet isolates Yoga allocation as the dominant frame cost.
