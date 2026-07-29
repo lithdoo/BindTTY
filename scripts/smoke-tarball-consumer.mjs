@@ -69,13 +69,14 @@ try {
     include: ["consumer.ts"]
   }, null, 2));
   writeFileSync(path.join(consumerRoot, "consumer.ts"), [
-    'import { createApp, createSignal } from "bindtty";',
+    'import { batch, createApp, createSignal } from "bindtty";',
     'import { createTerminalRenderer } from "@bindtty/renderer-terminal";',
     'import { emptyTemplate, type ViewTemplate } from "@bindtty/vnode";',
     'import type { SemanticInputEvent } from "@bindtty/input";',
     "",
     "const view: ViewTemplate = emptyTemplate();",
     "const count = createSignal(0);",
+    "batch(() => count.set(1));",
     "const renderer = createTerminalRenderer();",
     "const event: SemanticInputEvent = {",
     '  kind: "text", text: "x", protocol: "legacy-vt"',
@@ -107,7 +108,14 @@ try {
   ],
     temporaryRoot);
   run(process.execPath, [tsc, "-p", "tsconfig.json"], consumerRoot);
-  run(process.execPath, ["-e", 'import("bindtty").then(m => { if (!m.createApp) process.exit(1); })'],
+  run(npmCommand, ["ls", "@bindtty/signal", "--all"], temporaryRoot);
+  run(process.execPath, ["-e", [
+    'Promise.all([import("bindtty"), import("@bindtty/signal")])',
+    ".then(([root, signal]) => {",
+    "  if (!root.createApp || !root.batch) process.exit(1);",
+    "  if (root.createSignal !== signal.createSignal) process.exit(2);",
+    "});"
+  ].join("\n")],
     consumerRoot);
   console.log(`Isolated consumer smoke passed for ${tarballs.length} tarballs.`);
 } finally {
