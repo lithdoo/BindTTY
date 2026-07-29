@@ -99,6 +99,39 @@ test("tokenizer preserves split bracketed paste", () => {
   ]);
 });
 
+test("tokenizer bounds paste and resynchronizes after the terminator", () => {
+  const tokenizer = createInputTokenizer({ maxPasteCodeUnits: 4 });
+
+  assert.deepEqual(tokenizer.tokenize("\x1b[200~abc"), []);
+  assert.deepEqual(tokenizer.tokenize("de"), [{
+    type: "unknown",
+    sequence: "\x1b[200~"
+  }]);
+  assert.equal(tokenizer.hasPending(), true);
+  assert.deepEqual(tokenizer.tokenize("discarded\x1b[201~Z"), [{
+    type: "text",
+    value: "Z",
+    sequence: "Z"
+  }]);
+  assert.equal(tokenizer.hasPending(), false);
+});
+
+test("tokenizer accepts paste exactly at the configured capacity", () => {
+  const tokenizer = createInputTokenizer({ maxPasteCodeUnits: 4 });
+  assert.deepEqual(tokenizer.tokenize("\x1b[200~abcd\x1b[201~"), [{
+    type: "paste",
+    value: "abcd",
+    sequence: "\x1b[200~abcd\x1b[201~"
+  }]);
+});
+
+test("tokenizer rejects invalid paste capacities", () => {
+  assert.throws(
+    () => createInputTokenizer({ maxPasteCodeUnits: -1 }),
+    /non-negative safe integer/
+  );
+});
+
 test("tokenizer flushes incomplete CSI as one unknown token", () => {
   const tokenizer = createInputTokenizer();
 

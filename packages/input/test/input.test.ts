@@ -198,6 +198,21 @@ test("parseInputChunk maps Kitty F1-F24 with modifiers", () => {
   );
 });
 
+test("parseInputChunk rejects invalid Kitty and modifyOtherKeys codepoints without throwing", () => {
+  for (const sequence of [
+    "\x1b[1114112u",
+    "\x1b[55296u",
+    "\x1b[27;2;1114112~",
+    "\x1b[27;2;55296~"
+  ]) {
+    assert.doesNotThrow(() => [...parseInputChunk(sequence)]);
+    assert.deepEqual(
+      [...parseInputChunk(sequence)].map((event) => event.name),
+      ["unknown"]
+    );
+  }
+});
+
 test("parseInputChunk maps xterm modifiers for every F1-F12 key", () => {
   const tildeCodes = [
     "15", "17", "18", "19", "20", "21", "23", "24"

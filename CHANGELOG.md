@@ -12,6 +12,10 @@ BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见�
   在一次编辑事务中插入完整文本，不再按 grapheme 触发大量同步更新。直接使用
   `@bindtty/input` parser 的调用方仍保留原默认行为，也可显式使用
   `pasteMode: "event"`。
+- bracketed paste 默认最多保留 1,048,576 个 UTF-16 code unit；超限产生单个
+  `unknown` 事件并丢弃到 paste terminator，避免未结束 paste 无限占用内存。
+- Kitty 与 modifyOtherKeys codepoint 在转换前验证 Unicode scalar value，畸形或
+  超范围输入降级为 `unknown`，不再可能由 `String.fromCodePoint()` 抛错。
 
 ## 0.1.0-beta.3
 

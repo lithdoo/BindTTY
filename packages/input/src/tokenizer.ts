@@ -59,29 +59,70 @@ export interface InputTokenizer {
 const bracketedPasteStart = "\x1b[200~";
 const bracketedPasteEnd = "\x1b[201~";
 const maxControlSequenceLength = 4096;
+export const DEFAULT_MAX_PASTE_CODE_UNITS = 1_048_576;
 
-export function createInputTokenizer(): InputTokenizer {
+export interface InputTokenizerOptions {
+  maxPasteCodeUnits?: number;
+}
+
+export function createInputTokenizer(
+  options: InputTokenizerOptions = {}
+): InputTokenizer {
+  const maxPasteCodeUnits =
+    options.maxPasteCodeUnits ?? DEFAULT_MAX_PASTE_CODE_UNITS;
+  if (!Number.isSafeInteger(maxPasteCodeUnits) || maxPasteCodeUnits < 0) {
+    throw new RangeError("maxPasteCodeUnits must be a non-negative safe integer");
+  }
   let decoder = new StringDecoder("utf8");
   let pending = "";
   let paste = "";
   let pasteSequence = "";
   let inPaste = false;
+  let discardingPaste = false;
 
   function tokenizeSource(source: string, final: boolean): { tokens: RawInputToken[]; pending: string } {
     const tokens: RawInputToken[] = [];
     let index = 0;
 
     while (index < source.length) {
-      if (inPaste) {
+      if (discardingPaste) {
         const endIndex = source.indexOf(bracketedPasteEnd, index);
         if (endIndex === -1) {
-          paste += source.slice(index);
-          pasteSequence += source.slice(index);
+          return { tokens, pending: "" };
+        }
+        discardingPaste = false;
+        index = endIndex + bracketedPasteEnd.length;
+        continue;
+      }
+
+      if (inPaste) {
+        const endIndex = source.indexOf(bracketedPasteEnd, index);
+        const contentEnd = endIndex === -1 ? source.length : endIndex;
+        const content = source.slice(index, contentEnd);
+        if (paste.length + content.length > maxPasteCodeUnits) {
+          tokens.push({
+            type: "unknown",
+            sequence: bracketedPasteStart
+          });
+          paste = "";
+          pasteSequence = "";
+          inPaste = false;
+          if (endIndex === -1) {
+            discardingPaste = true;
+            return { tokens, pending: "" };
+          }
+          index = endIndex + bracketedPasteEnd.length;
+          continue;
+        }
+
+        if (endIndex === -1) {
+          paste += content;
+          pasteSequence += content;
           return { tokens, pending: "" };
         }
 
-        paste += source.slice(index, endIndex);
-        pasteSequence += source.slice(index, endIndex + bracketedPasteEnd.length);
+        paste += content;
+        pasteSequence += content + bracketedPasteEnd;
         tokens.push({
           type: "paste",
           value: paste,
@@ -171,6 +212,7 @@ export function createInputTokenizer(): InputTokenizer {
         pasteSequence = "";
         inPaste = false;
       }
+      discardingPaste = false;
 
       return tokens;
     },
@@ -180,9 +222,10 @@ export function createInputTokenizer(): InputTokenizer {
       paste = "";
       pasteSequence = "";
       inPaste = false;
+      discardingPaste = false;
     },
     hasPending(): boolean {
-      return pending !== "" || inPaste;
+      return pending !== "" || inPaste || discardingPaste;
     }
   };
 }

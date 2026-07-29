@@ -14,6 +14,7 @@ export const DEFAULT_ESCAPE_AMBIGUITY_TIMEOUT_MS = 30;
 
 export interface RawStdinInputOptions {
   escapeAmbiguityTimeoutMs?: number;
+  maxPasteCodeUnits?: number;
   clock?: InputParserSessionClock;
 }
 
@@ -42,6 +43,7 @@ export class RawStdinInput implements StdinInputAdapter {
     const session = createInputParserSession(onKey, {
       escapeFlushMode: "escape",
       pasteMode: "event",
+      maxPasteCodeUnits: this.options.maxPasteCodeUnits,
       pendingTimeoutMs: this.options.escapeAmbiguityTimeoutMs,
       clock: this.options.clock
     });

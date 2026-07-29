@@ -174,7 +174,7 @@ function parseKittyOrFixterms(token: CsiToken): InputEvent | null {
 
   const codepoint = Number(match[1]);
   const modifier = match[2];
-  if (!Number.isFinite(codepoint)) {
+  if (!isUnicodeScalarValue(codepoint)) {
     return null;
   }
 
@@ -222,7 +222,7 @@ function parseModifyOtherKeys(token: CsiToken): InputEvent | null {
 
   const flags = readXtermModifierFlags(match[1]);
   const codepoint = Number(match[2]);
-  if (!Number.isFinite(codepoint)) {
+  if (!isUnicodeScalarValue(codepoint)) {
     return null;
   }
 
@@ -253,6 +253,15 @@ function parseModifyOtherKeys(token: CsiToken): InputEvent | null {
   }
 
   return null;
+}
+
+function isUnicodeScalarValue(codepoint: number): boolean {
+  return (
+    Number.isInteger(codepoint) &&
+    codepoint >= 0 &&
+    codepoint <= 0x10ffff &&
+    (codepoint < 0xd800 || codepoint > 0xdfff)
+  );
 }
 
 function parseCsiTildeModifiedEnter(token: CsiToken): InputEvent | null {

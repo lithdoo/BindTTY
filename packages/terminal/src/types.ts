@@ -238,6 +238,12 @@ export interface CreateNodeTerminalOptions {
    * a standalone Escape key. Defaults to 30ms.
    */
   escapeAmbiguityTimeoutMs?: number;
+  /**
+   * Maximum decoded UTF-16 code units retained for one bracketed paste.
+   * Defaults to 1,048,576. Overflow becomes one unknown event and input is
+   * discarded through the matching paste terminator.
+   */
+  maxPasteCodeUnits?: number;
   platformAdapter?: PlatformTerminalAdapter;
   stdinInputAdapter?: StdinInputAdapter;
   /** Native Win32 console record source, normally supplied by the optional binding. */

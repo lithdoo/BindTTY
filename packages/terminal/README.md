@@ -70,6 +70,10 @@ as one semantic `{ kind: "paste", text }` event. The lower-level
 that want atomic paste there can select `pasteMode: "event"`. TerminalHost does
 not expose a legacy paste expansion option.
 
+One paste retains at most `maxPasteCodeUnits` decoded UTF-16 code units
+(default `1_048_576`). Overflow emits one `unknown` event and discards input
+through the matching paste terminator so later keyboard input can resume.
+
 Set `BINDTTY_INPUT_TRACE=1` to write an optional JSONL diagnostic trace.
 `BINDTTY_INPUT_TRACE_FILE` selects the destination. The trace records a safe
 environment snapshot, backend selection reason, capabilities, raw input or

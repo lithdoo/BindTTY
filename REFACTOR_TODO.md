@@ -416,13 +416,13 @@ terminal          interaction
 
 M1 完成不依赖完整 InputSession 的 parser/tokenizer 安全项：
 
-- [ ] Kitty codepoint 在调用 `String.fromCodePoint` 前验证 Unicode 范围。
-- [ ] bracketed paste 未结束时有容量保护。
-- [ ] 保留 tokenizer 已有的 4096 UTF-16 code unit CSI 上限，并为普通 CSI、Kitty、
+- [x] Kitty codepoint 在调用 `String.fromCodePoint` 前验证 Unicode 范围。
+- [x] bracketed paste 未结束时有容量保护。
+- [x] 保留 tokenizer 已有的 4096 UTF-16 code unit CSI 上限，并为普通 CSI、Kitty、
       modifyOtherKeys 增加超限契约测试。
 - [ ] 为 SS3 增加跨 chunk、缺失 final 和原子消费测试，不把 SS3 当作可变长度
       CSI 处理。
-- [ ] malformed input 产生 `unknown`，不得导致进程崩溃。
+- [x] malformed input 产生 `unknown`，不得导致进程崩溃。
 
 M5 随 InputSession 完成的 session 安全项：
 

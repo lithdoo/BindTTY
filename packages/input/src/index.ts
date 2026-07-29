@@ -51,7 +51,11 @@ export type {
   TextToken,
   UnknownToken
 } from "./tokenizer.js";
-export { createInputTokenizer } from "./tokenizer.js";
+export {
+  createInputTokenizer,
+  DEFAULT_MAX_PASTE_CODE_UNITS
+} from "./tokenizer.js";
+export type { InputTokenizerOptions } from "./tokenizer.js";
 
 export interface DynamicKeymapEntry {
   starter: string;
@@ -68,6 +72,7 @@ export interface ParseInputChunkOptions {
   keymap?: InputKeymap;
   pasteMode?: PasteMode;
   escapeFlushMode?: EscapeFlushMode;
+  maxPasteCodeUnits?: number;
 }
 
 export interface InputParser {
@@ -90,7 +95,9 @@ export function parseInputChunk(
 }
 
 export function createInputParser(options: ParseInputChunkOptions = {}): InputParser {
-  const tokenizer = createInputTokenizer();
+  const tokenizer = createInputTokenizer({
+    maxPasteCodeUnits: options.maxPasteCodeUnits
+  });
   const reverse = buildReverseKeymap(options.keymap?.fixed ?? defaultInputKeymap.fixed);
   const dynamic = options.keymap?.dynamic ?? defaultInputKeymap.dynamic ?? [];
   const pasteMode = options.pasteMode ?? "text";
