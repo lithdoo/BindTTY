@@ -466,3 +466,25 @@ test('owned computed and effect release their source dependencies', () => {
   assert.equal(effectRuns, 2);
   assert.throws(() => derived.get(), /computation has been disposed/);
 });
+
+test('subscriptions created inside an owner are disposed automatically', () => {
+  const source = createSignal(0);
+  const derived = computed(() => source.get() * 2);
+  const owner = createReactiveOwner();
+  const sourceValues = [];
+  const derivedValues = [];
+
+  runWithOwner(owner, () => {
+    source.subscribe((value) => sourceValues.push(value));
+    derived.subscribe((value) => derivedValues.push(value));
+  });
+
+  source.set(1);
+  assert.deepEqual(sourceValues, [1]);
+  assert.deepEqual(derivedValues, [2]);
+
+  disposeReactiveOwner(owner);
+  source.set(2);
+  assert.deepEqual(sourceValues, [1]);
+  assert.deepEqual(derivedValues, [2]);
+});

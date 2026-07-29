@@ -206,9 +206,11 @@ export function createSignal<T>(initialValue: T): Signal<T> {
     },
     subscribe(listener) {
       listeners.add(listener);
-      return () => {
+      const dispose = (): void => {
         listeners.delete(listener);
       };
+      registerOwnedCleanup(dispose);
+      return dispose;
     }
   };
 }
@@ -321,13 +323,15 @@ export function computed<T>(derive: () => T): ReadableSignal<T> {
       if (wasDormant) {
         recompute();
       }
-      return () => {
+      const dispose = (): void => {
         listeners.delete(listener);
         if (!hasConsumers()) {
           cleanupDependencies(computation);
           stale = true;
         }
       };
+      registerOwnedCleanup(dispose);
+      return dispose;
     }
   };
 
