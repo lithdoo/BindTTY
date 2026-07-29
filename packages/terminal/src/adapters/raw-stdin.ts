@@ -1,7 +1,5 @@
 import type { Readable } from "node:stream";
 
-import { createInputParser, toSemanticInputEvent } from "@bindtty/input";
-
 import type { Dispose, TerminalKeyEvent } from "../types.js";
 import type { StdinInputAdapter } from "../types.js";
 import type { InputTraceOption } from "../types.js";
@@ -9,6 +7,7 @@ import {
   createInputTraceListener,
   traceRawInput
 } from "../input-trace.js";
+import { createInputParserSession } from "../input-parser-session.js";
 
 export class RawStdinInput implements StdinInputAdapter {
   readonly kind = "raw" as const;
@@ -24,7 +23,7 @@ export class RawStdinInput implements StdinInputAdapter {
     stdin: Readable,
     onKey: (event: TerminalKeyEvent) => void
   ): Dispose {
-    const parser = createInputParser();
+    const session = createInputParserSession(onKey);
     let pasteTraceOpen = false;
     let traceSuffix = "";
     const handler = (chunk: Buffer | string): void => {
@@ -43,15 +42,13 @@ export class RawStdinInput implements StdinInputAdapter {
       }
       traceSuffix = combinedTraceText.slice(-5);
 
-      for (const event of parser.parse(chunk)) {
-        onKey(toSemanticInputEvent(event));
-      }
+      session.push(chunk);
     };
 
     stdin.on("data", handler);
     return () => {
       stdin.off("data", handler);
-      parser.reset();
+      session.reset();
       pasteTraceOpen = false;
       traceSuffix = "";
     };

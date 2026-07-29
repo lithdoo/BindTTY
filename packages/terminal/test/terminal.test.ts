@@ -1978,6 +1978,63 @@ test("RawStdinInput preserves split raw input sequences", () => {
   ]);
 });
 
+test("RawStdinInput preserves split SS3 sequences atomically", () => {
+  const stdin = new PassThrough();
+  const adapter = new RawStdinInput();
+  const events: TerminalKeyEvent[] = [];
+  const detach = adapter.attach(stdin, (event) => {
+    events.push(event);
+  });
+
+  stdin.write("\x1bO");
+  assert.deepEqual(events, []);
+  stdin.write("Q");
+  detach();
+
+  assert.deepEqual(events, [semanticKey("f2", "\x1bOQ")]);
+});
+
+test("RawStdinInput distinguishes complete Alt text from standalone Escape", () => {
+  const stdin = new PassThrough();
+  const adapter = new RawStdinInput();
+  const events: TerminalKeyEvent[] = [];
+  const detach = adapter.attach(stdin, (event) => {
+    events.push(event);
+  });
+
+  stdin.write("\x1bx");
+  stdin.write("\x1b");
+  detach();
+
+  assert.equal(events.length, 1);
+  assert.deepEqual(events[0], semanticKey("x", "\x1bx", { alt: true }));
+});
+
+test("RawStdinInput detach discards an incomplete parser sequence", () => {
+  const stdin = new PassThrough();
+  const adapter = new RawStdinInput();
+  const firstEvents: TerminalKeyEvent[] = [];
+  const secondEvents: TerminalKeyEvent[] = [];
+  const firstDetach = adapter.attach(stdin, (event) => {
+    firstEvents.push(event);
+  });
+
+  stdin.write("\x1b[13;");
+  firstDetach();
+
+  const secondDetach = adapter.attach(stdin, (event) => {
+    secondEvents.push(event);
+  });
+  stdin.write("5u");
+  secondDetach();
+
+  assert.deepEqual(firstEvents, []);
+  assert.deepEqual(
+    secondEvents.map((event) => event.kind === "text" ? event.text : event.kind),
+    ["5", "u"]
+  );
+});
+
 test("RawStdinInput traces raw bytes without changing dispatch", () => {
   const stdin = new PassThrough();
   const records: InputTraceRecord[] = [];
