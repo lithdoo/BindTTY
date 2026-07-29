@@ -1,6 +1,6 @@
 # BindTTY 系统性重构 TODO
 
-> 状态：M0–M4 已完成，待执行 M5
+> 状态：M0–M5 已完成，待执行 M6
 > 基线版本：`0.1.0-beta.3`  
 > 建立日期：2026-07-29  
 > 最近核对：2026-07-29  
@@ -41,6 +41,15 @@
 - [x] M4-05 FrameCoordinator。
 - [x] M4-06 AppLifecycle。
 - [x] M4 阶段 gate：`786 passed / 2 skipped`，见基线记录。
+- [x] M5-01 事件依赖方向。
+- [x] M5-02 完整 InputSession。
+- [x] M5-03 ResolvedTerminalProfile。
+- [x] M5-04 ResizeCoordinator。
+- [x] M5-05 TerminalOutput。
+- [x] M5-06 Capability negotiation。
+- [x] M5-07 LifecycleGuard。
+- [x] M5-08 `host.ts` 收口。
+- [x] M5 阶段 gate：`792 passed / 2 skipped`，见基线记录。
 
 ## 1. 目标
 
@@ -425,19 +434,19 @@ terminal          interaction
                   widgets
 ```
 
-- [ ] `interaction` 直接依赖 `@bindtty/input` 的语义事件，不依赖 TerminalHost。
-- [ ] `TerminalKeyEvent` 逐步收敛为语义输入事件别名或兼容导出。
-- [ ] Textarea 不再从 `@bindtty/terminal` 导入事件类型。
-- [ ] jsx-runtime 不再复制 protocol/modifier/key event 联合类型。
-- [ ] interaction handler 类型成为 JSX 与 widgets 的单一来源。
+- [x] `interaction` 直接依赖 `@bindtty/input` 的语义事件，不依赖 TerminalHost。
+- [x] `TerminalKeyEvent` 逐步收敛为语义输入事件别名或兼容导出。
+- [x] Textarea 不再从 `@bindtty/terminal` 导入事件类型。
+- [x] jsx-runtime 不再复制 protocol/modifier/key event 联合类型。
+- [x] interaction handler 类型成为 JSX 与 widgets 的单一来源。
 
 ### R3.2 输入 session
 
-- [ ] 把 parser、协议协商、pending timeout、paste 和 trace 归入 InputSession。
-- [ ] backend 只负责读取原始来源或 Win32 records。
-- [ ] InputSession 负责统一发布语义事件。
-- [ ] start/stop/restart 不遗留 parser、timer 或协议状态。
-- [ ] backend fallback 原因可以稳定诊断。
+- [x] 把 parser、协议协商、pending timeout、paste 和 trace 归入 InputSession。
+- [x] backend 只负责读取原始来源或 Win32 records。
+- [x] InputSession 负责统一发布语义事件。
+- [x] start/stop/restart 不遗留 parser、timer 或协议状态。
+- [x] backend fallback 原因可以稳定诊断。
 
 ### R3.3 输入健壮性
 
@@ -453,16 +462,16 @@ M1 完成不依赖完整 InputSession 的 parser/tokenizer 安全项：
 
 M5 随 InputSession 完成的 session 安全项：
 
-- [ ] 所有 pending 控制序列都有 timeout/reset 策略。
-- [ ] 为 pending SS3 增加 timeout 测试。
-- [ ] start/stop/restart 后不继承旧 pending sequence、paste、timer 或协议状态。
-- [ ] pending timeout 使用注入 clock/timer，并明确默认值、合法范围和超时后的
+- [x] 所有 pending 控制序列都有 timeout/reset 策略。
+- [x] 为 pending SS3 增加 timeout 测试。
+- [x] start/stop/restart 后不继承旧 pending sequence、paste、timer 或协议状态。
+- [x] pending timeout 使用注入 clock/timer，并明确默认值、合法范围和超时后的
       `unknown`/fallback 事件语义。
 
 跨 backend 契约：
 
-- [ ] repeat、modifier、AltGr、surrogate pair 有跨 backend 契约测试。
-- [ ] F1–F24 使用参数化测试覆盖所有 backend，不为 F2 建立应用层专项分支。
+- [x] repeat、modifier、AltGr、surrogate pair 有跨 backend 契约测试。
+- [x] F1–F24 使用参数化测试覆盖所有 backend，不为 F2 建立应用层专项分支。
 
 ### R3.4 Interaction 索引
 
@@ -478,58 +487,58 @@ M5 随 InputSession 完成的 session 安全项：
 
 ### R4.1 ResolvedTerminalProfile
 
-- [ ] 创建一次性解析的 `ResolvedTerminalProfile`。
-- [ ] 统一平台来源，不混用 `process.platform` 与 adapter name。
-- [ ] profile 包含 TTY、host、input/output capabilities、resize policy。
-- [ ] resize、input、synchronized output 都只读取 profile。
-- [ ] PlatformAdapter 注入测试覆盖所有默认策略。
-- [ ] 保留显式 option override。
+- [x] 创建一次性解析的 `ResolvedTerminalProfile`。
+- [x] 统一平台来源，不混用 `process.platform` 与 adapter name。
+- [x] profile 包含 TTY、host、input/output capabilities、resize policy。
+- [x] resize、input、synchronized output 都只读取 profile。
+- [x] PlatformAdapter 注入测试覆盖所有默认策略。
+- [x] 保留显式 option override。
 
 ### R4.2 ResizeCoordinator
 
-- [ ] 从 `host.ts` 提取 ResizeCoordinator。
-- [ ] 统一 event 与 polling sample。
-- [ ] 统一 viewport 校验与去重。
-- [ ] 统一 burst minimum interval 与 settle final publish。
-- [ ] 注入 clock/timer，测试不依赖真实等待。
-- [ ] start/stop/restart 清理所有 timer 和 listener。
-- [ ] Cursor、ConPTY、普通 POSIX resize 使用同一状态机。
-- [ ] 明确 burst minimum interval、settle delay、最大发布频率的默认值和 override。
+- [x] 从 `host.ts` 提取 ResizeCoordinator。
+- [x] 统一 event 与 polling sample。
+- [x] 统一 viewport 校验与去重。
+- [x] 统一 burst minimum interval 与 settle final publish。
+- [x] 注入 clock/timer，测试不依赖真实等待。
+- [x] start/stop/restart 清理所有 timer 和 listener。
+- [x] Cursor、ConPTY、普通 POSIX resize 使用同一状态机。
+- [x] 明确 burst minimum interval、settle delay、最大发布频率的默认值和 override。
 
 ### R4.3 TerminalOutput / FrameSink
 
 边界：FrameSink 是 App 使用的提交接口，TerminalOutput 是 terminal 包中的一种实现；
 两者不得合并成要求 App 理解 terminal capability 的单一对象。
 
-- [ ] 区分 `writeRaw(chunk)` 与 `present(frame)`。
-- [ ] 生命周期和协议控制序列只使用 raw write。
-- [ ] renderer patch 作为完整 frame 提交。
-- [ ] synchronized-output 只包裹完整 frame。
-- [ ] 保留旧 `write()` 的兼容语义并给出迁移期。
-- [ ] 增加拆分 ANSI raw write 不被同步边界破坏的测试。
-- [ ] 输出队列和 drain 状态由 TerminalOutput 独立管理。
+- [x] 区分 `writeRaw(chunk)` 与 `present(frame)`。
+- [x] 生命周期和协议控制序列只使用 raw write。
+- [x] renderer patch 作为完整 frame 提交。
+- [x] synchronized-output 只包裹完整 frame。
+- [x] 保留旧 `write()` 的兼容语义并给出迁移期。
+- [x] 增加拆分 ANSI raw write 不被同步边界破坏的测试。
+- [x] 输出队列和 drain 状态由 TerminalOutput 独立管理。
 
 ### R4.4 Capability negotiation
 
-- [ ] synchronized output 不再仅以 `win32 TTY` 作为能力判断。
-- [ ] 定义已知 host profile、保守 fallback 和显式 override。
-- [ ] 评估 DECRQM/能力查询是否值得实现。
+- [x] synchronized output 不再仅以 `win32 TTY` 作为能力判断。
+- [x] 定义已知 host profile、保守 fallback 和显式 override。
+- [x] 评估 DECRQM/能力查询是否值得实现。
 - [ ] 若采用 DECRQM，查询与响应必须由 InputSession/统一协议协商器路由，不能增加
       第二个独立 stdin consumer，也不能与 keyboard probe 竞争响应。
-- [ ] 不支持 DEC 2026 的终端保持正常输出。
-- [ ] capability trace 可用于实机诊断。
+- [x] 不支持 DEC 2026 的终端保持正常输出。
+- [x] capability trace 可用于实机诊断。
 
 ### R4.5 LifecycleGuard
 
 本节只负责 TerminalHost 和进程级终端状态恢复；App listener/runtime/renderer 的
 回滚由 R2.3 AppLifecycle 负责。
 
-- [ ] Terminal start 失败时回滚已启用的模式。
-- [ ] stop/dispose 即使部分恢复失败也继续清理其他资源。
-- [ ] 增加 SIGINT、SIGTERM、SIGHUP 的 best-effort restore。
-- [ ] 明确 uncaught exception/unhandled rejection 的恢复策略。
-- [ ] 多 TerminalHost 实例共享进程 hook 时不重复恢复。
-- [ ] 恢复 cursor、alt screen、raw mode 和 keyboard protocol。
+- [x] Terminal start 失败时回滚已启用的模式。
+- [x] stop/dispose 即使部分恢复失败也继续清理其他资源。
+- [x] 增加 SIGINT、SIGTERM、SIGHUP 的 best-effort restore。
+- [x] 明确 uncaught exception/unhandled rejection 的恢复策略。
+- [x] 多 TerminalHost 实例共享进程 hook 时不重复恢复。
+- [x] 恢复 cursor、alt screen、raw mode 和 keyboard protocol。
 
 ### R4.6 `host.ts` 收口
 
@@ -543,8 +552,8 @@ TerminalOutput
 LifecycleGuard
 ```
 
-- [ ] `host.ts` 不再直接拥有所有 timer、parser、protocol、resize 和 output 状态。
-- [ ] 公共 `TerminalHost` API 在拆分过程中保持兼容。
+- [x] `host.ts` 不再直接拥有所有 timer、parser、protocol、resize 和 output 状态。
+- [x] 公共 `TerminalHost` API 在拆分过程中保持兼容。
 
 ---
 

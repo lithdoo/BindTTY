@@ -212,3 +212,31 @@ M4 新增的分级 fixture 保存在
 100 次 paint-only 更新只调用 1 次 layout（初始布局），而 layout 与 structure fixture
 各调用 101 次。M0 没有分级 fixture，因此本次结果作为后续里程碑的首份增量调度基线；
 吞吐数字只作同环境趋势观察，layout 调用次数是强制契约。
+
+## M5 完成 gate
+
+2026-07-29 在相同 Linux/WSL、Node.js `v20.19.2` 环境完成验证：
+
+| 检查 | 结果 |
+| --- | --- |
+| `npm test` | 792 passed / 2 skipped，185.221 s |
+| `npm run check:dependencies` | passed |
+| `npm run smoke:consumer` | 13 个公开包通过 |
+
+测试分层结果为：
+
+- unit：650 passed / 2 skipped；
+- integration：71 passed；
+- mock E2E：49 passed；
+- real PTY：22 passed。
+
+M5 将 `host.ts` 收口为 177 行组合根，组合一次性解析的
+`ResolvedTerminalProfile`、`InputSession`、`ResizeCoordinator`、`TerminalOutput`
+和 `LifecycleGuard`。新增事件依赖、raw/frame 输出、profile、pending SS3、
+session restart、共享 signal hook 和已知 host capability 契约测试，无新增 skip。
+
+DECRQM 暂不实现：当前采用已知 host profile、保守 fallback 与显式 override，避免引入
+第二个 stdin consumer；未来只有 ADR 和实测收益成立时才经 InputSession 增加查询。
+uncaught exception/unhandled rejection 不注册额外全局 handler，避免改变应用错误语义；
+同步 start/stop/dispose 回滚与 SIGINT/SIGTERM/SIGHUP 使用 best-effort 恢复。
+Windows Terminal、PowerShell、conhost/ConPTY 实机矩阵仍按计划留在 M7 执行。
