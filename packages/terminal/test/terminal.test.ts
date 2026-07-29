@@ -466,6 +466,24 @@ test("resolved terminal profile applies platform defaults once and preserves ove
   });
 });
 
+test("known host profile enables synchronized output outside win32", () => {
+  const previous = process.env.TERM_PROGRAM;
+  process.env.TERM_PROGRAM = "vscode";
+  try {
+    const stdout = createMockStdout();
+    stdout.isTTY = true;
+    const profile = resolveTerminalProfile({ stdout });
+    assert.equal(profile.host, "vscode");
+    assert.equal(profile.output.synchronizedOutput, true);
+  } finally {
+    if (previous === undefined) {
+      delete process.env.TERM_PROGRAM;
+    } else {
+      process.env.TERM_PROGRAM = previous;
+    }
+  }
+});
+
 test("LifecycleGuard shares process hooks across terminal instances", () => {
   const baseline = process.listenerCount("SIGTERM");
   const first = createLifecycleGuard({ restore() {} });

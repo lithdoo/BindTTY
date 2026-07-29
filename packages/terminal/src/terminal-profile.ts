@@ -48,12 +48,13 @@ export function resolveTerminalProfile(
   const inputEnvironment = detectTerminalInputEnvironment(options, { platform });
   const win32Policy = platform === "win32";
 
+  const host = resolveHost(inputEnvironment);
   return {
     platform,
     adapter,
     inputEnvironment,
     inputBackend: selectInputBackend(options, inputEnvironment),
-    host: resolveHost(inputEnvironment),
+    host,
     input: {
       tty: inputEnvironment.stdinIsTTY,
       rawModeAvailable: inputEnvironment.canSetRawMode
@@ -62,7 +63,10 @@ export function resolveTerminalProfile(
       tty: inputEnvironment.stdoutIsTTY,
       synchronizedOutput:
         options.synchronizedOutput ??
-        (win32Policy && inputEnvironment.stdoutIsTTY)
+        (inputEnvironment.stdoutIsTTY &&
+          (win32Policy ||
+            host === "windows-terminal" ||
+            host === "vscode"))
     },
     resize: {
       pollIntervalMs: normalizeDurationMs(
