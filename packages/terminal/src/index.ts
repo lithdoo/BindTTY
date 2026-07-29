@@ -13,6 +13,11 @@ export {
   mapWin32KeyRecord
 } from "./adapters/win32-console-input.js";
 export { createNodeTerminal } from "./host.js";
+export { createTerminalOutput } from "./terminal-output.js";
+export type {
+  TerminalOutput,
+  TerminalOutputOptions
+} from "./terminal-output.js";
 export {
   detectTerminalInputEnvironment,
   selectInputBackend

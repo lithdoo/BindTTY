@@ -502,6 +502,22 @@ test("write frames output atomically when synchronized output is enabled", () =>
   ]);
 });
 
+test("writeRaw never adds synchronized frame boundaries", () => {
+  const stdout = createMockStdout();
+  const terminal = createNodeTerminal({
+    stdout,
+    synchronizedOutput: true
+  });
+
+  terminal.writeRaw?.("\x1b[?25l");
+  terminal.present?.("frame");
+
+  assert.deepEqual(stdout.writes, [
+    "\x1b[?25l",
+    ANSI.beginSynchronizedOutput + "frame" + ANSI.endSynchronizedOutput
+  ]);
+});
+
 test("synchronized output preserves stdout backpressure", () => {
   const stdout = createMockStdout();
   stdout.write = function writeBlocked(chunk: string): boolean {

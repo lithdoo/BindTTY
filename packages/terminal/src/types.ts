@@ -284,6 +284,10 @@ export interface TerminalHost {
    * callers to wait for drain before writing another frame.
    */
   write(chunk: string): boolean | void;
+  /** Writes a protocol or lifecycle sequence without frame synchronization. */
+  writeRaw?(chunk: string): boolean | void;
+  /** Presents one complete renderer frame, optionally using synchronization. */
+  present?(frame: string): boolean | void;
 
   onResize(listener: ResizeListener): Dispose;
   onDrain?(listener: () => void): Dispose;

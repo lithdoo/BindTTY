@@ -19,6 +19,7 @@ import {
   traceTerminalEnvironment
 } from "./input-trace.js";
 import { discoverNativeWin32InputProvider } from "./native-win32-provider.js";
+import { createTerminalOutput } from "./terminal-output.js";
 import type {
   CreateNodeTerminalOptions,
   Dispose,
@@ -139,7 +140,6 @@ export function createNodeTerminal(
   let started = false;
   let disposed = false;
   const resizeListeners = new Set<ResizeListener>();
-  const drainListeners = new Set<() => void>();
   const keyListeners = new Set<TerminalKeyListener>();
   const keyboardCapabilitiesListeners = new Set<KeyboardCapabilitiesListener>();
   const platform = resolvePlatformAdapter(options);
@@ -148,7 +148,10 @@ export function createNodeTerminal(
     (platform.name === "win32" && options.stdout.isTTY === true);
   const inputTrace = createInputTraceListener(options.inputTrace);
   let detachStdin: Dispose = () => {};
-  let stdoutDrainAttached = false;
+  const output = createTerminalOutput({
+    stdout: options.stdout,
+    synchronizedOutput: synchronizedOutputEnabled
+  });
   let resizePollTimer: ReturnType<typeof setInterval> | undefined;
   let resizeFrameTimer: ReturnType<typeof setTimeout> | undefined;
   let resizeSettleTimer: ReturnType<typeof setTimeout> | undefined;
@@ -530,62 +533,11 @@ export function createNodeTerminal(
   }
 
   function writeRaw(chunk: string): boolean {
-    if (disposed || chunk === "") {
-      return true;
-    }
-
-    return options.stdout.write(chunk) !== false;
+    return output.writeRaw(chunk);
   }
 
   function writeFrame(chunk: string): boolean {
-    if (disposed || chunk === "") {
-      return true;
-    }
-
-    return writeRaw(
-      synchronizedOutputEnabled
-        ? ANSI.beginSynchronizedOutput +
-          chunk +
-          ANSI.endSynchronizedOutput
-        : chunk
-    );
-  }
-
-  function attachStdoutDrain(): void {
-    if (
-      stdoutDrainAttached ||
-      !started ||
-      drainListeners.size === 0
-    ) {
-      return;
-    }
-    const on = options.stdout.on as
-      | ((event: "drain", listener: () => void) => unknown)
-      | undefined;
-    if (!on) {
-      return;
-    }
-
-    on.call(options.stdout, "drain", handleStdoutDrain);
-    stdoutDrainAttached = true;
-  }
-
-  function detachStdoutDrain(): void {
-    if (!stdoutDrainAttached) {
-      return;
-    }
-
-    const off = options.stdout.off as
-      | ((event: "drain", listener: () => void) => unknown)
-      | undefined;
-    off?.call(options.stdout, "drain", handleStdoutDrain);
-    stdoutDrainAttached = false;
-  }
-
-  function handleStdoutDrain(): void {
-    for (const listener of [...drainListeners]) {
-      listener();
-    }
+    return output.present(chunk);
   }
 
   const terminal: TerminalHost = {
@@ -682,7 +634,7 @@ export function createNodeTerminal(
       }
 
       options.stdout.on?.("resize", handleStdoutResize);
-      attachStdoutDrain();
+      output.start();
       startWin32ResizePolling();
     },
 
@@ -694,7 +646,7 @@ export function createNodeTerminal(
       stopWin32ResizePolling();
       resetResizeCoordinator();
       options.stdout.off?.("resize", handleStdoutResize);
-      detachStdoutDrain();
+      output.stop();
       detachStdin();
       detachStdin = () => {};
 
@@ -727,13 +679,15 @@ export function createNodeTerminal(
 
       terminal.stop();
       resizeListeners.clear();
-      drainListeners.clear();
+      output.dispose();
       keyListeners.clear();
       keyboardCapabilitiesListeners.clear();
       disposed = true;
     },
 
     write: writeFrame,
+    writeRaw,
+    present: writeFrame,
 
     onResize(listener: ResizeListener): Dispose {
       if (disposed) {
@@ -751,14 +705,7 @@ export function createNodeTerminal(
         return () => {};
       }
 
-      drainListeners.add(listener);
-      attachStdoutDrain();
-      return () => {
-        drainListeners.delete(listener);
-        if (drainListeners.size === 0) {
-          detachStdoutDrain();
-        }
-      };
+      return output.onDrain(listener);
     },
 
     onKey(listener: TerminalKeyListener): Dispose {
