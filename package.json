@@ -10,6 +10,8 @@
     "build:packages": "node scripts/build-graph.mjs packages",
     "build:tests": "npm run build:packages && node scripts/build-graph.mjs tests e2e",
     "build": "node scripts/build-graph.mjs all",
+    "build:clean": "node scripts/build-graph.mjs all --clean",
+    "build:incremental": "node scripts/build-graph.mjs all --incremental",
     "benchmark:baseline": "npm run build:packages && node --expose-gc benchmarks/baseline.mjs",
     "benchmark:ownership": "npm run build:packages && node --expose-gc benchmarks/ownership.mjs",
     "benchmark:frames": "npm run build:packages && node benchmarks/frame-intents.mjs",

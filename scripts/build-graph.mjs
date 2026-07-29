@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -15,13 +15,13 @@ const packageProjects = [
   "packages/signal/tsconfig.json",
   "packages/text/tsconfig.json",
   "packages/vnode/tsconfig.json",
+  "packages/input/tsconfig.json",
+  "packages/interaction/tsconfig.json",
   "packages/jsx-runtime/tsconfig.json",
   "packages/runtime/tsconfig.json",
   "packages/layout/tsconfig.json",
   "packages/renderer-terminal/tsconfig.json",
-  "packages/input/tsconfig.json",
   "packages/terminal/tsconfig.json",
-  "packages/interaction/tsconfig.json",
   "packages/widgets/tsconfig.json",
   "packages/bindtty/tsconfig.json"
 ];
@@ -47,6 +47,8 @@ const e2eProjects = [
 ];
 
 const modes = new Set(process.argv.slice(2));
+const clean = modes.delete("--clean");
+const incremental = modes.delete("--incremental");
 if (modes.size === 0 || modes.has("all")) {
   modes.add("packages");
   modes.add("tests");
@@ -63,9 +65,30 @@ if (projects.length === 0) {
   process.exit(1);
 }
 
+if (clean) {
+  const outputDirectories = [
+    ...packageProjects.map((project) => path.join(root, path.dirname(project), "dist")),
+    ...testProjects.map((project) => path.join(root, path.dirname(project), "dist")),
+    path.join(root, "packages/e2e/dist"),
+    path.join(root, ".cache/build")
+  ];
+  for (const directory of new Set(outputDirectories)) {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
 for (const project of projects) {
   console.log(`\n[build] ${project}`);
-  const result = spawnSync(process.execPath, [tsc, "-p", project], {
+  const args = [tsc, "-p", project];
+  if (incremental) {
+    const cacheFile = path.join(
+      root,
+      ".cache/build",
+      project.replaceAll("/", "__").replace(/\.json$/, ".tsbuildinfo")
+    );
+    args.push("--incremental", "--tsBuildInfoFile", cacheFile);
+  }
+  const result = spawnSync(process.execPath, args, {
     cwd: root,
     stdio: "inherit"
   });
