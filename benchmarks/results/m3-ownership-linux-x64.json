@@ -1,0 +1,18 @@
+{
+  "recordedAt": "2026-07-29T07:27:50.123Z",
+  "environment": {
+    "node": "v20.19.2",
+    "platform": "linux",
+    "arch": "x64",
+    "iterationsPerWave": 2000,
+    "gcExposed": true
+  },
+  "ownershipHeap": {
+    "beforeBytes": 3290208,
+    "afterFirstWaveBytes": 3668272,
+    "afterSecondWaveBytes": 3703720,
+    "firstWaveDeltaBytes": 378064,
+    "secondWaveDeltaBytes": 35448
+  },
+  "retainedReactiveRuns": 0
+}
