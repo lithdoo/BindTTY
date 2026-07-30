@@ -1963,6 +1963,45 @@ test("xterm viewport query consumes split responses and publishes live dimension
   assert.deepEqual(stdin.rawModeCalls, [true, false]);
 });
 
+test("raw VT input isolates Cursor viewport reports from adjacent F2", async () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const stdin = createMockStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    platformAdapter: new Win32PlatformAdapter(),
+    inputBackend: "raw",
+    keyboardProtocol: "legacy",
+    viewportQuery: "xterm",
+    resizePollIntervalMs: 0,
+    resizeMinFrameIntervalMs: 0,
+    resizeSettleDelayMs: 0
+  });
+  const keys: TerminalKeyEvent[] = [];
+  const events: TerminalResizeEvent[] = [];
+  terminal.onKey((event) => keys.push(event));
+  terminal.onResize((event) => events.push(event));
+
+  terminal.start();
+  stdin.emitData("\x1b[8;");
+  stdin.emitData("79;190t\x1bO");
+  stdin.emitData("Q");
+
+  await new Promise((resolve) => setTimeout(resolve, 5));
+
+  assert.deepEqual(
+    keys,
+    [semanticKey("f2", "\x1bOQ", {}, "windows-vt")],
+    "the viewport suffix must not leak as text and F2 must remain one key"
+  );
+  assert.deepEqual(terminal.viewport, { width: 190, height: 79 });
+  assert.deepEqual(events.at(-1)?.viewport, { width: 190, height: 79 });
+  assert.equal(events.every((event) => event.source === "query"), true);
+
+  terminal.stop();
+});
+
 test("polling prefers live getWindowSize when cached columns stay stale", async () => {
   const stdout = createMockStdout();
   stdout.isTTY = true;

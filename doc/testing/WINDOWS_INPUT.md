@@ -28,6 +28,15 @@ GitHub Actions 的 `windows-input` job 必须通过：
 1. F2 只产生 `kind: "key", name: "f2"`，Textarea 不得插入 `B`。
 2. 能力声明 `modifiedEnter: true` 时，Ctrl+Enter 只提交一次且不插入换行。
 3. 能力声明 `modifiedEnter: false` 时，应用显示 F2 等 fallback，不能谎报快捷键。
+
+Cursor / VS Code 在 viewport 查询期间还必须满足：
+
+1. `CSI 8;<rows>;<columns>t` 响应由 terminal response router 完整消费，不能把
+   `;<rows>;<columns>t` 尾部插入输入框。
+2. viewport 响应与 `SS3 Q`（F2）跨任意 stdin chunk 相邻时，仍只发布一个 `f2`
+   语义事件。
+3. native Win32 backend 不把物理 F2 重新编码成 VT 字节；只有查询响应候选字符
+   进入 response router。
 4. caret 使用 ANSI inverse，继承字符前景/背景色，不出现硬编码黑块。
 5. bracketed paste 内容正确进入 value，trace 文件不包含 paste 明文。
 6. stop/dispose 后协议、raw mode、光标和 alternate screen 全部恢复。
