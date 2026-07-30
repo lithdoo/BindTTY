@@ -27,14 +27,7 @@ export function createNodeTerminal(
 
   let started = false;
   let disposed = false;
-  let profile = resolveTerminalProfile(options);
-  if (
-    profile.resize.queryXtermViewport &&
-    options.inputBackend === undefined
-  ) {
-    options = { ...options, inputBackend: "raw" };
-    profile = resolveTerminalProfile(options);
-  }
+  const profile = resolveTerminalProfile(options);
   const output = createTerminalOutput({
     stdout: options.stdout,
     synchronizedOutput: profile.output.synchronizedOutput

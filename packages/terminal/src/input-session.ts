@@ -276,6 +276,8 @@ export function createInputSession(
         const backend = profile.adapter.createStdinInput({
           ...options,
           inputTrace: trace ?? false
+        }, {
+          responseRouter
         });
         activeKind = backend.kind;
         traceBackendSelection(

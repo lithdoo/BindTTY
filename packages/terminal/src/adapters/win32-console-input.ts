@@ -12,6 +12,9 @@ import {
   createInputTraceListener,
   traceWin32KeyRecord
 } from "../input-trace.js";
+import type {
+  TerminalResponseRouter
+} from "../terminal-response-router.js";
 
 const RIGHT_ALT_PRESSED = 0x0001;
 const LEFT_ALT_PRESSED = 0x0002;
@@ -43,7 +46,8 @@ export class Win32ConsoleInput implements StdinInputAdapter {
 
   constructor(
     private readonly provider: Win32InputProvider,
-    trace?: InputTraceOption
+    trace?: InputTraceOption,
+    private readonly responseRouter?: TerminalResponseRouter
   ) {
     this.trace = createInputTraceListener(trace);
   }
@@ -55,18 +59,56 @@ export class Win32ConsoleInput implements StdinInputAdapter {
     onKey: (event: TerminalKeyEvent) => void
   ): Dispose {
     this.pendingHighSurrogate = null;
-    const detach = this.provider.attach((record) => {
-      traceWin32KeyRecord(this.trace, record);
+    let pendingResponseRecords: Win32KeyRecord[] = [];
 
+    const dispatchRecord = (record: Win32KeyRecord): void => {
       for (const normalized of this.normalizeUnicodeRecord(record)) {
         const event = mapWin32KeyRecord(normalized);
         if (event) {
           onKey(event);
         }
       }
+    };
+
+    const replayPendingResponseRecords = (): void => {
+      const records = pendingResponseRecords;
+      pendingResponseRecords = [];
+      for (const record of records) {
+        dispatchRecord(record);
+      }
+    };
+
+    const stopRoutedInput = this.responseRouter?.onInput(() => {
+      replayPendingResponseRecords();
+    });
+
+    const detach = this.provider.attach((record) => {
+      traceWin32KeyRecord(this.trace, record);
+
+      const responseCandidate =
+        record.keyDown &&
+        record.unicode !== "" &&
+        (pendingResponseRecords.length > 0 ||
+          record.unicode.startsWith("\x1b"));
+      if (!this.responseRouter || !responseCandidate) {
+        dispatchRecord(record);
+        return;
+      }
+
+      pendingResponseRecords.push(record);
+      const routed = this.responseRouter.route(
+        record.unicode.repeat(Math.max(1, record.repeatCount))
+      );
+      if (routed.responses.length > 0) {
+        pendingResponseRecords = [];
+      } else if (routed.input !== "") {
+        replayPendingResponseRecords();
+      }
     });
 
     return () => {
+      stopRoutedInput?.();
+      replayPendingResponseRecords();
       this.pendingHighSurrogate = null;
       detach();
     };

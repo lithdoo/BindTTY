@@ -176,7 +176,14 @@ export type TerminalKeyEvent = SemanticInputEvent;
 export interface PlatformTerminalAdapter {
   readonly name: string;
 
-  createStdinInput(options: CreateNodeTerminalOptions): StdinInputAdapter;
+  createStdinInput(
+    options: CreateNodeTerminalOptions,
+    context?: StdinInputContext
+  ): StdinInputAdapter;
+}
+
+export interface StdinInputContext {
+  readonly responseRouter: import("./terminal-response-router.js").TerminalResponseRouter;
 }
 
 export type StdinInputKind = "readline" | "raw" | "win32";

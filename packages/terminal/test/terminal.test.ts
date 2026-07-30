@@ -1823,6 +1823,67 @@ test("win32 polls TTY stdout viewport when columns change without resize event",
   terminal.stop();
 });
 
+test("native Win32 input preserves F2 while routing a viewport response", async () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const stdin = createMockStdin();
+  let win32Listener:
+    | ((record: Parameters<typeof mapWin32KeyRecord>[0]) => void)
+    | undefined;
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    viewportQuery: "xterm",
+    resizePollIntervalMs: 10,
+    resizeMinFrameIntervalMs: 0,
+    resizeSettleDelayMs: 0,
+    platformAdapter: new Win32PlatformAdapter(),
+    win32InputProvider: {
+      attach(listener) {
+        win32Listener = listener;
+        return () => {
+          win32Listener = undefined;
+        };
+      }
+    }
+  });
+  const keys: TerminalKeyEvent[] = [];
+  terminal.onKey((event) => keys.push(event));
+  terminal.start();
+
+  const responseRecord = (unicode: string) => ({
+    keyDown: true,
+    virtualKeyCode: 0,
+    scanCode: 0,
+    unicode,
+    controlKeyState: 0,
+    repeatCount: 1
+  });
+  for (const character of "\x1b[8;40;") {
+    win32Listener?.(responseRecord(character));
+  }
+  win32Listener?.({
+    keyDown: true,
+    virtualKeyCode: 0x71,
+    scanCode: 0x3c,
+    unicode: "",
+    controlKeyState: 0,
+    repeatCount: 1
+  });
+  for (const character of "120t") {
+    win32Listener?.(responseRecord(character));
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 30));
+
+  assert.deepEqual(keys, [
+    semanticKey("f2", "win32:71:3c", {}, "win32")
+  ]);
+  assert.deepEqual(terminal.viewport, { width: 120, height: 40 });
+  assert.deepEqual(stdin.rawModeCalls, []);
+  terminal.stop();
+});
+
 test("xterm viewport query consumes split responses and publishes live dimensions", async () => {
   const stdout = createMockStdout();
   stdout.isTTY = true;
@@ -2753,6 +2814,57 @@ test("Win32ConsoleInput ignores key-up and expands repeat count", () => {
   assert.equal(events[0]?.kind, "key");
   assert.equal(events[0]?.kind === "key" ? events[0].key : undefined, "f2");
   assert.equal(events[0]?.kind === "key" ? events[0].repeat : undefined, 2);
+  detach();
+});
+
+test("Win32ConsoleInput replays an unmatched response candidate as its original key", () => {
+  let timeout: (() => void) | undefined;
+  const responseRouter = createTerminalResponseRouter({
+    pendingTimeoutMs: 5,
+    clock: {
+      setTimeout(callback) {
+        timeout = callback;
+        return callback;
+      },
+      clearTimeout(handle) {
+        if (timeout === handle) {
+          timeout = undefined;
+        }
+      }
+    }
+  });
+  responseRouter.expect("viewport");
+  let listener:
+    | ((record: Parameters<typeof mapWin32KeyRecord>[0]) => void)
+    | undefined;
+  const adapter = new Win32ConsoleInput({
+    attach(next) {
+      listener = next;
+      return () => {
+        listener = undefined;
+      };
+    }
+  }, undefined, responseRouter);
+  const events: TerminalKeyEvent[] = [];
+  const detach = adapter.attach(
+    new PassThrough(),
+    (event) => events.push(event)
+  );
+
+  listener?.({
+    keyDown: true,
+    virtualKeyCode: 0x1b,
+    scanCode: 0x01,
+    unicode: "\x1b",
+    controlKeyState: 0,
+    repeatCount: 1
+  });
+  assert.deepEqual(events, []);
+  timeout?.();
+
+  assert.deepEqual(events, [
+    semanticKey("escape", "win32:1b:1", {}, "win32")
+  ]);
   detach();
 });
 

@@ -77,6 +77,7 @@ export type {
   PlatformTerminalAdapter,
   ResizeListener,
   StdinInputAdapter,
+  StdinInputContext,
   StdinInputKind,
   TerminalHost,
   TerminalInputEnvironment,

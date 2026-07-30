@@ -50,6 +50,11 @@ F-keys, Ctrl+Enter, repeat counts, and Unicode as semantic events. No
 application wiring is required. Explicit `win32InputProvider` injection remains
 available for tests and custom hosts.
 
+Active terminal queries do not replace this backend with raw stdin. Potential
+response records beginning with Escape are buffered through the shared response
+router; physical function-key records continue through their virtual-key
+mapping, and unmatched candidates replay as their original Win32 records.
+
 If the optional addon is absent, cannot be built, or stdin is redirected,
 terminal safely continues through the raw VT and readline fallback chain.
 

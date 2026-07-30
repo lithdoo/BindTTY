@@ -1,4 +1,8 @@
-import type { CreateNodeTerminalOptions, StdinInputAdapter } from "../types.js";
+import type {
+  CreateNodeTerminalOptions,
+  StdinInputAdapter,
+  StdinInputContext
+} from "../types.js";
 import {
   detectTerminalInputEnvironment,
   selectInputBackend
@@ -12,7 +16,8 @@ export class Win32PlatformAdapter extends DefaultPlatformAdapter {
   override readonly name: string = "win32";
 
   override createStdinInput(
-    options: CreateNodeTerminalOptions
+    options: CreateNodeTerminalOptions,
+    context?: StdinInputContext
   ): StdinInputAdapter {
     const selection = selectInputBackend(
       options,
@@ -22,7 +27,8 @@ export class Win32PlatformAdapter extends DefaultPlatformAdapter {
     if (selection.stdinAdapter === "win32" && options.win32InputProvider) {
       return new Win32ConsoleInput(
         options.win32InputProvider,
-        options.inputTrace
+        options.inputTrace,
+        context?.responseRouter
       );
     }
 
