@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 
-import { ANSI, createLifecycleGuard, createNodeTerminal, createResizeCoordinator, DefaultPlatformAdapter, discoverNativeWin32InputProvider, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, resolveTerminalProfile, selectInputBackend, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
+import { ANSI, createLifecycleGuard, createNodeTerminal, createResizeCoordinator, createTerminalResponseRouter, DefaultPlatformAdapter, discoverNativeWin32InputProvider, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, resolveTerminalProfile, selectInputBackend, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
 import type {
   CreateNodeTerminalOptions,
   InputTraceRecord,
@@ -486,6 +486,113 @@ test("known host profile enables synchronized output outside win32", () => {
       process.env.TERM_PROGRAM = previous;
     }
   }
+});
+
+test("terminal response router preserves unsolicited control sequences", () => {
+  const router = createTerminalResponseRouter();
+  const sequence = "\x1b[8;24;80t";
+
+  assert.deepEqual(router.route(sequence), {
+    input: sequence,
+    responses: []
+  });
+});
+
+test("terminal response router consumes viewport reports at every chunk boundary", () => {
+  const sequence = "\x1b[8;79;190t";
+
+  for (let split = 1; split < sequence.length; split += 1) {
+    const router = createTerminalResponseRouter();
+    router.expect("viewport");
+
+    const first = router.route(sequence.slice(0, split));
+    const second = router.route(sequence.slice(split));
+
+    assert.equal(first.input + second.input, "", `split ${split}`);
+    assert.deepEqual(
+      [...first.responses, ...second.responses],
+      [{
+        kind: "viewport",
+        sequence,
+        rows: 79,
+        columns: 190
+      }],
+      `split ${split}`
+    );
+  }
+});
+
+test("terminal response router separates mixed responses from keyboard bytes", () => {
+  const router = createTerminalResponseRouter();
+  router.expect("viewport");
+  router.expect("kitty-keyboard");
+  router.expect("primary-device-attributes");
+
+  const routed = router.route(
+    "a\x1b[?1u\x1b[?1;2c\x1b[8;40;120tb"
+  );
+
+  assert.equal(routed.input, "ab");
+  assert.deepEqual(routed.responses, [
+    {
+      kind: "kitty-keyboard",
+      sequence: "\x1b[?1u",
+      parameters: "1"
+    },
+    {
+      kind: "primary-device-attributes",
+      sequence: "\x1b[?1;2c",
+      parameters: "1;2"
+    },
+    {
+      kind: "viewport",
+      sequence: "\x1b[8;40;120t",
+      rows: 40,
+      columns: 120
+    }
+  ]);
+});
+
+test("terminal response router expectation disposal stops response consumption", () => {
+  const router = createTerminalResponseRouter();
+  const stopExpecting = router.expect("viewport");
+
+  assert.equal(router.route("\x1b[8;").input, "");
+  stopExpecting();
+
+  assert.deepEqual(router.route("24;80t"), {
+    input: "\x1b[8;24;80t",
+    responses: []
+  });
+});
+
+test("terminal response router replays an incomplete response atomically on timeout", () => {
+  let timeout: (() => void) | undefined;
+  const router = createTerminalResponseRouter({
+    pendingTimeoutMs: 5,
+    clock: {
+      setTimeout(callback) {
+        timeout = callback;
+        return callback;
+      },
+      clearTimeout(handle) {
+        if (timeout === handle) {
+          timeout = undefined;
+        }
+      }
+    }
+  });
+  const replayed: string[] = [];
+  router.expect("viewport");
+  router.onInput((input) => replayed.push(input));
+
+  assert.deepEqual(router.route("\x1b[8;79;"), {
+    input: "",
+    responses: []
+  });
+  timeout?.();
+
+  assert.deepEqual(replayed, ["\x1b[8;79;"]);
 });
 
 test("LifecycleGuard shares process hooks across terminal instances", () => {

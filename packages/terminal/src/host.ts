@@ -4,6 +4,7 @@ import { createLifecycleGuard } from "./lifecycle-guard.js";
 import { discoverNativeWin32InputProvider } from "./native-win32-provider.js";
 import { createResizeCoordinator } from "./resize-coordinator.js";
 import { createTerminalOutput } from "./terminal-output.js";
+import { createTerminalResponseRouter } from "./terminal-response-router.js";
 import { resolveTerminalProfile } from "./terminal-profile.js";
 import { createXtermViewportQuery } from "./xterm-viewport-query.js";
 import type {
@@ -38,10 +39,15 @@ export function createNodeTerminal(
     stdout: options.stdout,
     synchronizedOutput: profile.output.synchronizedOutput
   });
+  const responseRouter = createTerminalResponseRouter({
+    pendingTimeoutMs: options.escapeAmbiguityTimeoutMs,
+    clock: options.inputClock
+  });
   const viewportQuery = profile.resize.queryXtermViewport
     ? createXtermViewportQuery({
         stdout: options.stdout,
         writeRaw: (chunk) => output.writeRaw(chunk),
+        responseRouter,
         clock: options.resizeClock
       })
     : undefined;
@@ -60,7 +66,7 @@ export function createNodeTerminal(
     profile,
     writeRaw: (chunk) => output.writeRaw(chunk),
     onExitRequest: () => terminal.dispose(),
-    filterRawInput: viewportQuery?.filterRawInput
+    responseRouter
   });
   const lifecycle = createLifecycleGuard({
     restore: restoreStartedComponents
@@ -129,6 +135,7 @@ export function createNodeTerminal(
         () => resize.dispose(),
         () => viewportQuery?.dispose(),
         () => input.dispose(),
+        () => responseRouter.dispose(),
         () => output.dispose()
       ]) {
         try {

@@ -1,5 +1,8 @@
 import { ANSI } from "./ansi.js";
 import type { ResizeClock } from "./resize-coordinator.js";
+import type {
+  TerminalResponseRouter
+} from "./terminal-response-router.js";
 import type { TerminalStdout } from "./types.js";
 
 export interface XtermViewportQuery {
@@ -7,19 +10,16 @@ export interface XtermViewportQuery {
   start(): void;
   stop(): void;
   dispose(): void;
-  filterRawInput(chunk: Buffer | string): string;
 }
 
 export interface XtermViewportQueryOptions {
   stdout: TerminalStdout;
   writeRaw(chunk: string): boolean | void;
+  responseRouter: TerminalResponseRouter;
   clock?: Pick<ResizeClock, "setInterval" | "clearInterval">;
   intervalMs?: number;
 }
 
-const reportPrefix = "\x1b[8;";
-const completeReport = /^\x1b\[8;(\d+);(\d+)t/;
-const partialReport = /^\x1b(?:\[8(?:;\d*(?:;\d*)?)?)?$/;
 const systemClock: Pick<ResizeClock, "setInterval" | "clearInterval"> = {
   setInterval(callback, intervalMs) {
     const handle = setInterval(callback, intervalMs);
@@ -39,10 +39,19 @@ export function createXtermViewportQuery(
   options: XtermViewportQueryOptions
 ): XtermViewportQuery {
   let viewport: [number, number] | undefined;
-  let pending = "";
   let timer: unknown;
   let started = false;
   let disposed = false;
+  let stopExpecting: (() => void) | undefined;
+  const stopListening = options.responseRouter.onResponse((response) => {
+    if (
+      response.kind === "viewport" &&
+      response.columns > 0 &&
+      response.rows > 0
+    ) {
+      viewport = [response.columns, response.rows];
+    }
+  });
   const clock = options.clock ?? systemClock;
 
   const stdout = Object.create(options.stdout) as TerminalStdout;
@@ -74,6 +83,7 @@ export function createXtermViewportQuery(
         return;
       }
       started = true;
+      stopExpecting = options.responseRouter.expect("viewport");
       query();
       timer = clock.setInterval(
         query,
@@ -88,7 +98,8 @@ export function createXtermViewportQuery(
         clock.clearInterval(timer);
         timer = undefined;
       }
-      pending = "";
+      stopExpecting?.();
+      stopExpecting = undefined;
       started = false;
     },
     dispose(): void {
@@ -96,44 +107,8 @@ export function createXtermViewportQuery(
         return;
       }
       controller.stop();
+      stopListening();
       disposed = true;
-    },
-    filterRawInput(chunk): string {
-      const text = pending +
-        (Buffer.isBuffer(chunk) ? chunk.toString("utf8") : chunk);
-      pending = "";
-      let output = "";
-      let offset = 0;
-
-      while (offset < text.length) {
-        const escape = text.indexOf("\x1b", offset);
-        if (escape < 0) {
-          output += text.slice(offset);
-          break;
-        }
-        output += text.slice(offset, escape);
-        const candidate = text.slice(escape);
-        const report = completeReport.exec(candidate);
-        if (report) {
-          const rows = Number(report[1]);
-          const columns = Number(report[2]);
-          if (columns > 0 && rows > 0) {
-            viewport = [columns, rows];
-          }
-          offset = escape + report[0].length;
-          continue;
-        }
-        if (
-          reportPrefix.startsWith(candidate) ||
-          partialReport.test(candidate)
-        ) {
-          pending = candidate;
-          break;
-        }
-        output += "\x1b";
-        offset = escape + 1;
-      }
-      return output;
     }
   };
 

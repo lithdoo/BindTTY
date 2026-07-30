@@ -15,6 +15,11 @@ import {
 } from "./input-trace.js";
 import { createInputParserSession } from "./input-parser-session.js";
 import type { ResolvedTerminalProfile } from "./terminal-profile.js";
+import {
+  createTerminalResponseRouter,
+  type TerminalResponse,
+  type TerminalResponseRouter
+} from "./terminal-response-router.js";
 import type {
   CreateNodeTerminalOptions,
   Dispose,
@@ -46,13 +51,10 @@ export interface InputSessionOptions {
   profile: ResolvedTerminalProfile;
   writeRaw(chunk: string): boolean | void;
   onExitRequest(): void;
-  filterRawInput?(chunk: Buffer | string): string;
+  responseRouter?: TerminalResponseRouter;
 }
 
 const defaultProbeTimeoutMs = 100;
-const kittyResponse = /^\x1b\[\?(\d+)u$/;
-const kittyLikeResponse = /^\x1b\[\?[^]*u$/;
-const primaryDaResponse = /^\x1b\[\??[\d;]*c$/;
 const systemClock: InputSessionClock = {
   setTimeout(callback, delayMs) {
     const handle = setTimeout(callback, delayMs);
@@ -69,6 +71,9 @@ export function createInputSession(
 ): InputSession {
   const options = config.terminalOptions;
   const { profile } = config;
+  const responseRouter =
+    config.responseRouter ?? createTerminalResponseRouter();
+  const ownsResponseRouter = config.responseRouter === undefined;
   const clock = options.inputClock ?? systemClock;
   const trace = createInputTraceListener(options.inputTrace);
   const keyListeners = new Set<TerminalKeyListener>();
@@ -82,6 +87,8 @@ export function createInputSession(
   let capabilities = keyboardCapabilitiesForProtocol(fallbackProtocol);
   let probeTimer: unknown;
   let daTimer: unknown;
+  let stopExpectingKitty: Dispose | undefined;
+  let stopExpectingPrimaryDa: Dispose | undefined;
   let probeState: "idle" | "kitty-query" = "idle";
   let awaitingPrimaryDa = false;
   let enabledProtocol:
@@ -117,6 +124,10 @@ export function createInputSession(
     }
     probeState = "idle";
     awaitingPrimaryDa = false;
+    stopExpectingKitty?.();
+    stopExpectingKitty = undefined;
+    stopExpectingPrimaryDa?.();
+    stopExpectingPrimaryDa = undefined;
   }
 
   function fallbackProbe(): void {
@@ -124,24 +135,31 @@ export function createInputSession(
     setCapabilities(fallbackProtocol);
   }
 
-  function consumeProtocolResponse(event: TerminalKeyEvent): boolean {
-    if (event.kind !== "unknown" || !event.sequence) {
-      return false;
-    }
-    if (probeState === "kitty-query" && kittyResponse.test(event.sequence)) {
+  function handleTerminalResponse(response: TerminalResponse): void {
+    if (
+      response.kind === "kitty-keyboard" &&
+      probeState === "kitty-query"
+    ) {
+      if (!/^\d+$/.test(response.parameters)) {
+        fallbackProbe();
+        return;
+      }
       clearProbeTimer();
       probeState = "idle";
+      stopExpectingKitty?.();
+      stopExpectingKitty = undefined;
       config.writeRaw(ANSI.enableKittyKeyboard);
       enabledProtocol = "kitty";
       setCapabilities("kitty");
-      return true;
+      return;
     }
-    if (probeState === "kitty-query" && kittyLikeResponse.test(event.sequence)) {
-      fallbackProbe();
-      return true;
-    }
-    if (awaitingPrimaryDa && primaryDaResponse.test(event.sequence)) {
+    if (
+      response.kind === "primary-device-attributes" &&
+      awaitingPrimaryDa
+    ) {
       awaitingPrimaryDa = false;
+      stopExpectingPrimaryDa?.();
+      stopExpectingPrimaryDa = undefined;
       if (probeState === "kitty-query") {
         daTimer = clock.setTimeout(() => {
           daTimer = undefined;
@@ -150,16 +168,15 @@ export function createInputSession(
           }
         }, 0);
       }
-      return true;
     }
-    return false;
   }
+
+  const stopResponseListener = responseRouter.onResponse(
+    handleTerminalResponse
+  );
 
   function dispatch(event: TerminalKeyEvent): void {
     event.protocol = capabilities.protocol;
-    if (consumeProtocolResponse(event)) {
-      return;
-    }
     traceInputEvent(
       trace,
       activeKind ?? fallbackStdinKind(profile.platform),
@@ -192,6 +209,9 @@ export function createInputSession(
       }
       probeState = "kitty-query";
       awaitingPrimaryDa = true;
+      stopExpectingKitty = responseRouter.expect("kitty-keyboard");
+      stopExpectingPrimaryDa =
+        responseRouter.expect("primary-device-attributes");
       config.writeRaw(ANSI.queryKittyKeyboard + ANSI.queryPrimaryDeviceAttributes);
       const timeout = Math.max(
         0,
@@ -297,10 +317,15 @@ export function createInputSession(
             pendingTimeoutMs: options.escapeAmbiguityTimeoutMs ?? 30,
             clock
           });
+          const stopRoutedInput = responseRouter.onInput((input) => {
+            parser.push(input);
+            parser.flush();
+          });
           let pasteTraceOpen = false;
           let traceSuffix = "";
           detachBackend = backend.attachRaw(stdin, (chunk) => {
-            const filteredChunk = config.filterRawInput?.(chunk) ?? chunk;
+            const filteredChunk =
+              responseRouter.route(chunk).input;
             if (filteredChunk.length === 0) {
               return;
             }
@@ -324,6 +349,7 @@ export function createInputSession(
           const detachRaw = detachBackend;
           detachBackend = () => {
             detachRaw();
+            stopRoutedInput();
             parser.reset();
             pasteTraceOpen = false;
             traceSuffix = "";
@@ -348,6 +374,7 @@ export function createInputSession(
       rawModeEnabled = false;
       activeKind = null;
       stopProtocol();
+      responseRouter.reset();
       started = false;
     },
     dispose(): void {
@@ -355,6 +382,10 @@ export function createInputSession(
         return;
       }
       session.stop();
+      stopResponseListener?.();
+      if (ownsResponseRouter) {
+        responseRouter.dispose();
+      }
       keyListeners.clear();
       capabilityListeners.clear();
       disposed = true;

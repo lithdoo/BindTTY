@@ -36,6 +36,13 @@ embedding environment has explicitly confirmed support.
 `enhancedKeyboard` is retained only for compatibility with the former eager
 dual-enable behavior.
 
+Terminal query responses share the same byte stream as keyboard input.
+`createNodeTerminal()` routes expected Kitty keyboard, primary device
+attributes, and xterm viewport responses through one `TerminalResponseRouter`
+before sending the remaining bytes to keyboard parsing. Consumers implementing
+custom transports can use `createTerminalResponseRouter()` directly and
+reference-count the response kinds they currently expect.
+
 On Windows, the optional `@bindtty/win32-input` package is discovered
 automatically. When stdin is a console handle it reads native
 `KEY_EVENT_RECORD` data, bypasses VT negotiation, and preserves physical
