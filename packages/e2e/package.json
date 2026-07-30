@@ -1,6 +1,6 @@
 {
   "name": "@bindtty/e2e",
-  "version": "0.1.0-beta.4",
+  "version": "0.1.0-beta.5",
   "private": true,
   "type": "module",
   "description": "End-to-end tests for BindTTY (mock streams and real PTY).",
@@ -22,18 +22,18 @@
     "validate:windows-matrix": "node scripts/validate-windows-input-fixture.mjs"
   },
   "dependencies": {
-    "@bindtty/signal": "0.1.0-beta.4",
-    "@bindtty/text": "0.1.0-beta.4",
-    "@bindtty/terminal": "0.1.0-beta.4",
-    "@bindtty/widgets": "0.1.0-beta.4",
-    "@bindtty/input": "0.1.0-beta.4",
-    "bindtty": "0.1.0-beta.4"
+    "@bindtty/signal": "0.1.0-beta.5",
+    "@bindtty/text": "0.1.0-beta.5",
+    "@bindtty/terminal": "0.1.0-beta.5",
+    "@bindtty/widgets": "0.1.0-beta.5",
+    "@bindtty/input": "0.1.0-beta.5",
+    "bindtty": "0.1.0-beta.5"
   },
   "optionalDependencies": {
     "node-pty": "^1.0.0"
   },
   "devDependencies": {
-    "@bindtty/jsx-runtime": "0.1.0-beta.4",
+    "@bindtty/jsx-runtime": "0.1.0-beta.5",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },

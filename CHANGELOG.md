@@ -2,7 +2,7 @@
 
 BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见行为变化；设计细节见 `doc/` 下对应 package/spec/widget 文档。
 
-## Unreleased
+## 0.1.0-beta.5
 
 - Fixed Windows viewport resize repainting by clearing reflowed terminal content
   before the full frame in the same presentation write. Applications that embed
@@ -29,6 +29,7 @@ BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见�
   1,048,576 个 UTF-16 code unit；新增 cache stats/clear 诊断 API。
 - BasicLayoutEngine 修复横向滚动始终为零的问题，`scrollX` 现在按内容宽度正确
   clamp；Basic 在 0.1.x 继续作为公开 fallback/test engine。
+- npm `beta` 与 `latest` 均指向本版本。
 
 ## 0.1.0-beta.3
 

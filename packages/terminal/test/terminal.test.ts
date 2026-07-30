@@ -1375,6 +1375,11 @@ test(
         viewport: { width: 20, height: 3 },
         previousViewport: { width: 10, height: 3 },
         source: "poll"
+      },
+      {
+        viewport: { width: 20, height: 3 },
+        previousViewport: { width: 20, height: 3 },
+        source: "poll"
       }
     ]);
   }
@@ -1528,6 +1533,11 @@ test("resize polling detects the latest viewport when events are missing", async
       viewport: { width: 13, height: 3 },
       previousViewport: { width: 10, height: 3 },
       source: "poll"
+    },
+    {
+      viewport: { width: 13, height: 3 },
+      previousViewport: { width: 13, height: 3 },
+      source: "poll"
     }
   ]);
 });
@@ -1567,8 +1577,18 @@ test("resize event and polling fallback share one deduplicated viewport", async 
       source: "event"
     },
     {
+      viewport: { width: 11, height: 3 },
+      previousViewport: { width: 11, height: 3 },
+      source: "event"
+    },
+    {
       viewport: { width: 12, height: 3 },
       previousViewport: { width: 11, height: 3 },
+      source: "poll"
+    },
+    {
+      viewport: { width: 12, height: 3 },
+      previousViewport: { width: 12, height: 3 },
       source: "poll"
     }
   ]);
@@ -1703,6 +1723,7 @@ test("xterm viewport query consumes split responses and publishes live dimension
   const terminal = createNodeTerminal({
     stdout,
     stdin,
+    platformAdapter: new Win32PlatformAdapter(),
     viewportQuery: "xterm",
     keyboardProtocol: "legacy",
     resizePollIntervalMs: 10,
