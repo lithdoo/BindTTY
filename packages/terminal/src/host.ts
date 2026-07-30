@@ -6,6 +6,7 @@ import { createResizeCoordinator } from "./resize-coordinator.js";
 import { createTerminalOutput } from "./terminal-output.js";
 import { createTerminalResponseRouter } from "./terminal-response-router.js";
 import { resolveTerminalProfile } from "./terminal-profile.js";
+import { createCompositeViewportProvider } from "./viewport-provider.js";
 import { createXtermViewportQuery } from "./xterm-viewport-query.js";
 import type {
   CreateNodeTerminalOptions,
@@ -38,20 +39,22 @@ export function createNodeTerminal(
   });
   const viewportQuery = profile.resize.queryXtermViewport
     ? createXtermViewportQuery({
-        stdout: options.stdout,
         writeRaw: (chunk) => output.writeRaw(chunk),
         responseRouter,
         clock: options.resizeClock
       })
     : undefined;
-  if (viewportQuery) {
-    options = { ...options, stdout: viewportQuery.stdout };
-  }
+  const viewportProvider = createCompositeViewportProvider({
+    stdout: options.stdout,
+    fallbackViewport: options.fallbackViewport,
+    query: viewportQuery
+  });
   const resize = createResizeCoordinator({
     stdout: options.stdout,
     fallbackViewport: options.fallbackViewport,
     ...profile.resize,
-    clock: options.resizeClock
+    clock: options.resizeClock,
+    viewportProvider
   });
   let terminal!: TerminalHost;
   const input = createInputSession({
@@ -92,7 +95,6 @@ export function createNodeTerminal(
           writeRaw(ANSI.enterAltScreen);
         }
         input.start();
-        viewportQuery?.start();
         if (options.hideCursor === true) {
           writeRaw(ANSI.hideCursor);
         }
@@ -126,7 +128,6 @@ export function createNodeTerminal(
         () => terminal.stop(),
         () => lifecycle.dispose(),
         () => resize.dispose(),
-        () => viewportQuery?.dispose(),
         () => input.dispose(),
         () => responseRouter.dispose(),
         () => output.dispose()
@@ -170,7 +171,6 @@ export function createNodeTerminal(
     const errors: unknown[] = [];
     for (const cleanup of [
       () => resize.stop(),
-      () => viewportQuery?.stop(),
       () => output.stop(),
       () => input.stop(),
       () => {

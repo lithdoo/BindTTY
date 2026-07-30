@@ -55,6 +55,12 @@ response records beginning with Escape are buffered through the shared response
 router; physical function-key records continue through their virtual-key
 mapping, and unmatched candidates replay as their original Win32 records.
 
+Viewport discovery is represented by a `ViewportProvider`, not by overriding
+properties on stdout. The composite provider uses `getWindowSize()` and cached
+Node dimensions until an xterm query succeeds, then treats query dimensions as
+authoritative while retaining stdout resize events as activity signals.
+`TerminalResizeEvent.source` distinguishes `"event"`, `"poll"`, and `"query"`.
+
 If the optional addon is absent, cannot be built, or stdin is redirected,
 terminal safely continues through the raw VT and readline fallback chain.
 

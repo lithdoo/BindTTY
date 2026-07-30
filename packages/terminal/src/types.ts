@@ -168,7 +168,7 @@ export interface TerminalViewport {
 export interface TerminalResizeEvent {
   readonly viewport: TerminalViewport;
   readonly previousViewport: TerminalViewport;
-  readonly source: "event" | "poll";
+  readonly source: "event" | "poll" | "query";
 }
 
 export type TerminalKeyEvent = SemanticInputEvent;

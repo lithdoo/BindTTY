@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 
-import { ANSI, createLifecycleGuard, createNodeTerminal, createResizeCoordinator, createTerminalResponseRouter, DefaultPlatformAdapter, discoverNativeWin32InputProvider, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, resolveTerminalProfile, selectInputBackend, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
+import { ANSI, createCompositeViewportProvider, createLifecycleGuard, createNodeTerminal, createResizeCoordinator, createTerminalResponseRouter, DefaultPlatformAdapter, discoverNativeWin32InputProvider, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, resolveTerminalProfile, selectInputBackend, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
 import type {
   CreateNodeTerminalOptions,
   InputTraceRecord,
@@ -593,6 +593,48 @@ test("terminal response router replays an incomplete response atomically on time
   timeout?.();
 
   assert.deepEqual(replayed, ["\x1b[8;79;"]);
+});
+
+test("composite viewport provider promotes query dimensions over stale stdout", () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  let queryViewport: TerminalViewport | undefined;
+  let queryListener:
+    | ((viewport: TerminalViewport) => void)
+    | undefined;
+  const provider = createCompositeViewportProvider({
+    stdout,
+    query: {
+      get viewport() {
+        return queryViewport;
+      },
+      start() {},
+      stop() {},
+      dispose() {},
+      onViewport(listener) {
+        queryListener = listener;
+        return () => {
+          queryListener = undefined;
+        };
+      }
+    }
+  });
+  const sources: TerminalResizeEvent["source"][] = [];
+  provider.onChange((source) => sources.push(source));
+
+  assert.deepEqual(provider.viewport, { width: 10, height: 3 });
+  provider.start();
+  queryViewport = { width: 120, height: 40 };
+  queryListener?.(queryViewport);
+
+  stdout.columns = 12;
+  stdout.rows = 4;
+  stdout.emitResize();
+
+  assert.deepEqual(provider.viewport, { width: 120, height: 40 });
+  assert.deepEqual(sources, ["query", "event"]);
+  provider.dispose();
+  assert.equal(stdout.listenerCount(), 0);
 });
 
 test("LifecycleGuard shares process hooks across terminal instances", () => {
@@ -1899,9 +1941,9 @@ test("xterm viewport query consumes split responses and publishes live dimension
     resizeSettleDelayMs: 0
   });
   const keys: TerminalKeyEvent[] = [];
-  const viewports: TerminalViewport[] = [];
+  const events: TerminalResizeEvent[] = [];
   terminal.onKey((event) => keys.push(event));
-  terminal.onResize((event) => viewports.push(event.viewport));
+  terminal.onResize((event) => events.push(event));
 
   terminal.start();
   assert.equal(stdout.writes.includes(ANSI.queryTextAreaSize), true);
@@ -1913,7 +1955,8 @@ test("xterm viewport query consumes split responses and publishes live dimension
   await new Promise((resolve) => setTimeout(resolve, 30));
 
   assert.deepEqual(terminal.viewport, { width: 120, height: 40 });
-  assert.deepEqual(viewports.at(-1), { width: 120, height: 40 });
+  assert.deepEqual(events.at(-1)?.viewport, { width: 120, height: 40 });
+  assert.equal(events.at(-1)?.source, "query");
   assert.deepEqual(keys, [semanticText("a", "windows-vt")]);
 
   terminal.stop();

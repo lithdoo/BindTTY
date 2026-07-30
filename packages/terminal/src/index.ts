@@ -40,6 +40,11 @@ export type {
   ResizeCoordinator,
   ResizeCoordinatorOptions
 } from "./resize-coordinator.js";
+export { createCompositeViewportProvider } from "./viewport-provider.js";
+export type {
+  CompositeViewportProviderOptions,
+  ViewportProvider
+} from "./viewport-provider.js";
 export { createInputSession } from "./input-session.js";
 export type {
   InputSession,

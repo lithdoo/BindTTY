@@ -5,6 +5,10 @@ import type {
   TerminalStdout,
   TerminalViewport
 } from "./types.js";
+import {
+  createCompositeViewportProvider,
+  type ViewportProvider
+} from "./viewport-provider.js";
 
 export interface ResizeClock {
   now(): number;
@@ -21,6 +25,7 @@ export interface ResizeCoordinatorOptions {
   minFrameIntervalMs: number;
   settleDelayMs: number;
   clock?: ResizeClock;
+  viewportProvider?: ViewportProvider;
 }
 
 export interface ResizeCoordinator {
@@ -31,7 +36,6 @@ export interface ResizeCoordinator {
   onResize(listener: ResizeListener): Dispose;
 }
 
-const defaultViewport: TerminalViewport = { width: 80, height: 24 };
 const systemClock: ResizeClock = {
   now: Date.now,
   setTimeout(callback, delayMs) {
@@ -56,6 +60,12 @@ export function createResizeCoordinator(
   options: ResizeCoordinatorOptions
 ): ResizeCoordinator {
   const clock = options.clock ?? systemClock;
+  const viewportProvider =
+    options.viewportProvider ??
+    createCompositeViewportProvider({
+      stdout: options.stdout,
+      fallbackViewport: options.fallbackViewport
+    });
   const listeners = new Set<ResizeListener>();
   let started = false;
   let disposed = false;
@@ -69,7 +79,7 @@ export function createResizeCoordinator(
   let settleCandidate:
     | { viewport: TerminalViewport; source: TerminalResizeEvent["source"] }
     | undefined;
-  let published = readViewport(options);
+  let published = viewportProvider.viewport;
 
   function publish(
     viewport: TerminalViewport,
@@ -132,7 +142,7 @@ export function createResizeCoordinator(
   }
 
   function sample(source: TerminalResizeEvent["source"]): void {
-    const viewport = readViewport(options, published);
+    const viewport = viewportProvider.viewport;
     if (equalViewport(published, viewport)) {
       if (pending) {
         pending = undefined;
@@ -176,24 +186,22 @@ export function createResizeCoordinator(
     scheduleSettle(frameDelay);
   }
 
-  const handleResize = (): void => sample("event");
+  let stopViewportListener: Dispose = () => {};
   const coordinator: ResizeCoordinator = {
     get viewport() {
-      return started ? { ...published } : readViewport(options, published);
+      return started ? { ...published } : viewportProvider.viewport;
     },
     start(): void {
       if (started || disposed) {
         return;
       }
-      published = readViewport(options, published);
+      published = viewportProvider.viewport;
       started = true;
-      options.stdout.on?.("resize", handleResize);
+      stopViewportListener = viewportProvider.onChange(sample);
+      viewportProvider.start();
       if (
         options.pollIntervalMs > 0 &&
-        options.stdout.isTTY === true &&
-        ((typeof options.stdout.columns === "number" &&
-          typeof options.stdout.rows === "number") ||
-          typeof options.stdout.getWindowSize === "function")
+        viewportProvider.pollable
       ) {
         pollTimer = clock.setInterval(
           () => sample("poll"),
@@ -214,7 +222,9 @@ export function createResizeCoordinator(
       pending = undefined;
       settleCandidate = undefined;
       lastPublishedAt = undefined;
-      options.stdout.off?.("resize", handleResize);
+      viewportProvider.stop();
+      stopViewportListener();
+      stopViewportListener = () => {};
       started = false;
     },
     dispose(): void {
@@ -222,6 +232,7 @@ export function createResizeCoordinator(
         return;
       }
       coordinator.stop();
+      viewportProvider.dispose();
       listeners.clear();
       disposed = true;
     },
@@ -234,53 +245,6 @@ export function createResizeCoordinator(
     }
   };
   return coordinator;
-}
-
-function readViewport(
-  options: ResizeCoordinatorOptions,
-  runtimeFallback?: TerminalViewport
-): TerminalViewport {
-  const windowSize = readWindowSize(options.stdout);
-  return {
-    width: readDimension(
-      windowSize?.[0],
-      options.stdout.columns,
-      runtimeFallback?.width,
-      options.fallbackViewport?.width,
-      defaultViewport.width
-    ),
-    height: readDimension(
-      windowSize?.[1],
-      options.stdout.rows,
-      runtimeFallback?.height,
-      options.fallbackViewport?.height,
-      defaultViewport.height
-    )
-  };
-}
-
-function readWindowSize(stdout: TerminalStdout): [number, number] | undefined {
-  if (typeof stdout.getWindowSize !== "function") {
-    return undefined;
-  }
-  try {
-    const size = stdout.getWindowSize();
-    if (Array.isArray(size) && size.length >= 2) {
-      return [size[0], size[1]];
-    }
-  } catch {
-    // Fall through to cached columns/rows and configured fallbacks.
-  }
-  return undefined;
-}
-
-function readDimension(...values: Array<number | undefined>): number {
-  for (const value of values) {
-    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-      return Math.max(1, Math.floor(value));
-    }
-  }
-  return 1;
 }
 
 function equalViewport(

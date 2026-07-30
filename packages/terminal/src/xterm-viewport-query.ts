@@ -3,17 +3,20 @@ import type { ResizeClock } from "./resize-coordinator.js";
 import type {
   TerminalResponseRouter
 } from "./terminal-response-router.js";
-import type { TerminalStdout } from "./types.js";
+import type {
+  Dispose,
+  TerminalViewport
+} from "./types.js";
 
 export interface XtermViewportQuery {
-  readonly stdout: TerminalStdout;
+  readonly viewport: TerminalViewport | undefined;
   start(): void;
   stop(): void;
   dispose(): void;
+  onViewport(listener: (viewport: TerminalViewport) => void): Dispose;
 }
 
 export interface XtermViewportQueryOptions {
-  stdout: TerminalStdout;
   writeRaw(chunk: string): boolean | void;
   responseRouter: TerminalResponseRouter;
   clock?: Pick<ResizeClock, "setInterval" | "clearInterval">;
@@ -43,6 +46,7 @@ export function createXtermViewportQuery(
   let started = false;
   let disposed = false;
   let stopExpecting: (() => void) | undefined;
+  const listeners = new Set<(viewport: TerminalViewport) => void>();
   const stopListening = options.responseRouter.onResponse((response) => {
     if (
       response.kind === "viewport" &&
@@ -50,34 +54,27 @@ export function createXtermViewportQuery(
       response.rows > 0
     ) {
       viewport = [response.columns, response.rows];
+      const next = {
+        width: response.columns,
+        height: response.rows
+      };
+      for (const listener of [...listeners]) {
+        listener(next);
+      }
     }
   });
   const clock = options.clock ?? systemClock;
-
-  const stdout = Object.create(options.stdout) as TerminalStdout;
-  Object.defineProperties(stdout, {
-    columns: {
-      configurable: true,
-      get: () => viewport?.[0] ?? options.stdout.columns
-    },
-    rows: {
-      configurable: true,
-      get: () => viewport?.[1] ?? options.stdout.rows
-    },
-    getWindowSize: {
-      configurable: true,
-      value: () => viewport
-        ? [...viewport] as [number, number]
-        : options.stdout.getWindowSize?.()
-    }
-  });
 
   function query(): void {
     options.writeRaw(ANSI.queryTextAreaSize);
   }
 
   const controller: XtermViewportQuery = {
-    stdout,
+    get viewport() {
+      return viewport
+        ? { width: viewport[0], height: viewport[1] }
+        : undefined;
+    },
     start(): void {
       if (started || disposed) {
         return;
@@ -108,7 +105,15 @@ export function createXtermViewportQuery(
       }
       controller.stop();
       stopListening();
+      listeners.clear();
       disposed = true;
+    },
+    onViewport(listener): Dispose {
+      if (disposed) {
+        return () => {};
+      }
+      listeners.add(listener);
+      return () => listeners.delete(listener);
     }
   };
 
