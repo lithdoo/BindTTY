@@ -11,7 +11,7 @@ import type {
 } from "./types.js";
 
 export const DEFAULT_WIN32_RESIZE_POLL_INTERVAL_MS = 50;
-export const DEFAULT_WIN32_RESIZE_MIN_FRAME_INTERVAL_MS = 32;
+export const DEFAULT_WIN32_RESIZE_MIN_FRAME_INTERVAL_MS = 80;
 export const DEFAULT_WIN32_RESIZE_SETTLE_DELAY_MS = 100;
 
 export interface ResolvedTerminalProfile {
@@ -37,6 +37,7 @@ export interface ResolvedTerminalProfile {
     readonly pollIntervalMs: number;
     readonly minFrameIntervalMs: number;
     readonly settleDelayMs: number;
+    readonly queryXtermViewport: boolean;
   };
 }
 
@@ -80,7 +81,13 @@ export function resolveTerminalProfile(
       settleDelayMs: normalizeDurationMs(
         options.resizeSettleDelayMs,
         win32Policy ? DEFAULT_WIN32_RESIZE_SETTLE_DELAY_MS : 0
-      )
+      ),
+      queryXtermViewport:
+        options.viewportQuery === "xterm" ||
+        (options.viewportQuery !== "none" &&
+          host === "vscode" &&
+          options.stdout === process.stdout &&
+          options.stdin === process.stdin)
     }
   };
 }

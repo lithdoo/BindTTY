@@ -40,6 +40,12 @@ function runCapture(): void {
     process.stdout.write("\nCapture complete.\n");
   };
 
+  const rejectCurrentStep = (message: string): void => {
+    pasteText = "";
+    process.stdout.write(`\n${message}\n`);
+    promptForStep(stepIndex, false);
+  };
+
   terminal.onKey((event) => {
     const expected = captureSteps[stepIndex];
     if (!expected) {
@@ -47,23 +53,42 @@ function runCapture(): void {
     }
 
     if (isSkipKey(event)) {
+      if (mandatoryObservedSteps.has(expected)) {
+        rejectCurrentStep(
+          `Rejected skip: ${expected} is mandatory. Press the requested key, or Ctrl+G only for host-reserved keys.`
+        );
+        return;
+      }
+
       writeCaptureMarker(writeRecord, expected, "skipped");
+      process.stdout.write("skipped\n");
       pasteText = "";
       stepIndex += 1;
+      if (stepIndex >= captureSteps.length) {
+        dispose();
+        return;
+      }
       promptForStep(stepIndex);
       return;
     }
 
     if (expected === pasteStep) {
       if (event.kind !== "text" && event.kind !== "paste") {
-        writeCaptureMarker(writeRecord, expected, "observed", event);
-        stepIndex += 1;
-        promptForStep(stepIndex);
+        rejectCurrentStep(
+          `Rejected ${formatEvent(event)}; expected paste of ${pasteSample}. Copy it first, then right-click paste.`
+        );
         return;
       }
 
       pasteText += event.text;
       if (pasteSample.startsWith(pasteText) && pasteText !== pasteSample) {
+        return;
+      }
+
+      if (pasteText !== pasteSample) {
+        rejectCurrentStep(
+          `Rejected paste length=${pasteText.length}; expected exact text ${pasteSample} (length ${pasteSample.length}).`
+        );
         return;
       }
 
@@ -73,6 +98,9 @@ function runCapture(): void {
         event.kind,
         pasteText.length
       );
+      process.stdout.write(
+        `kind=${event.kind} protocol=${event.protocol} textLength=${pasteText.length}\n`
+      );
       pasteText = "";
       stepIndex += 1;
       if (stepIndex >= captureSteps.length) {
@@ -80,6 +108,13 @@ function runCapture(): void {
         return;
       }
       promptForStep(stepIndex);
+      return;
+    }
+
+    if (!eventMatchesExpected(expected, event)) {
+      rejectCurrentStep(
+        `Rejected ${formatEvent(event)}${formatReceivedText(event)}; expected ${expected}. Stay on this step and try again.`
+      );
       return;
     }
 
@@ -101,6 +136,7 @@ function runCapture(): void {
     `trace=${tracePath}`,
     "",
     "Press the requested physical key once.",
+    "Wrong keys are rejected; remain on the same step and retry.",
     "Press Ctrl+G to mark a host-reserved or unavailable key as skipped.",
     "Do not type passwords or other sensitive text.",
     ""
@@ -109,12 +145,14 @@ function runCapture(): void {
   terminal.start();
   promptForStep(stepIndex);
 
-  function promptForStep(index: number): void {
+  function promptForStep(index: number, writeBegin = true): void {
     const expected = captureSteps[index];
     if (!expected) {
       return;
     }
-    writeCaptureMarker(writeRecord, expected, "begin");
+    if (writeBegin) {
+      writeCaptureMarker(writeRecord, expected, "begin");
+    }
     process.stdout.write(
       `[${index + 1}/${captureSteps.length}] Press ${expected} (Ctrl+G skips): `
     );
@@ -123,6 +161,28 @@ function runCapture(): void {
 
 const pasteSample = "BINDTTY_PASTE_SAMPLE";
 const pasteStep = `paste ${pasteSample}`;
+
+const mandatoryObservedSteps = new Set([
+  "F2",
+  "Enter",
+  "Ctrl+Enter",
+  "Up",
+  "Down",
+  "Left",
+  "Right",
+  "Ctrl+Up",
+  "Ctrl+Down",
+  "Ctrl+Left",
+  "Ctrl+Right",
+  "Backspace",
+  "Delete",
+  "Tab",
+  "Shift+Tab",
+  "text A",
+  "text 中",
+  "text emoji",
+  pasteStep
+]);
 
 function redactPasteRecord(
   record: InputTraceRecord,
@@ -192,6 +252,111 @@ function isSkipKey(event: TerminalKeyEvent): boolean {
   );
 }
 
+function eventMatchesExpected(
+  expected: string,
+  event: TerminalKeyEvent
+): boolean {
+  if (expected === "text emoji") {
+    return event.kind === "text" && isEmojiText(event.text);
+  }
+
+  if (expected.startsWith("text ")) {
+    const text = expected.slice("text ".length);
+    return event.kind === "text" && event.text === text;
+  }
+
+  const expectedKey = expectedKeyEvent(expected);
+  if (!expectedKey || event.kind !== "key") {
+    return false;
+  }
+
+  return (
+    event.key === expectedKey.key &&
+    sameModifiers(event.modifiers, expectedKey.modifiers)
+  );
+}
+
+function isEmojiText(text: string): boolean {
+  return /^\p{Extended_Pictographic}/u.test(text);
+}
+
+function expectedKeyEvent(expected: string): {
+  key: string;
+  modifiers: {
+    ctrl: boolean;
+    alt: boolean;
+    shift: boolean;
+    meta: boolean;
+  };
+} | null {
+  const functionMatch = expected.match(/^(?:(Shift|Ctrl|Alt)\+)?F(\d+)$/);
+  if (functionMatch) {
+    return {
+      key: `f${Number(functionMatch[2])}`,
+      modifiers: modifiersFor(functionMatch[1])
+    };
+  }
+
+  if (expected === "Shift+Tab") {
+    return { key: "tab", modifiers: modifiersFor("Shift") };
+  }
+
+  const modifierMatch = expected.match(/^(Ctrl|Alt)\+(.+)$/);
+  const modifier = modifierMatch?.[1];
+  const name = modifierMatch?.[2] ?? expected;
+  const keyNames: Record<string, string> = {
+    Enter: "enter",
+    Up: "up",
+    Down: "down",
+    Left: "left",
+    Right: "right",
+    Backspace: "backspace",
+    Delete: "delete",
+    Tab: "tab"
+  };
+
+  if (!keyNames[name]) {
+    return null;
+  }
+  return { key: keyNames[name], modifiers: modifiersFor(modifier) };
+}
+
+function modifiersFor(modifier: string | undefined): {
+  ctrl: boolean;
+  alt: boolean;
+  shift: boolean;
+  meta: boolean;
+} {
+  return {
+    ctrl: modifier === "Ctrl",
+    alt: modifier === "Alt",
+    shift: modifier === "Shift",
+    meta: false
+  };
+}
+
+function sameModifiers(
+  actual: {
+    ctrl: boolean;
+    alt: boolean;
+    shift: boolean;
+    meta: boolean;
+  },
+  expected: {
+    ctrl: boolean;
+    alt: boolean;
+    shift: boolean;
+    meta: boolean;
+  }
+): boolean {
+  return (
+    actual.ctrl === expected.ctrl &&
+    actual.alt === expected.alt &&
+    actual.shift === expected.shift &&
+    actual.meta === expected.meta
+  );
+}
+
 function formatEvent(event: TerminalKeyEvent): string {
   const modifiers = event.kind === "key"
     ? event.modifiers
@@ -210,6 +375,17 @@ function formatEvent(event: TerminalKeyEvent): string {
     `modifiers=${modifierLabels.join("+") || "-"}`,
     `textLength=${event.kind === "text" || event.kind === "paste" ? event.text.length : 0}`
   ].join(" ");
+}
+
+function formatReceivedText(event: TerminalKeyEvent): string {
+  if (event.kind !== "text" && event.kind !== "paste") {
+    return "";
+  }
+
+  const codePoints = [...event.text]
+    .map((char) => `U+${char.codePointAt(0)!.toString(16).toUpperCase()}`)
+    .join(" ");
+  return ` got=${JSON.stringify(event.text)} (${codePoints})`;
 }
 
 function writeCaptureMarker(
@@ -267,7 +443,7 @@ const captureSteps = [
   "Shift+Tab",
   "text A",
   "text 中",
-  "text 🙂",
+  "text emoji",
   pasteStep
 ] as const;
 

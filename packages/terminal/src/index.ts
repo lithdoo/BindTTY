@@ -77,6 +77,7 @@ export type {
   TerminalStdin,
   TerminalStdout,
   TerminalViewport,
+  ViewportQueryOption,
   Win32InputProvider,
   Win32KeyRecord
 } from "./types.js";

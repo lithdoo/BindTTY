@@ -325,6 +325,8 @@ export interface CreateAppStdoutOptions {
   fallbackViewport?: AppViewport;
   autoStart?: boolean;
   onLifecycleError?: RuntimeLifecycleErrorHandler;
+  onError?: AppErrorHandler;
+  clearOnResize?: boolean;
 }
 ```
 
@@ -335,6 +337,8 @@ export interface CreateAppTerminalOptions {
   terminal: TerminalHost;
   autoStart?: boolean;
   onLifecycleError?: RuntimeLifecycleErrorHandler;
+  onError?: AppErrorHandler;
+  clearOnResize?: boolean;
 }
 ```
 
@@ -383,6 +387,16 @@ stdout.rows ?? fallbackViewport.height ?? 24
 `getFocusedId()` 返回当前 focused element 的 id；无焦点或 app 已 dispose 时返回 `null`。
 
 `onLifecycleError` 用于接收 element lifecycle callback 的异常，包括 `api.onMounted`、`api.onLayout`、`api.onUnmount`。这些异常不会阻断后续节点更新、layout 派发或 dispose 清理；如果未提供该 handler，runtime 默认忽略这些异常。
+
+`onError` 用于接收 resize、异步 runtime flush 和 drain 重试入口中的
+layout/render/write 异常。事件包含 `phase`、原始 `error` 和失败时的
+`viewport`。这些异步入口不会把异常重新抛到事件循环；未提供 handler 时
+BindTTY 会写入 stderr。直接调用 `start()`、`render()` 或 `resize()` 时仍同步
+抛错，便于调用方显式处理。
+
+`clearOnResize` 默认为 `true`，使 viewport resize 在完整重绘前发送 ED2 和
+cursor home。嵌入非全屏终端且必须保留已有屏幕内容的应用可以显式设为
+`false`，回退到仅覆盖 viewport cell 的旧行为。
 
 ## 7. 生命周期
 

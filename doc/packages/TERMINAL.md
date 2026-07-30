@@ -294,6 +294,8 @@ rawMode = false
 synchronizedOutput = win32 且 stdout.isTTY 时为 true，否则 false
 exitOnCtrlC = true
 resizePollIntervalMs = win32 且 stdout.isTTY 时为 50，否则 0（不轮询）
+resizeMinFrameIntervalMs = win32 时为 80，否则 0
+resizeSettleDelayMs = win32 时为 100，否则 0
 ```
 
 默认不进入 alternate screen / raw mode，是为了保持当前 APP MVP 的温和行为。真实 CLI 可以显式打开。
@@ -320,15 +322,17 @@ frame，降低 resize 全帧重绘时的 tearing。未知的 DEC private mode �
 忽略；重定向 stdout 不添加边界，也可用 `synchronizedOutput: false` 显式关闭。
 alt-screen、光标和键盘协议等 terminal lifecycle 序列始终写在 frame 边界外。
 
-MVP 不默认 clear screen。
+普通帧、启动和退出仍不默认 clear screen。viewport resize 的第一帧会在同一次
+frame write 中发送 `CSI 2J` + cursor home 后再完整重绘，以清除 Windows
+ConPTY reflow 遗留的错位内容。
 
 原因：
 
 ```text
 1. renderer 已经只输出 patch，不拥有 terminal 生命周期。
-2. createApp 当前也不主动清屏。
+2. createApp 仅在 viewport resize 时主动清屏。
 3. 用户可能希望退出后保留最后一帧。
-4. 后续可以用 clearOnStart / clearOnDispose 显式配置。
+4. 后续可以用 clearOnStart / clearOnDispose 显式配置启动和退出行为。
 ```
 
 ## 7. 生命周期

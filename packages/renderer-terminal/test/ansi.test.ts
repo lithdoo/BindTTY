@@ -295,7 +295,29 @@ test("encodeAnsiPatch sorts mixed wide changes and still skips placeholders", ()
 
   assert.equal(
     encodeAnsiPatch(patch),
-    "\x1b[1;1H\x1b[0m中B\x1b[0m"
+    "\x1b[1;1H\x1b[0m中\x1b[1;3H\x1b[0mB\x1b[0m"
+  );
+});
+
+test("encodeAnsiPatch re-anchors every visible cell after wide text", () => {
+  const patch: FramePatch = {
+    kind: "full",
+    width: 5,
+    height: 1,
+    ordered: true,
+    changes: [
+      { x: 0, y: 0, cell: { char: "中", style: {}, width: 2 } },
+      { x: 1, y: 0, cell: { char: "", style: {}, width: 0 } },
+      { x: 2, y: 0, cell: { char: "🙂", style: {}, width: 2 } },
+      { x: 3, y: 0, cell: { char: "", style: {}, width: 0 } },
+      { x: 4, y: 0, cell: { char: "A", style: {}, width: 1 } }
+    ]
+  };
+
+  assert.equal(
+    encodeAnsiPatch(patch),
+    "\x1b[?7l\x1b[1;1H\x1b[0m中\x1b[1;3H\x1b[0m🙂" +
+      "\x1b[1;5H\x1b[0mA\x1b[0m\x1b[?7h"
   );
 });
 

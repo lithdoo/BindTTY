@@ -36,6 +36,7 @@ import type {
   TerminalResizeEvent,
   TerminalViewport
 } from "@bindtty/terminal";
+import { ANSI } from "@bindtty/terminal";
 import type { InteractionNodeFocusChangeEvent } from "@bindtty/interaction";
 import {
   elementTemplate,
@@ -616,11 +617,18 @@ test("start registers a resize listener and resize emits a full repaint", () => 
 
   app.start();
   assert.equal(stdout.listenerCount(), 1);
+  assert.ok(
+    !stdout.writes[0]?.startsWith(ANSI.eraseDisplay + ANSI.cursorHome),
+    "initial render must preserve the existing start lifecycle policy"
+  );
 
   stdout.columns = 2;
   stdout.emitResize();
 
   assert.equal(stdout.writes.length, 2);
+  assert.ok(
+    stdout.writes[1]?.startsWith(ANSI.eraseDisplay + ANSI.cursorHome)
+  );
   assert.match(stdout.writes[1], /A/);
   assert.match(stdout.writes[1], /B/);
 });
@@ -1137,6 +1145,38 @@ test("terminal resize renders from the viewport event snapshot", () => {
   assert.deepEqual(terminal.viewport, { width: 9, height: 4 });
 });
 
+test("viewport hook updates application state before initial and resize layout", () => {
+  const terminal = createMockTerminal(9, 4);
+  const events: string[] = [];
+  const delegate = createYogaLayoutEngine();
+  const app = createApp(elementTemplate("text", { value: "A" }), {
+    terminal,
+    onViewportChange(viewport) {
+      events.push(`viewport:${viewport.width}x${viewport.height}`);
+    },
+    layoutEngine: {
+      layout(root, options) {
+        events.push(`layout:${options.viewport.width}x${options.viewport.height}`);
+        return delegate.layout(root, options);
+      }
+    }
+  });
+
+  app.start();
+  terminal.emitResize({
+    viewport: { width: 3, height: 2 },
+    previousViewport: { width: 9, height: 4 },
+    source: "poll"
+  });
+
+  assert.deepEqual(events, [
+    "viewport:9x4",
+    "layout:9x4",
+    "viewport:3x2",
+    "layout:3x2"
+  ]);
+});
+
 test("terminal resize consumes a queued runtime flush in one repaint", async () => {
   const terminal = createMockTerminal(1, 1);
   const label = createSignal("A");
@@ -1410,6 +1450,59 @@ test("coordinator recovers after layout and write errors", () => {
   assert.throws(() => app.resize(), /write failed/);
   assert.doesNotThrow(() => app.resize());
   assert.match(stdout.writes.at(-1) ?? "", /A/);
+  app.dispose();
+});
+
+test("clearOnResize false preserves the legacy full-cover repaint", () => {
+  const stdout = createMockStdout(1, 1);
+  const app = createApp(elementTemplate("text", { value: "A" }), {
+    stdout,
+    clearOnResize: false
+  });
+  app.start();
+
+  stdout.columns = 2;
+  const patch = app.resize();
+
+  assert.ok(!patch.startsWith(ANSI.eraseDisplay + ANSI.cursorHome));
+  assert.match(patch, /A/);
+});
+
+test("resize listener reports layout errors without throwing from the event", () => {
+  const stdout = createMockStdout(2, 1);
+  const delegate = createYogaLayoutEngine();
+  const errors: Array<{
+    phase: string;
+    error: unknown;
+    viewport: { width: number; height: number };
+  }> = [];
+  let failLayout = false;
+  const app = createApp(elementTemplate("text", { value: "A" }), {
+    stdout,
+    layoutEngine: {
+      layout(root, options) {
+        if (failLayout) {
+          throw new Error("resize layout failed");
+        }
+        return delegate.layout(root, options);
+      }
+    },
+    onError(error) {
+      errors.push(error);
+    }
+  });
+  app.start();
+
+  failLayout = true;
+  stdout.columns = 4;
+  assert.doesNotThrow(() => stdout.emitResize());
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]?.phase, "resize");
+  assert.deepEqual(errors[0]?.viewport, { width: 4, height: 1 });
+  assert.match(String((errors[0]?.error as Error).message), /resize layout failed/);
+
+  failLayout = false;
+  assert.doesNotThrow(() => app.resize());
   app.dispose();
 });
 

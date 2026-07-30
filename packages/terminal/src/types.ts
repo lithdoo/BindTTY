@@ -16,6 +16,7 @@ export type KeyboardProtocolOption =
   | "modify-other-keys"
   | "legacy";
 export type InputBackendOption = "auto" | "readline" | "raw" | "win32";
+export type ViewportQueryOption = "auto" | "none" | "xterm";
 
 export interface TerminalInputEnvironment {
   platform: NodeJS.Platform;
@@ -143,6 +144,7 @@ export interface TerminalStdout {
   isTTY?: boolean;
   columns?: number;
   rows?: number;
+  getWindowSize?(): [number, number];
   write(chunk: string): unknown;
   on?(event: "resize", listener: () => void): unknown;
   off?(event: "resize", listener: () => void): unknown;
@@ -278,7 +280,7 @@ export interface CreateNodeTerminalOptions {
   resizePollIntervalMs?: number;
   /**
    * Minimum interval between viewport publications during a resize burst.
-   * Defaults to 32ms on win32 and 0 elsewhere; set 0 to publish immediately.
+   * Defaults to 80ms on win32 and 0 elsewhere; set 0 to publish immediately.
    */
   resizeMinFrameIntervalMs?: number;
   /**
@@ -286,6 +288,12 @@ export interface CreateNodeTerminalOptions {
    * Defaults to 100ms on win32 and 0 elsewhere.
    */
   resizeSettleDelayMs?: number;
+  /**
+   * Selects active terminal viewport discovery. `auto` enables the xterm
+   * character-area query for VS Code, whose ConPTY bridge may leave Node's
+   * cached stdout dimensions unchanged.
+   */
+  viewportQuery?: ViewportQueryOption;
   /** Injectable resize clock for deterministic hosts and tests. */
   resizeClock?: import("./resize-coordinator.js").ResizeClock;
 }

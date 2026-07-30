@@ -66,13 +66,17 @@ export function createResizeCoordinator(
   let pending:
     | { viewport: TerminalViewport; source: TerminalResizeEvent["source"] }
     | undefined;
+  let settleCandidate:
+    | { viewport: TerminalViewport; source: TerminalResizeEvent["source"] }
+    | undefined;
   let published = readViewport(options);
 
   function publish(
     viewport: TerminalViewport,
-    source: TerminalResizeEvent["source"]
+    source: TerminalResizeEvent["source"],
+    force = false
   ): void {
-    if (equalViewport(published, viewport)) {
+    if (!force && equalViewport(published, viewport)) {
       return;
     }
     const previousViewport = published;
@@ -110,16 +114,42 @@ export function createResizeCoordinator(
     }
   }
 
+  function scheduleSettle(frameDelay: number): void {
+    clearSettle();
+    settleTimer = clock.setTimeout(() => {
+      settleTimer = undefined;
+      clearFrame();
+      const settled = settleCandidate;
+      settleCandidate = undefined;
+      pending = undefined;
+      if (settled) {
+        // Hosts such as VS Code/ConPTY can reflow after the last size event was
+        // painted. Force one same-size viewport frame after the burst becomes
+        // stable so the app can clear and rebuild the final screen.
+        publish(settled.viewport, settled.source, true);
+      }
+    }, options.settleDelayMs > 0 ? options.settleDelayMs : frameDelay);
+  }
+
   function sample(source: TerminalResizeEvent["source"]): void {
     const viewport = readViewport(options, published);
     if (equalViewport(published, viewport)) {
-      pending = undefined;
-      clearFrame();
-      clearSettle();
+      if (pending) {
+        pending = undefined;
+        clearFrame();
+        settleCandidate = { viewport: { ...viewport }, source };
+        scheduleSettle(options.settleDelayMs);
+      }
       return;
     }
     if (pending && equalViewport(pending.viewport, viewport)) {
       pending.source = source;
+      settleCandidate = { viewport: { ...viewport }, source };
+      const elapsed =
+        lastPublishedAt === undefined
+          ? Number.POSITIVE_INFINITY
+          : clock.now() - lastPublishedAt;
+      scheduleSettle(Math.max(0, options.minFrameIntervalMs - elapsed));
       return;
     }
     const elapsed =
@@ -129,11 +159,13 @@ export function createResizeCoordinator(
     if (options.minFrameIntervalMs === 0 || elapsed >= options.minFrameIntervalMs) {
       pending = undefined;
       clearFrame();
-      clearSettle();
       publish(viewport, source);
+      settleCandidate = { viewport: { ...viewport }, source };
+      scheduleSettle(options.settleDelayMs);
       return;
     }
     pending = { viewport, source };
+    settleCandidate = { viewport: { ...viewport }, source };
     const frameDelay = Math.max(0, options.minFrameIntervalMs - elapsed);
     if (frameTimer === undefined) {
       frameTimer = clock.setTimeout(() => {
@@ -141,12 +173,7 @@ export function createResizeCoordinator(
         publishPending();
       }, frameDelay);
     }
-    clearSettle();
-    settleTimer = clock.setTimeout(() => {
-      settleTimer = undefined;
-      clearFrame();
-      publishPending();
-    }, options.settleDelayMs > 0 ? options.settleDelayMs : frameDelay);
+    scheduleSettle(frameDelay);
   }
 
   const handleResize = (): void => sample("event");
@@ -164,8 +191,9 @@ export function createResizeCoordinator(
       if (
         options.pollIntervalMs > 0 &&
         options.stdout.isTTY === true &&
-        typeof options.stdout.columns === "number" &&
-        typeof options.stdout.rows === "number"
+        ((typeof options.stdout.columns === "number" &&
+          typeof options.stdout.rows === "number") ||
+          typeof options.stdout.getWindowSize === "function")
       ) {
         pollTimer = clock.setInterval(
           () => sample("poll"),
@@ -184,6 +212,7 @@ export function createResizeCoordinator(
       clearFrame();
       clearSettle();
       pending = undefined;
+      settleCandidate = undefined;
       lastPublishedAt = undefined;
       options.stdout.off?.("resize", handleResize);
       started = false;
@@ -211,20 +240,38 @@ function readViewport(
   options: ResizeCoordinatorOptions,
   runtimeFallback?: TerminalViewport
 ): TerminalViewport {
+  const windowSize = readWindowSize(options.stdout);
   return {
     width: readDimension(
+      windowSize?.[0],
       options.stdout.columns,
       runtimeFallback?.width,
       options.fallbackViewport?.width,
       defaultViewport.width
     ),
     height: readDimension(
+      windowSize?.[1],
       options.stdout.rows,
       runtimeFallback?.height,
       options.fallbackViewport?.height,
       defaultViewport.height
     )
   };
+}
+
+function readWindowSize(stdout: TerminalStdout): [number, number] | undefined {
+  if (typeof stdout.getWindowSize !== "function") {
+    return undefined;
+  }
+  try {
+    const size = stdout.getWindowSize();
+    if (Array.isArray(size) && size.length >= 2) {
+      return [size[0], size[1]];
+    }
+  } catch {
+    // Fall through to cached columns/rows and configured fallbacks.
+  }
+  return undefined;
 }
 
 function readDimension(...values: Array<number | undefined>): number {

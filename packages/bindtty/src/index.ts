@@ -2,6 +2,9 @@ export { createApp } from "./app.js";
 export { batch, createSignal, computed, effect } from "@bindtty/signal";
 export type {
   AppStdin,
+  AppError,
+  AppErrorHandler,
+  AppErrorPhase,
   AppStdout,
   AppViewport,
   BindTTYApp,

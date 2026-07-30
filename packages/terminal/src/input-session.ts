@@ -46,6 +46,7 @@ export interface InputSessionOptions {
   profile: ResolvedTerminalProfile;
   writeRaw(chunk: string): boolean | void;
   onExitRequest(): void;
+  filterRawInput?(chunk: Buffer | string): string;
 }
 
 const defaultProbeTimeoutMs = 100;
@@ -299,6 +300,10 @@ export function createInputSession(
           let pasteTraceOpen = false;
           let traceSuffix = "";
           detachBackend = backend.attachRaw(stdin, (chunk) => {
+            const filteredChunk = config.filterRawInput?.(chunk) ?? chunk;
+            if (filteredChunk.length === 0) {
+              return;
+            }
             const text = Buffer.isBuffer(chunk) ? chunk.toString("utf8") : chunk;
             const combined = traceSuffix + text;
             const openIndex = combined.lastIndexOf("\x1b[200~");
@@ -314,7 +319,7 @@ export function createInputSession(
               pasteTraceOpen = openIndex > closeIndex;
             }
             traceSuffix = combined.slice(-5);
-            parser.push(chunk);
+            parser.push(filteredChunk);
           });
           const detachRaw = detachBackend;
           detachBackend = () => {

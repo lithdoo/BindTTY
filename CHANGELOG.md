@@ -4,6 +4,15 @@ BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见�
 
 ## Unreleased
 
+- Fixed Windows viewport resize repainting by clearing reflowed terminal content
+  before the full frame in the same presentation write. Applications that embed
+  into a shared screen can set `clearOnResize: false`.
+- Reduced Win32 resize burst repaint frequency while retaining the leading and
+  final settled viewport.
+- Added `createApp({ onError })` reporting for failures from resize, runtime
+  flush, and output-drain callbacks so they do not escape as uncaught event
+  listener exceptions.
+
 - raw stdin backend 增加默认 30ms、可配置的 Escape ambiguity timeout；独立 ESC
   稳定发布为语义 Escape key，同时保持 Alt、CSI、SS3、Kitty 与 modifyOtherKeys
   分片序列的原子解析。

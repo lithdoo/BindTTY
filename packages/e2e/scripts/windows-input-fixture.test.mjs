@@ -160,6 +160,13 @@ function observedEvent(expected) {
     }
   };
 
+  if (expected === "text emoji") {
+    return {
+      kind: "text",
+      protocol: "win32",
+      textLength: 2
+    };
+  }
   if (expected.startsWith("text ")) {
     return {
       kind: "text",

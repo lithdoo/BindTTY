@@ -78,8 +78,17 @@ export function encodeAnsiPatch(patch: FramePatch): string {
     }
 
     output += change.cell.char;
-    expectedX = change.x + (change.cell.width ?? 1);
-    expectedY = change.y;
+    const cellWidth = change.cell.width ?? 1;
+    if (cellWidth === 1) {
+      expectedX = change.x + 1;
+      expectedY = change.y;
+    } else {
+      // A host's cursor advance for CJK/emoji can disagree with our display
+      // width model (notably classic Windows Console Host). Re-anchor the
+      // next visible cell instead of allowing that disagreement to accumulate.
+      expectedX = -1;
+      expectedY = -1;
+    }
   }
 
   if (output.length === 0) {

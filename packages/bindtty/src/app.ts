@@ -12,10 +12,11 @@ import type {
   RuntimeLifecycleErrorHandler,
   RuntimeRoot
 } from "@bindtty/runtime";
-import type {
-  TerminalHost,
-  TerminalKeyEvent,
-  TerminalResizeEvent
+import {
+  ANSI,
+  type TerminalHost,
+  type TerminalKeyEvent,
+  type TerminalResizeEvent
 } from "@bindtty/terminal";
 import type { MountedElementNode, ViewTemplate } from "@bindtty/vnode";
 import {
@@ -44,9 +45,27 @@ export interface AppViewport {
   height: number;
 }
 
+export type AppErrorPhase = "resize" | "runtime-flush" | "drain";
+
+export interface AppError {
+  phase: AppErrorPhase;
+  error: unknown;
+  viewport: AppViewport;
+}
+
+export type AppErrorHandler = (error: AppError) => void;
+
 export interface CreateAppBaseOptions {
   autoStart?: boolean;
   onLifecycleError?: RuntimeLifecycleErrorHandler;
+  onError?: AppErrorHandler;
+  clearOnResize?: boolean;
+  /**
+   * Runs immediately before the initial or resized viewport is laid out.
+   * Applications can update viewport-derived state here without registering
+   * a second, order-dependent terminal resize listener.
+   */
+  onViewportChange?(viewport: AppViewport): void;
   layoutEngine?: LayoutEngine;
 }
 
@@ -56,6 +75,9 @@ export interface CreateAppStdoutOptions {
   fallbackViewport?: AppViewport;
   autoStart?: CreateAppBaseOptions["autoStart"];
   onLifecycleError?: CreateAppBaseOptions["onLifecycleError"];
+  onError?: CreateAppBaseOptions["onError"];
+  clearOnResize?: CreateAppBaseOptions["clearOnResize"];
+  onViewportChange?: CreateAppBaseOptions["onViewportChange"];
   layoutEngine?: CreateAppBaseOptions["layoutEngine"];
   terminal?: never;
 }
@@ -64,6 +86,9 @@ export interface CreateAppTerminalOptions {
   terminal: TerminalHost;
   autoStart?: CreateAppBaseOptions["autoStart"];
   onLifecycleError?: CreateAppBaseOptions["onLifecycleError"];
+  onError?: CreateAppBaseOptions["onError"];
+  clearOnResize?: CreateAppBaseOptions["clearOnResize"];
+  onViewportChange?: CreateAppBaseOptions["onViewportChange"];
   layoutEngine?: CreateAppBaseOptions["layoutEngine"];
   stdout?: never;
   stdin?: never;
@@ -126,7 +151,7 @@ export function createApp(
 
   function handleRuntimeRecord(record: RuntimeFlushRecord): void {
     if (!synchronousRuntimeFlush) {
-      consumeRuntimeRecord(record);
+      runAsyncEntry("runtime-flush", () => consumeRuntimeRecord(record));
     }
   }
 
@@ -150,6 +175,12 @@ export function createApp(
       cachedLayout === null;
     const needsLayout = intent.kind !== "paint" || cachedLayout === null;
 
+    if (
+      options.onViewportChange &&
+      (intent.kind === "viewport" || cachedViewport === null)
+    ) {
+      options.onViewportChange({ ...viewport });
+    }
     if (needsInteraction) {
       refreshInteraction();
     }
@@ -164,10 +195,17 @@ export function createApp(
       cachedViewport = { ...viewport };
     }
 
-    const patch = renderer.render(cachedLayout, {
+    let patch = renderer.render(cachedLayout, {
       viewport,
       isFocused: (mounted) => interaction.isFocused(mounted)
     });
+    if (
+      intent.kind === "viewport" &&
+      patch !== "" &&
+      options.clearOnResize !== false
+    ) {
+      patch = ANSI.eraseDisplay + ANSI.cursorHome + patch;
+    }
     let blocked = false;
     if (patch !== "") {
       blocked = sink.write(patch) === "blocked";
@@ -201,7 +239,39 @@ export function createApp(
   }
 
   function handleResize(event?: TerminalResizeEvent): void {
-    requestResize(event?.viewport ?? readViewport());
+    const viewport = event?.viewport ?? readViewport();
+    runAsyncEntry("resize", () => requestResize(viewport), viewport);
+  }
+
+  function runAsyncEntry(
+    phase: AppErrorPhase,
+    operation: () => unknown,
+    viewport = readViewport()
+  ): void {
+    try {
+      operation();
+    } catch (error) {
+      coordinator.cancelPending();
+      const appError: AppError = {
+        phase,
+        error,
+        viewport: { ...viewport }
+      };
+      try {
+        if (options.onError) {
+          options.onError(appError);
+        } else {
+          try {
+            app.stop();
+          } catch (stopError) {
+            console.error("[bindtty] terminal restore failed", stopError);
+          }
+          console.error(`[bindtty] ${phase} failed`, error);
+        }
+      } catch (handlerError) {
+        console.error("[bindtty] onError failed", handlerError);
+      }
+    }
   }
 
   function handleKey(event: TerminalKeyEvent): void {
@@ -260,7 +330,7 @@ export function createApp(
         if (sink.onWritable) {
           writableUnsubscribe = sink.onWritable(() => {
             if (!disposed && started) {
-              coordinator.writable();
+              runAsyncEntry("drain", () => coordinator.writable());
             }
           });
           rollbacks.push(() => writableUnsubscribe?.());
@@ -268,8 +338,9 @@ export function createApp(
 
         started = true;
         const viewport = readViewport();
-        if (
-          cachedViewport &&
+        if (!cachedViewport) {
+          requestRender("structure");
+        } else if (
           cachedViewport.width === viewport.width &&
           cachedViewport.height === viewport.height
         ) {

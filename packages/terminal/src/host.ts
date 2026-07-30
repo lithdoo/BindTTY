@@ -5,6 +5,7 @@ import { discoverNativeWin32InputProvider } from "./native-win32-provider.js";
 import { createResizeCoordinator } from "./resize-coordinator.js";
 import { createTerminalOutput } from "./terminal-output.js";
 import { resolveTerminalProfile } from "./terminal-profile.js";
+import { createXtermViewportQuery } from "./xterm-viewport-query.js";
 import type {
   CreateNodeTerminalOptions,
   Dispose,
@@ -25,11 +26,28 @@ export function createNodeTerminal(
 
   let started = false;
   let disposed = false;
-  const profile = resolveTerminalProfile(options);
+  let profile = resolveTerminalProfile(options);
+  if (
+    profile.resize.queryXtermViewport &&
+    options.inputBackend === undefined
+  ) {
+    options = { ...options, inputBackend: "raw" };
+    profile = resolveTerminalProfile(options);
+  }
   const output = createTerminalOutput({
     stdout: options.stdout,
     synchronizedOutput: profile.output.synchronizedOutput
   });
+  const viewportQuery = profile.resize.queryXtermViewport
+    ? createXtermViewportQuery({
+        stdout: options.stdout,
+        writeRaw: (chunk) => output.writeRaw(chunk),
+        clock: options.resizeClock
+      })
+    : undefined;
+  if (viewportQuery) {
+    options = { ...options, stdout: viewportQuery.stdout };
+  }
   const resize = createResizeCoordinator({
     stdout: options.stdout,
     fallbackViewport: options.fallbackViewport,
@@ -41,7 +59,8 @@ export function createNodeTerminal(
     terminalOptions: options,
     profile,
     writeRaw: (chunk) => output.writeRaw(chunk),
-    onExitRequest: () => terminal.dispose()
+    onExitRequest: () => terminal.dispose(),
+    filterRawInput: viewportQuery?.filterRawInput
   });
   const lifecycle = createLifecycleGuard({
     restore: restoreStartedComponents
@@ -74,6 +93,7 @@ export function createNodeTerminal(
           writeRaw(ANSI.enterAltScreen);
         }
         input.start();
+        viewportQuery?.start();
         if (options.hideCursor === true) {
           writeRaw(ANSI.hideCursor);
         }
@@ -107,6 +127,7 @@ export function createNodeTerminal(
         () => terminal.stop(),
         () => lifecycle.dispose(),
         () => resize.dispose(),
+        () => viewportQuery?.dispose(),
         () => input.dispose(),
         () => output.dispose()
       ]) {
@@ -149,6 +170,7 @@ export function createNodeTerminal(
     const errors: unknown[] = [];
     for (const cleanup of [
       () => resize.stop(),
+      () => viewportQuery?.stop(),
       () => output.stop(),
       () => input.stop(),
       () => {

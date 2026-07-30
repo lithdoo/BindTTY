@@ -385,8 +385,11 @@ test("exports terminal ANSI lifecycle constants", () => {
     showCursor: "\x1b[?25h",
     beginSynchronizedOutput: "\x1b[?2026h",
     endSynchronizedOutput: "\x1b[?2026l",
+    eraseDisplay: "\x1b[2J",
+    cursorHome: "\x1b[H",
     queryKittyKeyboard: "\x1b[?u",
     queryPrimaryDeviceAttributes: "\x1b[c",
+    queryTextAreaSize: "\x1b[18t",
     enableKittyKeyboard: "\x1b[>1u",
     disableKittyKeyboard: "\x1b[<u",
     enableModifyOtherKeys: "\x1b[>4;2m",
@@ -462,7 +465,8 @@ test("resolved terminal profile applies platform defaults once and preserves ove
   assert.deepEqual(profile.resize, {
     pollIntervalMs: 7,
     minFrameIntervalMs: 11,
-    settleDelayMs: 13
+    settleDelayMs: 13,
+    queryXtermViewport: false
   });
 });
 
@@ -1414,7 +1418,7 @@ test(
 );
 
 test(
-  "configured resize burst publishes an immediate and final viewport only",
+  "configured resize burst publishes bounded intermediate and settled frames",
   async () => {
     const stdout = createMockStdout();
     const terminal = createNodeTerminal({
@@ -1442,10 +1446,14 @@ test(
 
     terminal.stop();
     assert.ok(
-      events.length <= 2,
-      `expected at most immediate + settled events, received ${events.length}`
+      events.length <= 3,
+      `expected at most leading + intermediate + settled events, received ${events.length}`
     );
     assert.deepEqual(events.at(-1)?.viewport, {
+      width: 60,
+      height: 3
+    });
+    assert.deepEqual(events.at(-1)?.previousViewport, {
       width: 60,
       height: 3
     });
@@ -1548,7 +1556,7 @@ test("resize event and polling fallback share one deduplicated viewport", async 
   stdout.columns = 12;
 
   await new Promise((resolve) => {
-    setTimeout(resolve, 30);
+    setTimeout(resolve, 130);
   });
 
   terminal.stop();
@@ -1686,6 +1694,70 @@ test("win32 polls TTY stdout viewport when columns change without resize event",
 
   assert.equal(resizeCount, 1);
   terminal.stop();
+});
+
+test("xterm viewport query consumes split responses and publishes live dimensions", async () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const stdin = createMockStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    viewportQuery: "xterm",
+    keyboardProtocol: "legacy",
+    resizePollIntervalMs: 10,
+    resizeMinFrameIntervalMs: 0,
+    resizeSettleDelayMs: 0
+  });
+  const keys: TerminalKeyEvent[] = [];
+  const viewports: TerminalViewport[] = [];
+  terminal.onKey((event) => keys.push(event));
+  terminal.onResize((event) => viewports.push(event.viewport));
+
+  terminal.start();
+  assert.equal(stdout.writes.includes(ANSI.queryTextAreaSize), true);
+  assert.equal(stdin.rawModeCalls[0], true);
+
+  stdin.emitData("\x1b[8;40;");
+  stdin.emitData("120ta");
+
+  await new Promise((resolve) => setTimeout(resolve, 30));
+
+  assert.deepEqual(terminal.viewport, { width: 120, height: 40 });
+  assert.deepEqual(viewports.at(-1), { width: 120, height: 40 });
+  assert.deepEqual(keys, [semanticText("a", "windows-vt")]);
+
+  terminal.stop();
+  assert.deepEqual(stdin.rawModeCalls, [true, false]);
+});
+
+test("polling prefers live getWindowSize when cached columns stay stale", async () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  let liveSize: [number, number] = [10, 3];
+  stdout.getWindowSize = () => [...liveSize];
+  const resize = createResizeCoordinator({
+    stdout,
+    pollIntervalMs: 20,
+    minFrameIntervalMs: 0,
+    settleDelayMs: 100
+  });
+  const events: TerminalResizeEvent[] = [];
+  resize.onResize((event) => events.push(event));
+
+  resize.start();
+  liveSize = [24, 7];
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
+
+  assert.deepEqual(events[0]?.viewport, { width: 24, height: 7 });
+  assert.deepEqual(
+    { width: stdout.columns, height: stdout.rows },
+    { width: 10, height: 3 },
+    "the test must keep Node's cached properties stale"
+  );
+  resize.dispose();
 });
 
 test("win32 resize polling is disabled when resizePollIntervalMs is 0", async (t) => {

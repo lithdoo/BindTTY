@@ -18,6 +18,7 @@ export const captureSteps = [
   ),
   "Enter",
   "Ctrl+Enter",
+  "Alt+Enter",
   "Up",
   "Down",
   "Left",
@@ -32,7 +33,7 @@ export const captureSteps = [
   "Shift+Tab",
   "text A",
   "text 中",
-  "text 🙂",
+  "text emoji",
   "paste BINDTTY_PASTE_SAMPLE"
 ];
 
@@ -61,7 +62,7 @@ const mandatoryObservedSteps = new Set([
   "Shift+Tab",
   "text A",
   "text 中",
-  "text 🙂",
+  "text emoji",
   "paste BINDTTY_PASTE_SAMPLE"
 ]);
 
@@ -238,6 +239,15 @@ function validateCaptureMarkers(records, errors, label) {
 function validateObservedEvent(expected, event, errors, label) {
   if (!event) {
     errors.push(`${label}: ${expected} observed marker is missing event evidence`);
+    return;
+  }
+
+  if (expected === "text emoji") {
+    if (event.kind !== "text" || !(event.textLength >= 2)) {
+      errors.push(
+        `${label}: text emoji must be a text event with UTF-16 length >= 2`
+      );
+    }
     return;
   }
 
