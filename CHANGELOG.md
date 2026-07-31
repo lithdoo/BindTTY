@@ -2,7 +2,7 @@
 
 BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见行为变化；设计细节见 `doc/` 下对应 package/spec/widget 文档。
 
-## Unreleased
+## 0.1.0-beta.6
 
 - Added a bounded terminal frame scheduler that coalesces runtime updates and
   resize bursts while preserving the latest viewport and dirty state.
@@ -24,6 +24,7 @@ BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见�
 - Classic Windows Console Host now disables synchronized output and alt screen
   automatically, reports no absolute cursor-addressing capability, and uses a
   sequential full-row repaint strategy to avoid resize/CJK/emoji cursor drift.
+- npm `beta` 与 `latest` 均指向本版本。
 
 ## 0.1.0-beta.5
 
