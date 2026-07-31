@@ -44,16 +44,20 @@ custom transports can use `createTerminalResponseRouter()` directly and
 reference-count the response kinds they currently expect.
 
 On Windows, the optional `@bindtty/win32-input` package is discovered
-automatically. When stdin is a console handle it reads native
+automatically. In Console Host and Windows Terminal, when stdin is a console
+handle, it reads native
 `KEY_EVENT_RECORD` data, bypasses VT negotiation, and preserves physical
 F-keys, Ctrl+Enter, repeat counts, and Unicode as semantic events. No
 application wiring is required. Explicit `win32InputProvider` injection remains
 available for tests and custom hosts.
 
-Active terminal queries do not replace this backend with raw stdin. Potential
-response records beginning with Escape are buffered through the shared response
-router; physical function-key records continue through their virtual-key
-mapping, and unmatched candidates replay as their original Win32 records.
+VS Code-family integrated terminals use raw VT input in auto mode even when the
+native provider is available. Their synthesized terminal-query responses and
+keyboard input must share one byte stream; the response router removes viewport
+reports before the remaining bytes reach the keyboard parser. This keeps
+Cursor viewport discovery live without leaking response fragments into text or
+misclassifying adjacent function keys. Explicit `inputBackend: "win32"` still
+selects native records for diagnostics or host-specific overrides.
 
 Viewport discovery is represented by a `ViewportProvider`, not by overriding
 properties on stdout. The composite provider uses `getWindowSize()` and cached
@@ -71,11 +75,12 @@ Redirected output is left untouched, and `synchronizedOutput: false` disables
 the behavior explicitly. Terminal lifecycle sequences are never frame-wrapped.
 
 Backend selection belongs to `@bindtty/terminal`. With the default
-`inputBackend: "auto"` policy, Windows prefers an available native provider,
-otherwise uses raw input for a capable TTY, and falls back to readline for a
-non-TTY. Applications do not inspect PowerShell, Windows Terminal, or Console
-Host. `inputBackend: "readline" | "raw" | "win32"` is available only as an
-explicit diagnostic or compatibility override.
+`inputBackend: "auto"` policy, Windows prefers an available native provider in
+console hosts, uses raw VT in VS Code-family integrated terminals or when the
+native provider is unavailable, and falls back to readline for a non-TTY.
+Applications do not inspect PowerShell, Windows Terminal, or Console Host.
+`inputBackend: "readline" | "raw" | "win32"` is available only as an explicit
+diagnostic or compatibility override.
 
 The raw backend waits up to `escapeAmbiguityTimeoutMs` (default `30`) for bytes
 following `ESC`, so a standalone Escape key and an Alt/control sequence remain
@@ -97,6 +102,13 @@ Set `BINDTTY_INPUT_TRACE=1` to write an optional JSONL diagnostic trace.
 environment snapshot, backend selection reason, capabilities, raw input or
 Win32 records, and the final dispatched event. Bracketed paste content is
 redacted.
+
+Set `BINDTTY_DIAGNOSTIC_LOG_FILE` to enable the higher-level JSONL lifecycle,
+viewport, frame, backpressure, and recoverable-error log shared by
+`@bindtty/terminal` and `bindtty`. `BINDTTY_DIAGNOSTIC_RUN_ID` can correlate it
+with an application log. Writes are batched briefly and flushed on disposal or
+process exit. Semantic input records include key metadata or text length only;
+they never include user-entered text.
 
 See:
 

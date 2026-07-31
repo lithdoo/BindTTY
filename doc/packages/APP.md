@@ -327,6 +327,11 @@ export interface CreateAppStdoutOptions {
   onLifecycleError?: RuntimeLifecycleErrorHandler;
   onError?: AppErrorHandler;
   clearOnResize?: boolean;
+  onViewportChange?(viewport: AppViewport): void;
+  layoutEngine?: LayoutEngine;
+  frameIntervalMs?: number;
+  maxStabilizationPasses?: number;
+  frameClock?: FrameClock;
 }
 ```
 
@@ -339,6 +344,11 @@ export interface CreateAppTerminalOptions {
   onLifecycleError?: RuntimeLifecycleErrorHandler;
   onError?: AppErrorHandler;
   clearOnResize?: boolean;
+  onViewportChange?(viewport: AppViewport): void;
+  layoutEngine?: LayoutEngine;
+  frameIntervalMs?: number;
+  maxStabilizationPasses?: number;
+  frameClock?: FrameClock;
 }
 ```
 
@@ -389,14 +399,23 @@ stdout.rows ?? fallbackViewport.height ?? 24
 `onLifecycleError` 用于接收 element lifecycle callback 的异常，包括 `api.onMounted`、`api.onLayout`、`api.onUnmount`。这些异常不会阻断后续节点更新、layout 派发或 dispose 清理；如果未提供该 handler，runtime 默认忽略这些异常。
 
 `onError` 用于接收 resize、异步 runtime flush 和 drain 重试入口中的
-layout/render/write 异常。事件包含 `phase`、原始 `error` 和失败时的
-`viewport`。这些异步入口不会把异常重新抛到事件循环；未提供 handler 时
-BindTTY 会写入 stderr。直接调用 `start()`、`render()` 或 `resize()` 时仍同步
-抛错，便于调用方显式处理。
+layout/render/write 异常。事件包含 `phase`、原始 `error`、`viewport`、
+合并后的 frame `intent`、单调递增 `revision`、`schedulerState` 和
+`recoverable`。可恢复的异步单帧失败不会停止 terminal，下一 revision 可以继续
+提交；未提供 handler 时 BindTTY 会把完整错误写入 stderr。直接调用
+`start()`、`render()` 或 `resize()` 时仍同步抛错，便于调用方显式处理。
 
 `clearOnResize` 默认为 `true`，使 viewport resize 在完整重绘前发送 ED2 和
 cursor home。嵌入非全屏终端且必须保留已有屏幕内容的应用可以显式设为
 `false`，回退到仅覆盖 viewport cell 的旧行为。
+
+terminal 模式的异步 runtime/resize frame 默认使用 16ms 最小间隔，burst 的第一帧
+立即执行并保留最新 trailing frame。`frameIntervalMs` 可调整这一预算；stdout
+模式默认不限帧。用户输入、手动 `render()`、`resize()` 和 `focus()` 仍立即执行。
+
+layout callback 导致的 offset/scrollbar 等反馈会在写出前稳定化，默认最多同步执行
+2 次。超过 `maxStabilizationPasses` 后保留最新 dirty intent 并延后到下一帧，
+避免同步死循环。`frameClock` 只用于测试和需要自定义调度时注入。
 
 ## 7. 生命周期
 
@@ -673,41 +692,40 @@ MVP 不直接 import `process.stdout`。用户或外层 CLI 传入 stdout。
 
 ## 10. 错误处理
 
-MVP 错误策略：
+当前错误策略：
 
 ```text
-layoutRoot 抛错:
-  冒出
+直接 start/render/resize 的 layout/render/write 错误:
+  同步抛给调用方
 
-renderer.render 抛错:
-  冒出
+异步 runtime/resize/drain frame 错误:
+  通过 onError 报告；默认写 stderr；terminal 保持运行，等待下一 revision
 
-stdout.write 抛错:
-  冒出
+frame candidate 失败:
+  不提交 cached layout、cached viewport 或 renderer baseline
 
-runtime flush listener 抛错:
-  由当前 runtime scheduler 行为决定
+stdout backpressure:
+  等待 drain；期间只保留最新合并 intent
 
 lifecycle callback 抛错:
   捕获并调用 onLifecycleError，不阻断后续节点更新 / layout dispatch / dispose cleanup
 ```
 
-暂不实现：
+仍不提供：
 
 ```text
 error boundary
-通用 onError callback
 fallback UI
-recoverable render
 ```
 
-后续可以扩展通用 `onError`，与当前已实现的 `onLifecycleError` 区分：
+`onError` 与 `onLifecycleError` 分开：前者处理 frame pipeline，后者处理 element
+lifecycle callback。
 
 ```ts
 createApp(view, {
   stdout,
-  onError(error) {
-    // log / render fallback / dispose
+  onError(event) {
+    console.error(event.phase, event.revision, event.error);
   }
 });
 ```

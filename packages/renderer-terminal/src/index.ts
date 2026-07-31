@@ -21,6 +21,7 @@ export type {
   CellStyle,
   Frame,
   FramePatch,
+  PreparedTerminalRender,
   RenderOptions,
   TerminalRenderer
 } from "./types.js";

@@ -83,6 +83,26 @@ test("TerminalRenderer returns empty output when the frame is unchanged", () => 
   assert.equal(renderer.render(textLayout("A"), { viewport }), "");
 });
 
+test("TerminalRenderer prepare does not mutate the committed baseline", () => {
+  const renderer = createTerminalRenderer();
+  renderer.render(textLayout("A"), { viewport });
+
+  const candidate = renderer.prepare(textLayout("B"), { viewport });
+
+  assert.match(candidate.patch, /B/);
+  assert.equal(renderer.render(textLayout("A"), { viewport }), "");
+});
+
+test("TerminalRenderer prepare commits its candidate explicitly", () => {
+  const renderer = createTerminalRenderer();
+  renderer.render(textLayout("A"), { viewport });
+
+  const candidate = renderer.prepare(textLayout("B"), { viewport });
+  candidate.commit();
+
+  assert.equal(renderer.render(textLayout("B"), { viewport }), "");
+});
+
 test("TerminalRenderer paints focused state with inverse style", () => {
   const renderer = createTerminalRenderer();
 

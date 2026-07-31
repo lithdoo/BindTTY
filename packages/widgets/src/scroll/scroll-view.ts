@@ -58,7 +58,6 @@ export interface ScrollViewProps extends ScrollViewStyleProps {
 export function ScrollView(props: ScrollViewProps): Template {
   const stateX = createScrollAxisState();
   const stateY = createScrollAxisState();
-  const layoutTick = createSignal(0);
   const scrollbarColumnText = createSignal("");
   const scrollbarRowText = createSignal("");
   const verticalBarWidth = createSignal(0);
@@ -74,7 +73,6 @@ export function ScrollView(props: ScrollViewProps): Template {
         props,
         stateX,
         stateY,
-        layoutTick,
         scrollbarColumnText,
         scrollbarRowText,
         verticalBarWidth,
@@ -124,7 +122,6 @@ export function ScrollView(props: ScrollViewProps): Template {
       return "";
     }
 
-    layoutTick.get();
     return scrollbarColumnText.get();
   });
 
@@ -133,24 +130,14 @@ export function ScrollView(props: ScrollViewProps): Template {
       return "";
     }
 
-    layoutTick.get();
     return scrollbarRowText.get();
   });
 
-  const verticalBarWidthBinding = computed(() => {
-    layoutTick.get();
-    return verticalBarWidth.get();
-  });
+  const verticalBarWidthBinding = computed(() => verticalBarWidth.get());
 
-  const horizontalBarHeightBinding = computed(() => {
-    layoutTick.get();
-    return horizontalBarHeight.get();
-  });
+  const horizontalBarHeightBinding = computed(() => horizontalBarHeight.get());
 
-  const cornerVisible = computed(() => {
-    layoutTick.get();
-    return showCorner.get();
-  });
+  const cornerVisible = computed(() => showCorner.get());
 
   return elementTemplate(
     "box",
@@ -198,7 +185,6 @@ function createScrollViewRef(
   props: ScrollViewProps,
   stateX: ScrollAxisAppliedState,
   stateY: ScrollAxisAppliedState,
-  layoutTick: ReturnType<typeof createSignal<number>>,
   scrollbarColumnText: ReturnType<typeof createSignal<string>>,
   scrollbarRowText: ReturnType<typeof createSignal<string>>,
   verticalBarWidth: ReturnType<typeof createSignal<number>>,
@@ -249,7 +235,6 @@ function createScrollViewRef(
         showCorner
       );
 
-      layoutTick.set(layoutTick.get() + 1);
     };
 
     api.onUnmount = () => {

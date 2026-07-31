@@ -177,6 +177,11 @@ async function nextMicrotask(): Promise<void> {
   await Promise.resolve();
 }
 
+async function nextFrame(): Promise<void> {
+  await new Promise<void>((resolve) => setTimeout(resolve, 20));
+  await nextMicrotask();
+}
+
 function visibleText(output: string | undefined): string {
   return stripVTControlCharacters(output ?? "");
 }
@@ -265,6 +270,7 @@ test("tsx app renders updates resizes and disposes through the real node termina
   stdout.columns = 16;
   stdout.rows = 6;
   stdout.emitResize();
+  await nextFrame();
 
   assert.equal(stdout.writes.length, 5);
   assert.match(visibleText(stdout.writes[4]), /ready/);
@@ -1153,7 +1159,7 @@ test("tsx app scrolls dynamic List data with for keys", async () => {
     { id: 5, label: "E" }
   ]);
   offset.set(3);
-  await nextMicrotask();
+  await nextFrame();
 
   assert.match(visibleText(stdout.writes.at(-1)), /E/);
 
@@ -1212,7 +1218,7 @@ test("tsx app List stickToBottom auto scrolls on push", async () => {
     ...items.get(),
     { id: 5, label: "E" }
   ]);
-  await nextMicrotask();
+  await nextFrame();
 
   assert.equal(offset.get(), 3);
   assert.match(visibleText(stdout.writes.at(-1)), /D/);
@@ -1278,7 +1284,7 @@ test("tsx app List stickToBottom detaches after up and re-attaches after end", a
     ...items.get(),
     { id: 6, label: "F" }
   ]);
-  await nextMicrotask();
+  await nextFrame();
 
   assert.equal(offset.get(), 4);
   assert.match(visibleText(stdout.writes.at(-1)), /E/);
@@ -1869,6 +1875,7 @@ test("tsx app renders updates and resizes wide text through fake terminal", asyn
   stdout.columns = 4;
   stdout.rows = 8;
   stdout.emitResize();
+  await nextFrame();
 
   assert.match(visibleText(stdout.writes.at(-1)), /中/);
   assert.match(visibleText(stdout.writes.join("")), /🙂/);

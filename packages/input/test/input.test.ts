@@ -175,6 +175,43 @@ test("parseInputChunk maps F1-F12 from SS3, CSI tilde, Win32, and Kitty", () => 
   ]);
 });
 
+test("Linux-console F1-F5 sequences remain atomic across every chunk boundary", () => {
+  const cases = [
+    ["f1", "\x1b[[A"],
+    ["f2", "\x1b[[B"],
+    ["f3", "\x1b[[C"],
+    ["f4", "\x1b[[D"],
+    ["f5", "\x1b[[E"]
+  ] as const;
+
+  for (const [name, sequence] of cases) {
+    assert.deepEqual([...parseInputChunk(sequence)], [
+      keyEvent(name, "", sequence)
+    ]);
+
+    for (let split = 1; split < sequence.length; split += 1) {
+      const parser = createInputParser();
+      assert.deepEqual(
+        parser.parse(sequence.slice(0, split)),
+        [],
+        `${name} emitted before split ${split} completed`
+      );
+      assert.deepEqual(
+        parser.parse(sequence.slice(split)),
+        [keyEvent(name, "", sequence)],
+        `${name} did not survive split ${split}`
+      );
+    }
+  }
+});
+
+test("unknown double-bracket CSI keeps the generic tokenizer behavior", () => {
+  assert.deepEqual([...parseInputChunk("\x1b[[Z")], [
+    keyEvent("unknown", "", "\x1b[["),
+    textEvent("Z")
+  ]);
+});
+
 test("parseInputChunk maps Kitty F1-F24 with modifiers", () => {
   const events = Array.from({ length: 24 }, (_, index) => {
     const codepoint = 57364 + index;

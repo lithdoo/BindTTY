@@ -22,8 +22,10 @@ interface MockStdout extends TerminalStdout {
   writes: string[];
   listenerCount(): number;
   drainListenerCount(): number;
+  errorListenerCount(): number;
   emitResize(): void;
   emitDrain(): void;
+  emitError(error: unknown): void;
 }
 
 interface MockStdin extends TerminalStdin {
@@ -39,6 +41,7 @@ interface MockStdin extends TerminalStdin {
 function createMockStdout(): MockStdout {
   const resizeListeners = new Set<() => void>();
   const drainListeners = new Set<() => void>();
+  const errorListeners = new Set<(error: unknown) => void>();
 
   return {
     columns: 10,
@@ -47,18 +50,28 @@ function createMockStdout(): MockStdout {
     write(chunk: string) {
       this.writes.push(chunk);
     },
-    on(event: "resize" | "drain", listener: () => void) {
+    on(
+      event: "resize" | "drain" | "error",
+      listener: (() => void) | ((error: unknown) => void)
+    ) {
       if (event === "resize") {
-        resizeListeners.add(listener);
+        resizeListeners.add(listener as () => void);
+      } else if (event === "drain") {
+        drainListeners.add(listener as () => void);
       } else {
-        drainListeners.add(listener);
+        errorListeners.add(listener as (error: unknown) => void);
       }
     },
-    off(event: "resize" | "drain", listener: () => void) {
+    off(
+      event: "resize" | "drain" | "error",
+      listener: (() => void) | ((error: unknown) => void)
+    ) {
       if (event === "resize") {
-        resizeListeners.delete(listener);
+        resizeListeners.delete(listener as () => void);
+      } else if (event === "drain") {
+        drainListeners.delete(listener as () => void);
       } else {
-        drainListeners.delete(listener);
+        errorListeners.delete(listener as (error: unknown) => void);
       }
     },
     listenerCount() {
@@ -66,6 +79,9 @@ function createMockStdout(): MockStdout {
     },
     drainListenerCount() {
       return drainListeners.size;
+    },
+    errorListenerCount() {
+      return errorListeners.size;
     },
     emitResize() {
       for (const listener of [...resizeListeners]) {
@@ -75,6 +91,11 @@ function createMockStdout(): MockStdout {
     emitDrain() {
       for (const listener of [...drainListeners]) {
         listener();
+      }
+    },
+    emitError(error: unknown) {
+      for (const listener of [...errorListeners]) {
+        listener(error);
       }
     }
   };
@@ -498,6 +519,37 @@ test("terminal response router preserves unsolicited control sequences", () => {
   });
 });
 
+test("VS Code family uses raw VT so control responses share the input stream", () => {
+  const selection = selectInputBackend(
+    {
+      stdout: createMockStdout(),
+      stdin: createMockStdin(),
+      rawMode: true,
+      win32InputProvider: {
+        isAvailable: () => true,
+        attach: () => () => {}
+      }
+    },
+    {
+      platform: "win32",
+      stdinIsTTY: true,
+      stdoutIsTTY: true,
+      canSetRawMode: true,
+      isProcessStdin: true,
+      windowsTerminal: false,
+      conEmu: false,
+      ansicon: false,
+      terminalProgram: "vscode"
+    }
+  );
+
+  assert.deepEqual(selection, {
+    stdinAdapter: "raw",
+    reason: "vscode-terminal-control-responses; using-raw-stdin",
+    enableRawMode: true
+  });
+});
+
 test("terminal response router consumes viewport reports at every chunk boundary", () => {
   const sequence = "\x1b[8;79;190t";
 
@@ -884,6 +936,41 @@ test("onDrain follows stdout drain subscription lifecycle", () => {
   stdout.emitDrain();
   assert.equal(drains, 1);
   assert.equal(stdout.drainListenerCount(), 0);
+  terminal.dispose();
+});
+
+test("Windows TTY write EPIPE is contained and requests output recovery", () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const terminal = createNodeTerminal({ stdout });
+  const errors: unknown[] = [];
+  const unsubscribe = terminal.onOutputError?.((error) => {
+    errors.push(error);
+  });
+  const transientError = Object.assign(new Error("write EPIPE"), {
+    code: "EPIPE",
+    syscall: "write"
+  });
+
+  terminal.start();
+  assert.equal(stdout.errorListenerCount(), 1);
+  assert.doesNotThrow(() => stdout.emitError(transientError));
+  assert.deepEqual(errors, [transientError]);
+
+  terminal.stop();
+  assert.equal(stdout.errorListenerCount(), 0);
+  unsubscribe?.();
+  terminal.dispose();
+});
+
+test("Windows TTY output rethrows non-transient stream errors", () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const terminal = createNodeTerminal({ stdout });
+  const error = new Error("terminal output failed");
+
+  terminal.start();
+  assert.throws(() => stdout.emitError(error), error);
   terminal.dispose();
 });
 
@@ -1998,6 +2085,43 @@ test("raw VT input isolates Cursor viewport reports from adjacent F2", async () 
   assert.deepEqual(terminal.viewport, { width: 190, height: 79 });
   assert.deepEqual(events.at(-1)?.viewport, { width: 190, height: 79 });
   assert.equal(events.every((event) => event.source === "query"), true);
+
+  terminal.stop();
+});
+
+test("VS Code mixed Kitty input preserves Linux-console F2 beside viewport reports", async () => {
+  const stdout = createMockStdout();
+  stdout.isTTY = true;
+  const stdin = createMockStdin();
+  const terminal = createNodeTerminal({
+    stdout,
+    stdin,
+    platformAdapter: new Win32PlatformAdapter(),
+    inputBackend: "raw",
+    keyboardProtocol: "auto",
+    viewportQuery: "xterm",
+    resizePollIntervalMs: 0,
+    resizeMinFrameIntervalMs: 0,
+    resizeSettleDelayMs: 0
+  });
+  const keys: TerminalKeyEvent[] = [];
+  terminal.onKey((event) => keys.push(event));
+
+  terminal.start();
+  stdin.emitData("\x1b[?1u");
+  assert.equal(terminal.keyboardCapabilities?.protocol, "kitty");
+
+  stdin.emitData("\x1b[8;79;190t\x1b[[");
+  stdin.emitData("B");
+
+  await new Promise((resolve) => setTimeout(resolve, 5));
+
+  assert.deepEqual(
+    keys,
+    [semanticKey("f2", "\x1b[[B", {}, "kitty")],
+    "legacy F2 must stay atomic after Kitty negotiation"
+  );
+  assert.deepEqual(terminal.viewport, { width: 190, height: 79 });
 
   terminal.stop();
 });

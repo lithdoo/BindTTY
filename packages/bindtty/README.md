@@ -134,6 +134,11 @@ const app = createApp(view, { terminal });
 app.start();
 ```
 
+terminal 模式会把 runtime 更新、resize、scroll layout feedback 和 output drain
+合并到同一帧调度器。异步更新默认按 16ms 帧预算执行并保留 burst 的最终状态；
+layout feedback 在写出前有限稳定化，暂态 frame 失败通过 `onError` 上报且不会
+自动停止 terminal。可用 `frameIntervalMs` 和 `maxStabilizationPasses` 调整。
+
 ## 文档
 
 - [doc/packages/APP.md](../../doc/packages/APP.md) - createApp 设计

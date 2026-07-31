@@ -45,5 +45,15 @@ export interface RenderOptions {
 
 export interface TerminalRenderer {
   render(root: import("@bindtty/layout").LayoutNode | null, options: RenderOptions): string;
+  prepare(
+    root: import("@bindtty/layout").LayoutNode | null,
+    options: RenderOptions,
+    resetBaseline?: boolean
+  ): PreparedTerminalRender;
   reset(): void;
+}
+
+export interface PreparedTerminalRender {
+  readonly patch: string;
+  commit(): void;
 }

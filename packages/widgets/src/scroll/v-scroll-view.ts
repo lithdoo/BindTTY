@@ -49,7 +49,6 @@ export {
 
 export function VScrollView(props: VScrollViewProps): Template {
   const scrollState = createScrollAxisState();
-  const layoutTick = createSignal(0);
   const scrollbarText = createSignal("");
   const usesScrollbar = props.showScrollbar !== undefined;
 
@@ -57,7 +56,7 @@ export function VScrollView(props: VScrollViewProps): Template {
     "box",
     omitUndefined({
       id: props.id,
-      ref: createVScrollViewRef(props, scrollState, layoutTick, scrollbarText),
+      ref: createVScrollViewRef(props, scrollState, scrollbarText),
       focusable: props.focusable ?? true,
       onKey: createVScrollViewOnKey(props, scrollState),
       onFocusChange: props.onFocusChange,
@@ -85,7 +84,6 @@ export function VScrollView(props: VScrollViewProps): Template {
       return "";
     }
 
-    layoutTick.get();
     return scrollbarText.get();
   });
 
@@ -135,7 +133,6 @@ interface VScrollViewLayoutState {
 function createVScrollViewRef(
   props: VScrollViewProps,
   state: ScrollAxisAppliedState,
-  layoutTick: ReturnType<typeof createSignal<number>>,
   scrollbarText: ReturnType<typeof createSignal<string>>
 ): (api: MountedElementApi) => void {
   return (api) => {
@@ -168,7 +165,6 @@ function createVScrollViewRef(
         onOffsetChange: props.onOffsetChange
       });
 
-      layoutTick.set(layoutTick.get() + 1);
       scrollbarText.set(
         readBooleanBindingValue(props.showScrollbar, false) && state.max > 0
           ? renderScrollbarColumn(

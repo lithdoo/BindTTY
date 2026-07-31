@@ -6,6 +6,7 @@ import type {
 export type Dispose = () => void;
 
 export type ResizeListener = (event: TerminalResizeEvent) => void;
+export type TerminalOutputErrorListener = (error: unknown) => void;
 export type TerminalKeyListener = (event: TerminalKeyEvent) => void;
 export type KeyboardCapabilitiesListener = (
   capabilities: KeyboardCapabilities
@@ -41,6 +42,7 @@ export interface InputBackendSelection {
     | "explicit-win32-backend-unavailable; using-raw-stdin"
     | "explicit-win32-backend-unavailable; using-readline"
     | "win32-input-provider-available"
+    | "vscode-terminal-control-responses; using-raw-stdin"
     | "win32-input-provider-unavailable; using-raw-stdin"
     | "win32-input-provider-unavailable; using-readline"
     | "tty-raw-input-available"
@@ -325,6 +327,12 @@ export interface TerminalHost {
 
   onResize(listener: ResizeListener): Dispose;
   onDrain?(listener: () => void): Dispose;
+  /**
+   * Reports a transient terminal write failure after it has been contained.
+   * Applications should schedule a full repaint because the failed frame may
+   * have been only partially presented.
+   */
+  onOutputError?(listener: TerminalOutputErrorListener): Dispose;
   onKey(listener: TerminalKeyListener): Dispose;
   onKeyboardCapabilitiesChange?(listener: KeyboardCapabilitiesListener): Dispose;
 }

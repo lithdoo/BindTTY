@@ -93,6 +93,19 @@ export function selectInputBackend(
         };
   }
 
+  if (
+    environment.platform === "win32" &&
+    environment.terminalProgram === "vscode" &&
+    options.rawMode !== false &&
+    rawInputAvailable(options, environment)
+  ) {
+    return {
+      stdinAdapter: "raw",
+      reason: "vscode-terminal-control-responses; using-raw-stdin",
+      enableRawMode: environment.stdinIsTTY && environment.canSetRawMode
+    };
+  }
+
   if (environment.platform === "win32" && win32ProviderAvailable(options)) {
     return {
       stdinAdapter: "win32",

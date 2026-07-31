@@ -200,18 +200,33 @@ function mountForItems(
   owner: ReactiveOwner
 ): MountedForItemNode<unknown>[] {
   const mountedItems: MountedForItemNode<unknown>[] = [];
+  const keys = new Set<string | number>();
 
-  items.forEach((item, index) => {
-    const node = mountForItem(template, item, index, options, owner);
+  try {
+    items.forEach((item, index) => {
+      const key = getItemKey(template, item, index);
+      assertUniqueForKey(keys, key);
+      const node = mountForItem(template, item, index, options, owner);
 
-    if (node) {
-      mountedItems.push({
-        key: getItemKey(template, item, index),
-        item,
-        node
-      });
+      if (node) {
+        mountedItems.push({
+          key,
+          item,
+          node
+        });
+      }
+    });
+  } catch (error) {
+    const errors: unknown[] = [error];
+    for (const mounted of mountedItems) {
+      try {
+        disposeMountedNode(mounted.node);
+      } catch (cleanupError) {
+        collectErrors(errors, cleanupError);
+      }
     }
-  });
+    throwCollectedErrors(errors);
+  }
 
   return mountedItems;
 }
@@ -224,6 +239,16 @@ function updateForItems(
   owner: ReactiveOwner
 ): void {
   const previousByKey = new Map<string | number, MountedForItemNode<unknown>>();
+  const nextEntries = nextItems.map((item, index) => ({
+    item,
+    index,
+    key: getItemKey(template, item, index)
+  }));
+  const nextKeys = new Set<string | number>();
+
+  for (const entry of nextEntries) {
+    assertUniqueForKey(nextKeys, entry.key);
+  }
 
   for (const itemNode of node.items) {
     previousByKey.set(itemNode.key, itemNode);
@@ -234,12 +259,10 @@ function updateForItems(
   const newlyMountedNodes: MountedNode[] = [];
 
   try {
-    nextItems.forEach((item, index) => {
-      const key = getItemKey(template, item, index);
+    nextEntries.forEach(({ item, index, key }) => {
       const previous = previousByKey.get(key);
 
-      if (previous) {
-        previous.item = item;
+      if (previous && Object.is(previous.item, item)) {
         nextMountedItems.push(previous);
         reusedKeys.add(key);
         return;
@@ -264,6 +287,9 @@ function updateForItems(
     throwCollectedErrors(errors);
   }
 
+  const changed =
+    node.items.length !== nextMountedItems.length ||
+    nextMountedItems.some((item, index) => node.items[index] !== item);
   const errors: unknown[] = [];
   for (const previous of node.items) {
     if (!reusedKeys.has(previous.key)) {
@@ -276,8 +302,10 @@ function updateForItems(
   }
 
   node.items = nextMountedItems;
-  markDirty(node, "structure");
-  options.context?.scheduler.queueDirty(node);
+  if (changed) {
+    markDirty(node, "structure");
+    options.context?.scheduler.queueDirty(node);
+  }
   throwCollectedErrors(errors);
 }
 
@@ -287,6 +315,16 @@ function getItemKey(
   index: number
 ): string | number {
   return template.key ? template.key(item, index) : index;
+}
+
+function assertUniqueForKey(
+  keys: Set<string | number>,
+  key: string | number
+): void {
+  if (keys.has(key)) {
+    throw new Error(`Duplicate key in for template: ${String(key)}`);
+  }
+  keys.add(key);
 }
 
 function updateShowBranch(

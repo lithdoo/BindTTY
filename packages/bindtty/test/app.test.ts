@@ -8,8 +8,10 @@ import {
   createApp,
   createSignal,
   effect,
+  type AppError,
   type AppStdout,
-  type CreateAppOptions
+  type CreateAppOptions,
+  type FrameClock
 } from "bindtty";
 import {
   Button,
@@ -63,8 +65,10 @@ interface MockTerminal extends TerminalHost {
   stopCalls: number;
   disposeCalls: number;
   resizeListenerCount(): number;
+  outputErrorListenerCount(): number;
   keyListenerCount(): number;
   emitResize(event?: TerminalResizeEvent): void;
+  emitOutputError(error: unknown): void;
   emitKey(event: TerminalKeyEvent): void;
   setViewport(viewport: TerminalViewport): void;
 }
@@ -116,6 +120,7 @@ function createMockTerminal(width = 1, height = 1): MockTerminal {
   };
   let previousViewport = currentViewport;
   const resizeListeners = new Set<ResizeListener>();
+  const outputErrorListeners = new Set<(error: unknown) => void>();
   const keyListeners = new Set<(event: TerminalKeyEvent) => void>();
 
   return {
@@ -144,6 +149,12 @@ function createMockTerminal(width = 1, height = 1): MockTerminal {
         resizeListeners.delete(listener);
       };
     },
+    onOutputError(listener: (error: unknown) => void): Dispose {
+      outputErrorListeners.add(listener);
+      return () => {
+        outputErrorListeners.delete(listener);
+      };
+    },
     onKey(listener: (event: TerminalKeyEvent) => void): Dispose {
       keyListeners.add(listener);
       return () => {
@@ -152,6 +163,9 @@ function createMockTerminal(width = 1, height = 1): MockTerminal {
     },
     resizeListenerCount() {
       return resizeListeners.size;
+    },
+    outputErrorListenerCount() {
+      return outputErrorListeners.size;
     },
     keyListenerCount() {
       return keyListeners.size;
@@ -165,6 +179,11 @@ function createMockTerminal(width = 1, height = 1): MockTerminal {
       previousViewport = currentViewport;
       for (const listener of [...resizeListeners]) {
         listener(event);
+      }
+    },
+    emitOutputError(error: unknown) {
+      for (const listener of [...outputErrorListeners]) {
+        listener(error);
       }
     },
     emitKey(event: TerminalKeyEvent) {
@@ -208,6 +227,47 @@ function keyEvent(
 
 async function nextMicrotask(): Promise<void> {
   await Promise.resolve();
+}
+
+function createTestFrameClock(): FrameClock & {
+  advance(durationMs: number): void;
+  pending(): number;
+} {
+  let now = 0;
+  let nextId = 1;
+  const timers = new Map<
+    number,
+    { at: number; callback: () => void }
+  >();
+
+  return {
+    now: () => now,
+    setTimeout(callback, delayMs) {
+      const id = nextId++;
+      timers.set(id, { at: now + delayMs, callback });
+      return id;
+    },
+    clearTimeout(handle) {
+      timers.delete(handle as number);
+    },
+    advance(durationMs) {
+      const target = now + durationMs;
+      while (true) {
+        const next = [...timers.entries()]
+          .filter(([, timer]) => timer.at <= target)
+          .sort((left, right) => left[1].at - right[1].at)[0];
+        if (!next) {
+          break;
+        }
+        const [id, timer] = next;
+        timers.delete(id);
+        now = timer.at;
+        timer.callback();
+      }
+      now = target;
+    },
+    pending: () => timers.size
+  };
 }
 
 function createRecordingLayoutEngine(
@@ -465,6 +525,180 @@ test("same-tick signal updates are coalesced by the runtime scheduler", async ()
   assert.doesNotMatch(stdout.writes[1], /B/);
 });
 
+test("terminal frame budget keeps the latest runtime and viewport state", async () => {
+  const terminal = createMockTerminal(20, 4);
+  const clock = createTestFrameClock();
+  const value = createSignal("initial");
+  const calls: Array<{ root: unknown; viewport: LayoutViewport }> = [];
+  const app = createApp(elementTemplate("text", { value }), {
+    terminal,
+    frameIntervalMs: 16,
+    frameClock: clock,
+    layoutEngine: createRecordingLayoutEngine(calls)
+  });
+
+  app.start();
+  value.set("leading");
+  await nextMicrotask();
+
+  assert.equal(terminal.writes.length, 2);
+
+  for (let index = 0; index < 100; index += 1) {
+    value.set(`delta-${index}`);
+    terminal.setViewport({
+      width: 21 + index,
+      height: 4 + (index % 3)
+    });
+    terminal.emitResize();
+    await nextMicrotask();
+  }
+
+  assert.equal(
+    terminal.writes.length,
+    2,
+    "updates inside the frame window must remain pending"
+  );
+  assert.equal(clock.pending(), 1);
+
+  clock.advance(16);
+
+  assert.equal(terminal.writes.length, 3);
+  assert.deepEqual(calls.at(-1)?.viewport, {
+    width: 120,
+    height: 4
+  });
+  assert.equal(
+    (calls.at(-1)?.root as { props?: { value?: unknown } }).props?.value,
+    "delta-99"
+  );
+  assert.equal(clock.pending(), 0);
+  app.dispose();
+});
+
+test("stable keyed items publish updated text through the app", async () => {
+  const stdout = createMockStdout(12, 1);
+  const items = createSignal([{ id: 1, label: "first" }]);
+  const app = createApp(
+    forTemplate<{ id: number; label: string }>({
+      each: items,
+      key: (item) => item.id,
+      renderItem: (item) =>
+        elementTemplate("text", { value: item.label })
+    }),
+    { stdout }
+  );
+
+  app.start();
+  items.set([{ id: 1, label: "second" }]);
+  await nextMicrotask();
+
+  assert.equal(stdout.writes.length, 2);
+  assert.match(stdout.writes.at(-1) ?? "", /second/);
+  app.dispose();
+});
+
+test("streaming scroll tree and resize burst converge to one trailing frame", async () => {
+  const terminal = createMockTerminal(40, 8);
+  const clock = createTestFrameClock();
+  const delegate = createYogaLayoutEngine();
+  const width = createSignal(40);
+  const height = createSignal(5);
+  const offset = createSignal(0);
+  const messages = createSignal([{ id: 1, text: "start" }]);
+  const errors: AppError[] = [];
+  let layoutCount = 0;
+  let itemMountCount = 0;
+  let itemUnmountCount = 0;
+  const app = createApp(
+    VScrollView({
+      width,
+      height,
+      offset,
+      stickToBottom: true,
+      showScrollbar: true,
+      onOffsetChange: (nextOffset) => offset.set(nextOffset),
+      children: forTemplate<{ id: number; text: string }>({
+        each: messages,
+        key: (message) => message.id,
+        renderItem: (message) =>
+          elementTemplate("text", {
+            value: message.text,
+            wrap: "wrap",
+            ref(api: MountedElementApi) {
+              itemMountCount += 1;
+              api.onUnmount = () => {
+                itemUnmountCount += 1;
+              };
+            }
+          })
+      })
+    }),
+    {
+      terminal,
+      frameIntervalMs: 16,
+      frameClock: clock,
+      onError: (error) => errors.push(error),
+      layoutEngine: {
+        layout(root, options) {
+          layoutCount += 1;
+          return delegate.layout(root, options);
+        }
+      }
+    }
+  );
+
+  app.start();
+  await nextMicrotask();
+  const writesBeforeBurst = terminal.writes.length;
+
+  for (let index = 0; index < 1_000; index += 1) {
+    messages.set([
+      {
+        id: 1,
+        text: `final-${index} ${"中".repeat(index % 40)}`
+      }
+    ]);
+    if (index % 2 === 0) {
+      const viewport = {
+        width: 24 + (index % 37),
+        height: 8 + (index % 5)
+      };
+      terminal.setViewport(viewport);
+      width.set(viewport.width);
+      height.set(Math.max(3, viewport.height - 3));
+      terminal.emitResize();
+    }
+    await nextMicrotask();
+  }
+
+  assert.ok(
+    terminal.writes.length <= writesBeforeBurst + 1,
+    "the burst may publish one leading frame before the trailing frame"
+  );
+
+  clock.advance(16);
+  await nextMicrotask();
+  clock.advance(16);
+
+  assert.deepEqual(errors, []);
+  assert.ok(terminal.writes.length <= writesBeforeBurst + 3);
+  assert.match(
+    stripVTControlCharacters(terminal.writes.at(-1) ?? ""),
+    /final-999/
+  );
+  assert.deepEqual(terminal.viewport, { width: 60, height: 11 });
+  assert.ok(layoutCount <= 8, `expected bounded layouts, got ${layoutCount}`);
+  assert.equal(itemMountCount, 1_001);
+  assert.equal(itemUnmountCount, 1_000);
+  assert.ok(
+    terminal.writes.reduce((total, patch) => total + patch.length, 0) <
+      100_000,
+    "ANSI output must stay bounded by the frame budget"
+  );
+  app.dispose();
+  assert.equal(itemUnmountCount, 1_001);
+});
+
 test("paint-only updates reuse the previous LayoutNode", async () => {
   const stdout = createMockStdout(4, 1);
   const color = createSignal("red");
@@ -500,6 +734,7 @@ test("layout and structure updates rerun layout at their declared level", async 
     }),
     {
       terminal,
+      frameIntervalMs: 0,
       layoutEngine: createRecordingLayoutEngine(calls)
     }
   );
@@ -1125,6 +1360,28 @@ test("terminal resize triggers app resize and full repaint", () => {
   assert.match(terminal.writes[1], /B/);
 });
 
+test("transient terminal output failure schedules a full recovery repaint", () => {
+  const terminal = createMockTerminal(4, 1);
+  const app = createApp(elementTemplate("text", { value: "AB" }), { terminal });
+
+  app.start();
+  assert.equal(terminal.outputErrorListenerCount(), 1);
+  terminal.emitOutputError(
+    Object.assign(new Error("write EPIPE"), {
+      code: "EPIPE",
+      syscall: "write"
+    })
+  );
+
+  assert.equal(terminal.writes.length, 2);
+  assert.ok(
+    terminal.writes[1]?.startsWith(ANSI.eraseDisplay + ANSI.cursorHome)
+  );
+
+  app.stop();
+  assert.equal(terminal.outputErrorListenerCount(), 0);
+});
+
 test("terminal resize renders from the viewport event snapshot", () => {
   const terminal = createMockTerminal(9, 4);
   const calls: Array<{ root: unknown; viewport: LayoutViewport }> = [];
@@ -1471,11 +1728,7 @@ test("clearOnResize false preserves the legacy full-cover repaint", () => {
 test("resize listener reports layout errors without throwing from the event", () => {
   const stdout = createMockStdout(2, 1);
   const delegate = createYogaLayoutEngine();
-  const errors: Array<{
-    phase: string;
-    error: unknown;
-    viewport: { width: number; height: number };
-  }> = [];
+  const errors: AppError[] = [];
   let failLayout = false;
   const app = createApp(elementTemplate("text", { value: "A" }), {
     stdout,
@@ -1499,10 +1752,105 @@ test("resize listener reports layout errors without throwing from the event", ()
   assert.equal(errors.length, 1);
   assert.equal(errors[0]?.phase, "resize");
   assert.deepEqual(errors[0]?.viewport, { width: 4, height: 1 });
+  assert.equal(errors[0]?.intent.kind, "viewport");
+  assert.equal(errors[0]?.recoverable, true);
+  assert.equal(typeof errors[0]?.revision, "number");
   assert.match(String((errors[0]?.error as Error).message), /resize layout failed/);
 
   failLayout = false;
   assert.doesNotThrow(() => app.resize());
+  app.dispose();
+});
+
+test("transient runtime frame failure keeps terminal active and later recovers", async () => {
+  const terminal = createMockTerminal(8, 1);
+  const label = createSignal("A");
+  const delegate = createYogaLayoutEngine();
+  let failNextLayout = false;
+  const originalConsoleError = console.error;
+  const reported: unknown[][] = [];
+  console.error = (...args: unknown[]) => {
+    reported.push(args);
+  };
+
+  try {
+    const app = createApp(elementTemplate("text", { value: label }), {
+      terminal,
+      frameIntervalMs: 0,
+      layoutEngine: {
+        layout(root, options) {
+          if (failNextLayout) {
+            failNextLayout = false;
+            throw new Error("transient layout failure");
+          }
+          return delegate.layout(root, options);
+        }
+      }
+    });
+    app.start();
+
+    failNextLayout = true;
+    label.set("B");
+    await nextMicrotask();
+
+    assert.equal(terminal.stopCalls, 0);
+    assert.equal(terminal.writes.length, 1);
+    assert.match(String(reported[0]?.[0]), /runtime-flush failed/);
+
+    label.set("C");
+    await nextMicrotask();
+
+    assert.equal(terminal.stopCalls, 0);
+    assert.equal(terminal.writes.length, 2);
+    assert.match(terminal.writes.at(-1) ?? "", /C/);
+    app.dispose();
+  } finally {
+    console.error = originalConsoleError;
+  }
+});
+
+test("scheduled trailing frame reports errors without an uncaught timer throw", async () => {
+  const terminal = createMockTerminal(12, 1);
+  const clock = createTestFrameClock();
+  const label = createSignal("A");
+  const delegate = createYogaLayoutEngine();
+  const errors: AppError[] = [];
+  let failNextLayout = false;
+  const app = createApp(elementTemplate("text", { value: label }), {
+    terminal,
+    frameIntervalMs: 16,
+    frameClock: clock,
+    onError: (error) => errors.push(error),
+    layoutEngine: {
+      layout(root, options) {
+        if (failNextLayout) {
+          failNextLayout = false;
+          throw new Error("scheduled layout failure");
+        }
+        return delegate.layout(root, options);
+      }
+    }
+  });
+  app.start();
+
+  label.set("leading");
+  await nextMicrotask();
+  label.set("scheduled");
+  await nextMicrotask();
+  failNextLayout = true;
+
+  assert.doesNotThrow(() => clock.advance(16));
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0]?.phase, "runtime-flush");
+  assert.equal(errors[0]?.schedulerState, "idle");
+  assert.equal(terminal.stopCalls, 0);
+
+  label.set("recovered");
+  await nextMicrotask();
+
+  assert.equal(terminal.stopCalls, 0);
+  assert.equal(errors.length, 1);
+  assert.match(app.resize(), /recovered/);
   app.dispose();
 });
 

@@ -46,7 +46,6 @@ export { renderScrollbarRow } from "./axis-shared.js";
 
 export function HScrollView(props: HScrollViewProps): Template {
   const scrollState = createScrollAxisState();
-  const layoutTick = createSignal(0);
   const scrollbarText = createSignal("");
   const usesScrollbar = props.showScrollbar !== undefined;
 
@@ -54,7 +53,7 @@ export function HScrollView(props: HScrollViewProps): Template {
     "box",
     omitUndefined({
       id: props.id,
-      ref: createHScrollViewRef(props, scrollState, layoutTick, scrollbarText),
+      ref: createHScrollViewRef(props, scrollState, scrollbarText),
       focusable: props.focusable ?? true,
       onKey: createHScrollViewOnKey(props, scrollState),
       onFocusChange: props.onFocusChange,
@@ -82,7 +81,6 @@ export function HScrollView(props: HScrollViewProps): Template {
       return "";
     }
 
-    layoutTick.get();
     return scrollbarText.get();
   });
 
@@ -132,7 +130,6 @@ interface HScrollViewLayoutState {
 function createHScrollViewRef(
   props: HScrollViewProps,
   state: ScrollAxisAppliedState,
-  layoutTick: ReturnType<typeof createSignal<number>>,
   scrollbarText: ReturnType<typeof createSignal<string>>
 ): (api: MountedElementApi) => void {
   return (api) => {
@@ -165,7 +162,6 @@ function createHScrollViewRef(
         onOffsetChange: props.onOffsetChange
       });
 
-      layoutTick.set(layoutTick.get() + 1);
       scrollbarText.set(
         readBooleanBindingValue(props.showScrollbar, false) && state.max > 0
           ? renderScrollbarRow(

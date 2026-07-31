@@ -2,6 +2,26 @@
 
 BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见行为变化；设计细节见 `doc/` 下对应 package/spec/widget 文档。
 
+## Unreleased
+
+- Added a bounded terminal frame scheduler that coalesces runtime updates and
+  resize bursts while preserving the latest viewport and dirty state.
+- Made keyed `For` updates publish changed item content when a stable key is
+  reused, and reject duplicate keys instead of silently corrupting ownership.
+- Removed unconditional scroll layout feedback and capped synchronous
+  stabilization passes to prevent render/resize feedback loops.
+- Added transactional terminal rendering: renderer and layout baselines commit
+  only after the frame sink accepts the prepared patch.
+- Recoverable scheduled-frame failures are reported through `onError` without
+  stopping the terminal, so a later revision can repaint successfully.
+- Contained transient Windows TTY `getWindowSize EPIPE` and `write EPIPE`
+  failures during live resize; a failed output frame now schedules a full
+  recovery repaint while unrelated stream errors still propagate.
+- VS Code-family integrated terminals now keep keyboard input and xterm
+  viewport responses on the shared raw VT stream, so Cursor resize reports
+  continue after the first response without leaking fragments into F-keys or
+  text input.
+
 ## 0.1.0-beta.5
 
 - Fixed Windows viewport resize repainting by clearing reflowed terminal content

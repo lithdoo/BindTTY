@@ -771,10 +771,9 @@ test("for updates keyed structure by reusing, disposing, and mounting nodes", ()
   const titleA = createSignal("A");
   const titleB = createSignal("B");
   const titleC = createSignal("C");
-  const items = createSignal([
-    { id: 1, title: titleA },
-    { id: 2, title: titleB }
-  ]);
+  const itemA = { id: 1, title: titleA };
+  const itemB = { id: 2, title: titleB };
+  const items = createSignal([itemA, itemB]);
   let renderCount = 0;
 
   const mounted = mountTemplate(
@@ -796,7 +795,7 @@ test("for updates keyed structure by reusing, disposing, and mounting nodes", ()
   assert.equal(nodeB?.kind, "element");
 
   items.set([
-    { id: 2, title: titleB },
+    itemB,
     { id: 3, title: titleC }
   ]);
 
@@ -844,11 +843,10 @@ test("for mounts a new node when a removed key appears again", () => {
   assert.equal(mounted.items[0]?.node.props.value, "A again");
 });
 
-test("for reorders keyed items without rerendering reused nodes", () => {
-  const items = createSignal([
-    { id: 1, title: "A" },
-    { id: 2, title: "B" }
-  ]);
+test("for reorders identical keyed items without rerendering reused nodes", () => {
+  const first = { id: 1, title: "A" };
+  const second = { id: 2, title: "B" };
+  const items = createSignal([first, second]);
   let renderCount = 0;
 
   const mounted = mountTemplate(
@@ -866,10 +864,7 @@ test("for reorders keyed items without rerendering reused nodes", () => {
   const node1 = mounted.items[0]?.node;
   const node2 = mounted.items[1]?.node;
 
-  items.set([
-    { id: 2, title: "B updated static" },
-    { id: 1, title: "A updated static" }
-  ]);
+  items.set([second, first]);
 
   assert.equal(renderCount, 2);
   assert.equal(mounted.items[0]?.key, 2);
@@ -881,7 +876,9 @@ test("for reorders keyed items without rerendering reused nodes", () => {
 });
 
 test("for item owners survive reorder and dispose only removed item effects", () => {
-  const items = createSignal([{ id: 1 }, { id: 2 }]);
+  const first = { id: 1 };
+  const second = { id: 2 };
+  const items = createSignal([first, second]);
   const pulse = createSignal(0);
   const runs = new Map<number, number>();
   const mounted = mountTemplate(forTemplate<{ id: number }>({
@@ -898,11 +895,11 @@ test("for item owners survive reorder and dispose only removed item effects", ()
   assert.equal(mounted?.kind, "for");
   assert.deepEqual([...runs], [[1, 1], [2, 1]]);
 
-  items.set([{ id: 2 }, { id: 1 }]);
+  items.set([second, first]);
   pulse.set(1);
   assert.deepEqual([...runs], [[1, 2], [2, 2]]);
 
-  items.set([{ id: 2 }]);
+  items.set([second]);
   pulse.set(2);
   assert.deepEqual([...runs], [[1, 2], [2, 3]]);
 
@@ -911,7 +908,7 @@ test("for item owners survive reorder and dispose only removed item effects", ()
   assert.deepEqual([...runs], [[1, 2], [2, 3]]);
 });
 
-test("for updates reused item references when keys are stable", () => {
+test("for updates item subtrees when keys are stable", () => {
   const items = createSignal([
     { id: 1, title: "A" },
     { id: 2, title: "B" }
@@ -925,13 +922,93 @@ test("for updates reused item references when keys are stable", () => {
   );
 
   assert.equal(mounted?.kind, "for");
+  const previousNode = mounted.items[0]?.node;
   const nextItem = { id: 1, title: "A updated" };
 
   items.set([nextItem, { id: 2, title: "B updated" }]);
 
   assert.equal(mounted.items[0]?.item, nextItem);
   assert.equal(mounted.items[0]?.node.kind, "element");
-  assert.equal(mounted.items[0]?.node.props.value, "A");
+  assert.equal(mounted.items[0]?.node.props.value, "A updated");
+  assert.notEqual(mounted.items[0]?.node, previousNode);
+  assert.equal(mounted.items[1]?.node.kind, "element");
+  assert.equal(mounted.items[1]?.node.props.value, "B updated");
+});
+
+test("for stable-key item replacement disposes the old owner", () => {
+  const first = { id: 1, title: "A" };
+  const second = { id: 1, title: "B" };
+  const items = createSignal([first]);
+  const pulse = createSignal(0);
+  const events: string[] = [];
+  const mounted = mountTemplate(
+    forTemplate<{ id: number; title: string }>({
+      each: items,
+      key: (item) => item.id,
+      renderItem: (item) => {
+        effect(() => {
+          pulse.get();
+          events.push(`run:${item.title}`);
+          return () => events.push(`cleanup:${item.title}`);
+        });
+        return elementTemplate("text", { value: item.title });
+      }
+    })
+  );
+
+  assert.equal(mounted?.kind, "for");
+  items.set([second]);
+  pulse.set(1);
+  disposeMountedNode(mounted);
+
+  assert.deepEqual(events, [
+    "run:A",
+    "run:B",
+    "cleanup:A",
+    "cleanup:B",
+    "run:B",
+    "cleanup:B"
+  ]);
+});
+
+test("for rejects duplicate keys on mount and update", () => {
+  assert.throws(
+    () =>
+      mountTemplate(
+        forTemplate<{ id: number; title: string }>({
+          each: [
+            { id: 1, title: "A" },
+            { id: 1, title: "B" }
+          ],
+          key: (item) => item.id,
+          renderItem: (item) =>
+            elementTemplate("text", { value: item.title })
+        })
+      ),
+    /Duplicate key in for template: 1/
+  );
+
+  const items = createSignal([{ id: 1, title: "A" }]);
+  const mounted = mountTemplate(
+    forTemplate<{ id: number; title: string }>({
+      each: items,
+      key: (item) => item.id,
+      renderItem: (item) => elementTemplate("text", { value: item.title })
+    })
+  );
+
+  assert.equal(mounted?.kind, "for");
+  const previousNode = mounted.items[0]?.node;
+  assert.throws(
+    () =>
+      items.set([
+        { id: 2, title: "B" },
+        { id: 2, title: "C" }
+      ]),
+    /Duplicate key in for template: 2/
+  );
+  assert.equal(mounted.items.length, 1);
+  assert.equal(mounted.items[0]?.node, previousNode);
 });
 
 test("for updates to an empty array dispose all item nodes", () => {

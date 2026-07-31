@@ -13,6 +13,13 @@ export type {
   CreateAppOptions
 } from "./app.js";
 export type {
+  FrameClock,
+  FrameCoordinatorState,
+  FrameIntent,
+  FrameIntentKind,
+  FrameReason
+} from "./frame-coordinator.js";
+export type {
   Dispose,
   EffectCleanup,
   ReadableSignal,

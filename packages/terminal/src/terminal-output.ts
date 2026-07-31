@@ -1,10 +1,15 @@
 import { ANSI } from "./ansi.js";
-import type { Dispose, TerminalStdout } from "./types.js";
+import type {
+  Dispose,
+  TerminalOutputErrorListener,
+  TerminalStdout
+} from "./types.js";
 
 export interface TerminalOutput {
   writeRaw(chunk: string): boolean;
   present(frame: string): boolean;
   onDrain(listener: () => void): Dispose;
+  onOutputError(listener: TerminalOutputErrorListener): Dispose;
   start(): void;
   stop(): void;
   dispose(): void;
@@ -13,15 +18,18 @@ export interface TerminalOutput {
 export interface TerminalOutputOptions {
   stdout: TerminalStdout;
   synchronizedOutput: boolean;
+  recoverWindowsWriteEpipe?: boolean;
 }
 
 export function createTerminalOutput(
   options: TerminalOutputOptions
 ): TerminalOutput {
   const listeners = new Set<() => void>();
+  const outputErrorListeners = new Set<TerminalOutputErrorListener>();
   let started = false;
   let disposed = false;
   let drainAttached = false;
+  let errorAttached = false;
 
   function handleDrain(): void {
     for (const listener of [...listeners]) {
@@ -52,6 +60,47 @@ export function createTerminalOutput(
       | undefined;
     off?.call(options.stdout, "drain", handleDrain);
     drainAttached = false;
+  }
+
+  function handleOutputError(error: unknown): void {
+    if (
+      !options.recoverWindowsWriteEpipe ||
+      !isTransientWindowsWriteEpipe(error)
+    ) {
+      throw error;
+    }
+    for (const listener of [...outputErrorListeners]) {
+      listener(error);
+    }
+  }
+
+  function attachError(): void {
+    if (
+      errorAttached ||
+      !started ||
+      !options.recoverWindowsWriteEpipe
+    ) {
+      return;
+    }
+    const on = options.stdout.on as
+      | ((event: "error", listener: (error: unknown) => void) => unknown)
+      | undefined;
+    if (!on) {
+      return;
+    }
+    on.call(options.stdout, "error", handleOutputError);
+    errorAttached = true;
+  }
+
+  function detachError(): void {
+    if (!errorAttached) {
+      return;
+    }
+    const off = options.stdout.off as
+      | ((event: "error", listener: (error: unknown) => void) => unknown)
+      | undefined;
+    off?.call(options.stdout, "error", handleOutputError);
+    errorAttached = false;
   }
 
   const output: TerminalOutput = {
@@ -89,17 +138,29 @@ export function createTerminalOutput(
       };
     },
 
+    onOutputError(listener): Dispose {
+      if (disposed) {
+        return () => {};
+      }
+      outputErrorListeners.add(listener);
+      return () => {
+        outputErrorListeners.delete(listener);
+      };
+    },
+
     start(): void {
       if (disposed) {
         return;
       }
       started = true;
       attachDrain();
+      attachError();
     },
 
     stop(): void {
       started = false;
       detachDrain();
+      detachError();
     },
 
     dispose(): void {
@@ -108,9 +169,22 @@ export function createTerminalOutput(
       }
       output.stop();
       listeners.clear();
+      outputErrorListeners.clear();
       disposed = true;
     }
   };
 
   return output;
+}
+
+function isTransientWindowsWriteEpipe(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  const candidate = error as NodeJS.ErrnoException;
+  return (
+    candidate.code === "EPIPE" &&
+    (candidate.syscall === "write" ||
+      String(candidate.message).includes("write EPIPE"))
+  );
 }

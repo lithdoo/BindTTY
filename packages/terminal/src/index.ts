@@ -13,6 +13,15 @@ export {
   mapWin32KeyRecord
 } from "./adapters/win32-console-input.js";
 export { createNodeTerminal } from "./host.js";
+export {
+  createDiagnosticLogger,
+  serializeError
+} from "./diagnostic-log.js";
+export type {
+  DiagnosticLogFields,
+  DiagnosticLogger,
+  DiagnosticLogOptions
+} from "./diagnostic-log.js";
 export { createTerminalResponseRouter } from "./terminal-response-router.js";
 export type {
   RoutedTerminalInput,
@@ -81,6 +90,7 @@ export type {
   KeyboardProtocolOption,
   PlatformTerminalAdapter,
   ResizeListener,
+  TerminalOutputErrorListener,
   StdinInputAdapter,
   StdinInputContext,
   StdinInputKind,

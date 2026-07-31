@@ -281,6 +281,34 @@ function readCsiToken(
   index: number,
   final: boolean
 ): { token: RawInputToken; nextIndex: number } | "pending" {
+  // Linux-console F1-F5 use ESC [[ A through ESC [[ E. The second "["
+  // falls inside the generic CSI final-byte range, so preserve this known
+  // four-byte family before applying the normal CSI grammar. VS Code/ConPTY
+  // can emit these legacy sequences even after negotiating Kitty input.
+  if (source[index + 2] === "[") {
+    if (index + 3 >= source.length) {
+      if (!final) {
+        return "pending";
+      }
+    } else {
+      const linuxConsoleFinal = source[index + 3] ?? "";
+      if (
+        linuxConsoleFinal >= "A" &&
+        linuxConsoleFinal <= "E"
+      ) {
+        return {
+          token: {
+            type: "csi",
+            sequence: source.slice(index, index + 4),
+            payload: "[",
+            final: linuxConsoleFinal
+          },
+          nextIndex: index + 4
+        };
+      }
+    }
+  }
+
   let cursor = index + 2;
 
   while (cursor < source.length) {

@@ -14,6 +14,7 @@ import type {
 } from "@bindtty/runtime";
 import {
   ANSI,
+  createDiagnosticLogger,
   type TerminalHost,
   type TerminalKeyEvent,
   type TerminalResizeEvent
@@ -21,8 +22,11 @@ import {
 import type { MountedElementNode, ViewTemplate } from "@bindtty/vnode";
 import {
   createFrameCoordinator,
+  type FrameClock,
+  type FrameCoordinatorState,
   type FrameIntent,
-  type FrameIntentKind
+  type FrameIntentKind,
+  type FrameReason
 } from "./frame-coordinator.js";
 import {
   createStdoutFrameSink,
@@ -51,6 +55,10 @@ export interface AppError {
   phase: AppErrorPhase;
   error: unknown;
   viewport: AppViewport;
+  intent: FrameIntent;
+  revision: number;
+  schedulerState: FrameCoordinatorState;
+  recoverable: boolean;
 }
 
 export type AppErrorHandler = (error: AppError) => void;
@@ -67,6 +75,19 @@ export interface CreateAppBaseOptions {
    */
   onViewportChange?(viewport: AppViewport): void;
   layoutEngine?: LayoutEngine;
+  /**
+   * Minimum interval between asynchronous runtime/viewport frames. The first
+   * update in a burst is immediate and the latest trailing update is retained.
+   * Defaults to 16ms for TerminalHost mode and 0 for plain stdout mode.
+   */
+  frameIntervalMs?: number;
+  /**
+   * Maximum number of reentrant frame passes completed synchronously before
+   * remaining work is deferred. Defaults to 2.
+   */
+  maxStabilizationPasses?: number;
+  /** Injectable frame clock for deterministic scheduling tests. */
+  frameClock?: FrameClock;
 }
 
 export interface CreateAppStdoutOptions {
@@ -79,6 +100,9 @@ export interface CreateAppStdoutOptions {
   clearOnResize?: CreateAppBaseOptions["clearOnResize"];
   onViewportChange?: CreateAppBaseOptions["onViewportChange"];
   layoutEngine?: CreateAppBaseOptions["layoutEngine"];
+  frameIntervalMs?: CreateAppBaseOptions["frameIntervalMs"];
+  maxStabilizationPasses?: CreateAppBaseOptions["maxStabilizationPasses"];
+  frameClock?: CreateAppBaseOptions["frameClock"];
   terminal?: never;
 }
 
@@ -90,6 +114,9 @@ export interface CreateAppTerminalOptions {
   clearOnResize?: CreateAppBaseOptions["clearOnResize"];
   onViewportChange?: CreateAppBaseOptions["onViewportChange"];
   layoutEngine?: CreateAppBaseOptions["layoutEngine"];
+  frameIntervalMs?: CreateAppBaseOptions["frameIntervalMs"];
+  maxStabilizationPasses?: CreateAppBaseOptions["maxStabilizationPasses"];
+  frameClock?: CreateAppBaseOptions["frameClock"];
   stdout?: never;
   stdin?: never;
   fallbackViewport?: never;
@@ -111,6 +138,7 @@ export function createApp(
   view: ViewTemplate,
   options: CreateAppOptions
 ): BindTTYApp {
+  const diagnostic = createDiagnosticLogger("bindtty-app");
   const renderer = createTerminalRenderer();
   const interaction = createInteractionController();
   const terminal = options.terminal;
@@ -126,7 +154,16 @@ export function createApp(
   let flushUnsubscribe: Dispose | null = null;
   let resizeUnsubscribe: Dispose | null = null;
   let writableUnsubscribe: Dispose | null = null;
+  let outputErrorUnsubscribe: Dispose | null = null;
   let keyUnsubscribe: Dispose | null = null;
+  let lastFailedIntent: FrameIntent | null = null;
+
+  diagnostic.log("created", {
+    terminalMode: terminal !== undefined,
+    frameIntervalMs: options.frameIntervalMs ?? (terminal ? 16 : 0),
+    maxStabilizationPasses: options.maxStabilizationPasses ?? 2,
+    clearOnResize: options.clearOnResize !== false
+  });
 
   function readViewport(): AppViewport {
     if (terminal) {
@@ -142,16 +179,20 @@ export function createApp(
     interaction.refresh(runtime.root);
   }
 
-  function consumeRuntimeRecord(record: RuntimeFlushRecord | null): void {
-    if (!record || record.dirtyNodes.length === 0) {
-      return;
-    }
-    coordinator.request({ kind: record.highestDirty });
-  }
-
   function handleRuntimeRecord(record: RuntimeFlushRecord): void {
+    diagnostic.log("runtime-flush", {
+      dirtyNodeCount: record.dirtyNodes.length,
+      highestDirty: record.highestDirty,
+      synchronous: synchronousRuntimeFlush,
+      schedulerState: coordinator.state,
+      revision: coordinator.revision
+    });
     if (!synchronousRuntimeFlush) {
-      runAsyncEntry("runtime-flush", () => consumeRuntimeRecord(record));
+      runAsyncEntry("runtime-flush", () => {
+        if (record.dirtyNodes.length > 0) {
+          requestRender(record.highestDirty, true, "runtime");
+        }
+      });
     }
   }
 
@@ -168,7 +209,21 @@ export function createApp(
     patch: string;
     blocked: boolean;
   } {
+    const frameStartedAt = diagnostic.enabled
+      ? process.hrtime.bigint()
+      : undefined;
     const viewport = intent.viewport ?? readViewport();
+    if (diagnostic.enabled) {
+      diagnostic.log("frame-begin", {
+        kind: intent.kind,
+        reasons: intent.reasons,
+        revision: intent.revision,
+        width: viewport.width,
+        height: viewport.height,
+        schedulerState: coordinator.state,
+        cachedLayout: cachedLayout !== null
+      });
+    }
     const needsInteraction =
       intent.kind === "structure" ||
       intent.kind === "viewport" ||
@@ -184,21 +239,45 @@ export function createApp(
     if (needsInteraction) {
       refreshInteraction();
     }
-    if (intent.kind === "viewport") {
-      renderer.reset();
-    }
+    let candidateLayout = cachedLayout;
+    let candidateViewport = cachedViewport;
     if (needsLayout) {
-      cachedLayout = layoutRoot(runtime.root, {
+      candidateLayout = layoutRoot(runtime.root, {
         viewport,
         engine: options.layoutEngine
       });
-      cachedViewport = { ...viewport };
+      candidateViewport = { ...viewport };
+      dispatchLayout(candidateLayout);
+      const feedbackKind = flushRuntimeIntent();
+      if (feedbackKind) {
+        coordinator.request(
+          {
+            ...intent,
+            kind: mergeIntentKind(intent.kind, feedbackKind),
+            reasons: [...(intent.reasons ?? []), "runtime"]
+          },
+          false
+        );
+        diagnostic.log("frame-deferred-runtime-feedback", {
+          kind: intent.kind,
+          feedbackKind,
+          revision: intent.revision,
+          width: viewport.width,
+          height: viewport.height
+        });
+        return { patch: "", blocked: false };
+      }
     }
 
-    let patch = renderer.render(cachedLayout, {
-      viewport,
-      isFocused: (mounted) => interaction.isFocused(mounted)
-    });
+    const prepared = renderer.prepare(
+      candidateLayout,
+      {
+        viewport,
+        isFocused: (mounted) => interaction.isFocused(mounted)
+      },
+      intent.kind === "viewport"
+    );
+    let patch = prepared.patch;
     if (
       intent.kind === "viewport" &&
       patch !== "" &&
@@ -211,36 +290,127 @@ export function createApp(
       blocked = sink.write(patch) === "blocked";
     }
 
+    prepared.commit();
+    cachedLayout = candidateLayout;
+    cachedViewport = candidateViewport;
     runtime.clearDirty();
-    if (needsLayout) {
-      dispatchLayout(cachedLayout);
+    if (frameStartedAt !== undefined) {
+      const durationNs = process.hrtime.bigint() - frameStartedAt;
+      diagnostic.log("frame-commit", {
+        kind: intent.kind,
+        reasons: intent.reasons,
+        revision: intent.revision,
+        width: viewport.width,
+        height: viewport.height,
+        patchLength: patch.length,
+        blocked,
+        durationMs: Number(durationNs / 1_000_000n)
+      });
     }
     return { patch, blocked };
   }
 
-  const coordinator = createFrameCoordinator(renderFrame);
+  const coordinator = createFrameCoordinator(
+    (intent) => {
+      lastFailedIntent = null;
+      try {
+        return renderFrame(intent);
+      } catch (error) {
+        lastFailedIntent = intent;
+        throw error;
+      }
+    },
+    {
+      frameIntervalMs: options.frameIntervalMs ?? (terminal ? 16 : 0),
+      maxSynchronousPasses: options.maxStabilizationPasses,
+      ...(options.frameClock ? { clock: options.frameClock } : {}),
+      onError(error) {
+        const failedIntent = lastFailedIntent;
+        const reasons = failedIntent?.reasons ?? [];
+        const phase: AppErrorPhase = reasons.includes("viewport")
+          ? "resize"
+          : reasons.includes("drain")
+            ? "drain"
+            : "runtime-flush";
+        runAsyncEntry(
+          phase,
+          () => {
+            throw error;
+          },
+          failedIntent?.viewport ?? readViewport()
+        );
+      }
+    }
+  );
 
-  function requestRender(kind: FrameIntentKind = "paint"): string {
+  function requestRender(
+    kind: FrameIntentKind = "paint",
+    paced = false,
+    reason: FrameReason = "manual"
+  ): string {
     if (disposed) {
       return "";
     }
     const runtimeKind = flushRuntimeIntent();
-    return coordinator.request({
-      kind: mergeIntentKind(kind, runtimeKind)
+    const patch = coordinator.request(
+      {
+        kind: mergeIntentKind(kind, runtimeKind),
+        reasons: [reason]
+      },
+      paced
+    );
+    diagnostic.log("render-request", {
+      kind,
+      reason,
+      paced,
+      patchLength: patch.length,
+      schedulerState: coordinator.state,
+      revision: coordinator.revision
     });
+    return patch;
   }
 
-  function requestResize(viewport: AppViewport): string {
+  function requestResize(
+    viewport: AppViewport,
+    paced = false,
+    reason: FrameReason = "manual"
+  ): string {
     if (disposed) {
       return "";
     }
     flushRuntimeIntent();
-    return coordinator.request({ kind: "viewport", viewport });
+    const patch = coordinator.request(
+      { kind: "viewport", viewport, reasons: [reason] },
+      paced
+    );
+    diagnostic.log("resize-request", {
+      reason,
+      paced,
+      width: viewport.width,
+      height: viewport.height,
+      patchLength: patch.length,
+      schedulerState: coordinator.state,
+      revision: coordinator.revision
+    });
+    return patch;
   }
 
   function handleResize(event?: TerminalResizeEvent): void {
     const viewport = event?.viewport ?? readViewport();
-    runAsyncEntry("resize", () => requestResize(viewport), viewport);
+    diagnostic.log("resize-received", {
+      source: event?.source ?? "stdout",
+      width: viewport.width,
+      height: viewport.height,
+      previousWidth: event?.previousViewport.width,
+      previousHeight: event?.previousViewport.height,
+      schedulerState: coordinator.state,
+      revision: coordinator.revision
+    });
+    runAsyncEntry(
+      "resize",
+      () => requestResize(viewport, true, "viewport"),
+      viewport
+    );
   }
 
   function runAsyncEntry(
@@ -251,21 +421,43 @@ export function createApp(
     try {
       operation();
     } catch (error) {
+      const schedulerState = coordinator.state;
+      const failedIntent = lastFailedIntent ?? {
+        kind: phase === "resize" ? "viewport" : "paint",
+        viewport: { ...viewport },
+        revision: coordinator.revision,
+        reasons: [
+          phase === "resize"
+            ? "viewport"
+            : phase === "drain"
+              ? "drain"
+              : "runtime"
+        ]
+      };
+      lastFailedIntent = null;
       coordinator.cancelPending();
       const appError: AppError = {
         phase,
         error,
-        viewport: { ...viewport }
+        viewport: { ...viewport },
+        intent: failedIntent,
+        revision: failedIntent.revision ?? coordinator.revision,
+        schedulerState,
+        recoverable: true
       };
+      diagnostic.error("entry-error", error, {
+        phase,
+        width: viewport.width,
+        height: viewport.height,
+        intentKind: failedIntent.kind,
+        intentReasons: failedIntent.reasons,
+        revision: appError.revision,
+        schedulerState
+      });
       try {
         if (options.onError) {
           options.onError(appError);
         } else {
-          try {
-            app.stop();
-          } catch (stopError) {
-            console.error("[bindtty] terminal restore failed", stopError);
-          }
           console.error(`[bindtty] ${phase} failed`, error);
         }
       } catch (handlerError) {
@@ -277,7 +469,7 @@ export function createApp(
   function handleKey(event: TerminalKeyEvent): void {
     const result = interaction.handleKey(event);
     if (result.handled || result.dirtyNodes.length > 0) {
-      requestRender("paint");
+      requestRender("paint", false, "input");
     }
   }
 
@@ -288,7 +480,7 @@ export function createApp(
     refreshInteraction();
     const result = interaction.focus(target);
     if (result.handled || result.dirtyNodes.length > 0) {
-      requestRender("paint");
+      requestRender("paint", false, "input");
     }
     return result;
   }
@@ -309,6 +501,7 @@ export function createApp(
 
       const rollbacks: Array<() => void> = [];
       try {
+        diagnostic.log("start", { ...readViewport() });
         if (terminal) {
           rollbacks.push(() => terminal.stop());
           terminal.start();
@@ -330,10 +523,27 @@ export function createApp(
         if (sink.onWritable) {
           writableUnsubscribe = sink.onWritable(() => {
             if (!disposed && started) {
+              diagnostic.log("output-writable", {
+                schedulerState: coordinator.state,
+                revision: coordinator.revision
+              });
               runAsyncEntry("drain", () => coordinator.writable());
             }
           });
           rollbacks.push(() => writableUnsubscribe?.());
+        }
+        if (terminal?.onOutputError) {
+          outputErrorUnsubscribe = terminal.onOutputError((error) => {
+            if (!disposed && started) {
+              diagnostic.error("output-error-repaint", error, {
+                ...readViewport(),
+                schedulerState: coordinator.state,
+                revision: coordinator.revision
+              });
+              requestResize(readViewport(), true, "output-recovery");
+            }
+          });
+          rollbacks.push(() => outputErrorUnsubscribe?.());
         }
 
         started = true;
@@ -349,6 +559,10 @@ export function createApp(
           requestResize(viewport);
         }
       } catch (error) {
+        diagnostic.error("start-error", error, {
+          schedulerState: coordinator.state,
+          revision: coordinator.revision
+        });
         started = false;
         coordinator.cancelPending();
         const errors: unknown[] = [error];
@@ -382,10 +596,16 @@ export function createApp(
       }
 
       started = false;
+      diagnostic.log("stop", {
+        ...readViewport(),
+        schedulerState: coordinator.state,
+        revision: coordinator.revision
+      });
       coordinator.cancelPending();
       const errors: unknown[] = [];
       runCleanups([
         () => keyUnsubscribe?.(),
+        () => outputErrorUnsubscribe?.(),
         () => writableUnsubscribe?.(),
         () => resizeUnsubscribe?.(),
         () => flushUnsubscribe?.(),
@@ -407,6 +627,11 @@ export function createApp(
       }
 
       const errors: unknown[] = [];
+      diagnostic.log("dispose", {
+        ...readViewport(),
+        schedulerState: coordinator.state,
+        revision: coordinator.revision
+      });
       try {
         app.stop();
       } catch (error) {
@@ -422,6 +647,13 @@ export function createApp(
       ], errors);
       cachedLayout = null;
       cachedViewport = null;
+      if (errors.length > 0) {
+        diagnostic.error(
+          "dispose-error",
+          new AggregateError(errors, "App dispose failed")
+        );
+      }
+      diagnostic.dispose();
       throwErrors(errors, "App dispose failed");
     }
   };
@@ -430,6 +662,7 @@ export function createApp(
     flushUnsubscribe = null;
     resizeUnsubscribe = null;
     writableUnsubscribe = null;
+    outputErrorUnsubscribe = null;
     keyUnsubscribe = null;
   }
 
