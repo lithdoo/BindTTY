@@ -17,7 +17,9 @@ export function resolvePlatformAdapter(
     return new FixedStdinPlatformAdapter(options.stdinInputAdapter);
   }
 
-  if (process.platform === "win32") {
+  if (
+    (options.terminalEnvironment?.platform ?? process.platform) === "win32"
+  ) {
     return win32Platform;
   }
 

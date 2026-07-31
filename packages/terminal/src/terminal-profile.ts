@@ -24,6 +24,7 @@ export interface ResolvedTerminalProfile {
     | "vscode"
     | "conemu"
     | "ansicon"
+    | "classic-windows-console"
     | "generic";
   readonly input: {
     readonly tty: boolean;
@@ -32,6 +33,7 @@ export interface ResolvedTerminalProfile {
   readonly output: {
     readonly tty: boolean;
     readonly synchronizedOutput: boolean;
+    readonly absoluteCursorAddressing: boolean;
   };
   readonly resize: {
     readonly pollIntervalMs: number;
@@ -42,11 +44,17 @@ export interface ResolvedTerminalProfile {
 }
 
 export function resolveTerminalProfile(
-  options: CreateNodeTerminalOptions
+  options: CreateNodeTerminalOptions,
+  environmentOverrides: Partial<TerminalInputEnvironment> = {}
 ): ResolvedTerminalProfile {
   const adapter = resolvePlatformAdapter(options);
-  const platform = adapter.name === "win32" ? "win32" : process.platform;
-  const inputEnvironment = detectTerminalInputEnvironment(options, { platform });
+  const platform =
+    environmentOverrides.platform ??
+    (adapter.name === "win32" ? "win32" : process.platform);
+  const inputEnvironment = detectTerminalInputEnvironment(options, {
+    platform,
+    ...environmentOverrides
+  });
   const win32Policy = platform === "win32";
 
   const host = resolveHost(inputEnvironment);
@@ -65,9 +73,11 @@ export function resolveTerminalProfile(
       synchronizedOutput:
         options.synchronizedOutput ??
         (inputEnvironment.stdoutIsTTY &&
+          host !== "classic-windows-console" &&
           (win32Policy ||
             host === "windows-terminal" ||
-            host === "vscode"))
+            host === "vscode")),
+      absoluteCursorAddressing: host !== "classic-windows-console"
     },
     resize: {
       pollIntervalMs: normalizeDurationMs(
@@ -119,6 +129,12 @@ function resolveHost(
   }
   if (environment.ansicon) {
     return "ansicon";
+  }
+  if (
+    environment.platform === "win32" &&
+    environment.isProcessStdout === true
+  ) {
+    return "classic-windows-console";
   }
   return "generic";
 }

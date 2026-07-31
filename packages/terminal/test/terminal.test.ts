@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { PassThrough } from "node:stream";
 import test from "node:test";
 
-import { ANSI, createCompositeViewportProvider, createLifecycleGuard, createNodeTerminal, createResizeCoordinator, createTerminalResponseRouter, DefaultPlatformAdapter, discoverNativeWin32InputProvider, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, resolveTerminalProfile, selectInputBackend, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
+import { ANSI, createCompositeViewportProvider, createLifecycleGuard, createNodeTerminal as createNodeTerminalBase, createResizeCoordinator, createTerminalResponseRouter, DefaultPlatformAdapter, discoverNativeWin32InputProvider, mapWin32KeyRecord, normalizeKeypressEvent, parseRawChunk, RawStdinInput, ReadlineStdinInput, resolveTerminalProfile, selectInputBackend, Win32ConsoleInput, Win32PlatformAdapter } from "@bindtty/terminal";
 import type {
   CreateNodeTerminalOptions,
   InputTraceRecord,
@@ -36,6 +36,26 @@ interface MockStdin extends TerminalStdin {
   dataListenerCount(): number;
   emitKey(input?: string, key?: KeypressKey): void;
   emitData(chunk: Buffer | string): void;
+}
+
+function createNodeTerminal(
+  options: CreateNodeTerminalOptions
+): TerminalHost {
+  return createNodeTerminalBase({
+    ...options,
+    terminalEnvironment:
+      options.terminalEnvironment ??
+      (options.platformAdapter
+        ? undefined
+        : {
+            platform: "linux",
+            windowsTerminal: false,
+            conEmu: false,
+            ansicon: false,
+            terminalProgram: undefined,
+            term: undefined
+          })
+  });
 }
 
 function createMockStdout(): MockStdout {
@@ -861,6 +881,28 @@ test("win32 TTY enables synchronized output without application wiring", () => {
   ]);
 });
 
+test("classic Windows Console profile disables absolute cursor addressing", () => {
+  const profile = resolveTerminalProfile(
+    {
+      stdout: createMockStdout(),
+      platformAdapter: new Win32PlatformAdapter()
+    },
+    {
+      platform: "win32",
+      stdoutIsTTY: true,
+      isProcessStdout: true,
+      windowsTerminal: false,
+      terminalProgram: undefined,
+      conEmu: false,
+      ansicon: false
+    }
+  );
+
+  assert.equal(profile.host, "classic-windows-console");
+  assert.equal(profile.output.absoluteCursorAddressing, false);
+  assert.equal(profile.output.synchronizedOutput, false);
+});
+
 test("redirected win32 output does not enable synchronized output", () => {
   const stdout = createMockStdout();
   stdout.isTTY = false;
@@ -942,7 +984,10 @@ test("onDrain follows stdout drain subscription lifecycle", () => {
 test("Windows TTY write EPIPE is contained and requests output recovery", () => {
   const stdout = createMockStdout();
   stdout.isTTY = true;
-  const terminal = createNodeTerminal({ stdout });
+  const terminal = createNodeTerminal({
+    stdout,
+    platformAdapter: new Win32PlatformAdapter()
+  });
   const errors: unknown[] = [];
   const unsubscribe = terminal.onOutputError?.((error) => {
     errors.push(error);
@@ -966,7 +1011,10 @@ test("Windows TTY write EPIPE is contained and requests output recovery", () => 
 test("Windows TTY output rethrows non-transient stream errors", () => {
   const stdout = createMockStdout();
   stdout.isTTY = true;
-  const terminal = createNodeTerminal({ stdout });
+  const terminal = createNodeTerminal({
+    stdout,
+    platformAdapter: new Win32PlatformAdapter()
+  });
   const error = new Error("terminal output failed");
 
   terminal.start();
@@ -1933,7 +1981,11 @@ test("win32 polls TTY stdout viewport when columns change without resize event",
 
   const stdout = createMockStdout();
   stdout.isTTY = true;
-  const terminal = createNodeTerminal({ stdout, resizePollIntervalMs: 20 });
+  const terminal = createNodeTerminal({
+    stdout,
+    resizePollIntervalMs: 20,
+    platformAdapter: new Win32PlatformAdapter()
+  });
   let resizeCount = 0;
 
   terminal.onResize(() => {
@@ -2840,6 +2892,14 @@ test("terminal trace records environment backend capabilities raw input and fina
     stdout,
     rawMode: true,
     platformAdapter: new DefaultPlatformAdapter(),
+    terminalEnvironment: {
+      platform: "linux",
+      windowsTerminal: false,
+      conEmu: false,
+      ansicon: false,
+      terminalProgram: undefined,
+      term: undefined
+    },
     inputTrace(record) {
       records.push(record);
     }

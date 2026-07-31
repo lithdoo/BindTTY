@@ -83,6 +83,24 @@ test("TerminalRenderer returns empty output when the frame is unchanged", () => 
   assert.equal(renderer.render(textLayout("A"), { viewport }), "");
 });
 
+test("sequential renderer emits CJK frames without absolute cursor addressing", () => {
+  const renderer = createTerminalRenderer({ strategy: "sequential" });
+  const options = {
+    viewport: {
+      width: 6,
+      height: 2
+    }
+  };
+
+  const first = renderer.render(textLayoutWithWidth("中文", 4), options);
+  assert.match(first, /^\x1b\[\?7l\x1b\[2J\x1b\[H/);
+  assert.match(first, /中文/);
+  assert.match(first, /\r\n/);
+  assert.doesNotMatch(first, /\x1b\[\d+;\d+H/);
+  assert.match(first, /\x1b\[\?7h$/);
+  assert.equal(renderer.render(textLayoutWithWidth("中文", 4), options), "");
+});
+
 test("TerminalRenderer prepare does not mutate the committed baseline", () => {
   const renderer = createTerminalRenderer();
   renderer.render(textLayout("A"), { viewport });

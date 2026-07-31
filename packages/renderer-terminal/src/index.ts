@@ -11,7 +11,7 @@ export {
   setCell,
   writeText
 } from "./frame.js";
-export { encodeAnsiPatch } from "./ansi.js";
+export { encodeAnsiPatch, encodeSequentialFrame } from "./ansi.js";
 export { diffFrames } from "./diff.js";
 export { paintLayout } from "./paint.js";
 export { createTerminalRenderer } from "./renderer.js";
@@ -23,6 +23,7 @@ export type {
   FramePatch,
   PreparedTerminalRender,
   RenderOptions,
-  TerminalRenderer
+  TerminalRenderer,
+  TerminalRendererOptions
 } from "./types.js";
 export type { PaintOptions } from "./paint.js";

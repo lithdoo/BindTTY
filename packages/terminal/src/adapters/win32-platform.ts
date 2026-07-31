@@ -19,10 +19,12 @@ export class Win32PlatformAdapter extends DefaultPlatformAdapter {
     options: CreateNodeTerminalOptions,
     context?: StdinInputContext
   ): StdinInputAdapter {
-    const selection = selectInputBackend(
-      options,
-      detectTerminalInputEnvironment(options, { platform: "win32" })
-    );
+    const selection =
+      context?.inputBackend ??
+      selectInputBackend(
+        options,
+        detectTerminalInputEnvironment(options, { platform: "win32" })
+      );
 
     if (selection.stdinAdapter === "win32" && options.win32InputProvider) {
       return new Win32ConsoleInput(

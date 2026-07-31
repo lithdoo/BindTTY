@@ -25,6 +25,7 @@ export interface TerminalInputEnvironment {
   stdoutIsTTY: boolean;
   canSetRawMode: boolean;
   isProcessStdin: boolean;
+  isProcessStdout?: boolean;
   windowsTerminal: boolean;
   conEmu: boolean;
   ansicon: boolean;
@@ -186,6 +187,7 @@ export interface PlatformTerminalAdapter {
 
 export interface StdinInputContext {
   readonly responseRouter: import("./terminal-response-router.js").TerminalResponseRouter;
+  readonly inputBackend: InputBackendSelection;
 }
 
 export type StdinInputKind = "readline" | "raw" | "win32";
@@ -233,13 +235,24 @@ export interface CreateNodeTerminalOptions {
   stdout: TerminalStdout;
   stdin?: TerminalStdin;
   fallbackViewport?: TerminalViewport;
+  /**
+   * Overrides detected process facts. Primarily useful for deterministic
+   * embedding and tests that model a different terminal host.
+   */
+  terminalEnvironment?: Partial<TerminalInputEnvironment>;
+  /**
+   * Requests the alternate screen. BindTTY ignores this request in classic
+   * Windows Console Host because resizing its VT alternate buffer can crash
+   * affected conhost builds.
+   */
   useAltScreen?: boolean;
   hideCursor?: boolean;
   rawMode?: boolean;
   /**
    * Wraps each public terminal write in DEC 2026 synchronized-output
    * boundaries so supporting terminal hosts present the frame atomically.
-   * Defaults to true for win32 TTY output and false otherwise.
+   * Defaults to true only for terminal hosts known to support DEC 2026.
+   * Classic Windows Console Host uses ordinary writes.
    */
   synchronizedOutput?: boolean;
   /**
@@ -310,6 +323,9 @@ export interface CreateNodeTerminalOptions {
 export interface TerminalHost {
   readonly viewport: TerminalViewport;
   readonly keyboardCapabilities?: KeyboardCapabilities;
+  readonly outputCapabilities?: {
+    readonly absoluteCursorAddressing: boolean;
+  };
 
   start(): void;
   stop(): void;

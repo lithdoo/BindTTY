@@ -35,6 +35,10 @@ const terminal = createNodeTerminal({
   useAltScreen: true,
   hideCursor: true,
   rawMode: true,
+  inputBackend: "raw",
+  terminalEnvironment: {
+    platform: "linux"
+  },
   exitOnCtrlC: false,
   platformAdapter: ptyPlatformAdapter
 });

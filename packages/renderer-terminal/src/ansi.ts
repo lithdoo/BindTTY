@@ -1,4 +1,4 @@
-import type { CellStyle, FramePatch } from "./types.js";
+import type { CellStyle, Frame, FramePatch } from "./types.js";
 
 const RESET = "\x1b[0m";
 const DISABLE_AUTOWRAP = "\x1b[?7l";
@@ -101,6 +101,45 @@ export function encodeAnsiPatch(patch: FramePatch): string {
     : encodedPatch;
 }
 
+export function encodeSequentialFrame(frame: Frame): string {
+  let output = DISABLE_AUTOWRAP + "\x1b[2J\x1b[H";
+  let activeStyle = "";
+
+  for (let y = 0; y < frame.height; y += 1) {
+    let lastMeaningfulX = -1;
+    for (let x = frame.width - 1; x >= 0; x -= 1) {
+      const cell = frame.cells[y * frame.width + x];
+      if (
+        cell &&
+        cell.width !== 0 &&
+        (cell.char !== " " || styleKey(cell.style) !== DEFAULT_STYLE_KEY)
+      ) {
+        lastMeaningfulX = x;
+        break;
+      }
+    }
+
+    for (let x = 0; x <= lastMeaningfulX; x += 1) {
+      const cell = frame.cells[y * frame.width + x];
+      if (!cell || cell.width === 0) {
+        continue;
+      }
+      const nextStyle = styleKey(cell.style);
+      if (nextStyle !== activeStyle) {
+        output += RESET + encodeStyle(cell.style);
+        activeStyle = nextStyle;
+      }
+      output += cell.char;
+    }
+    if (y + 1 < frame.height) {
+      output += RESET + "\r\n";
+      activeStyle = "";
+    }
+  }
+
+  return output + RESET + ENABLE_AUTOWRAP;
+}
+
 function styleKey(style: CellStyle): string {
   return [
     style.bold === true ? "1" : "0",
@@ -112,6 +151,8 @@ function styleKey(style: CellStyle): string {
     style.background ?? ""
   ].join(":");
 }
+
+const DEFAULT_STYLE_KEY = styleKey({});
 
 function moveCursor(x: number, y: number): string {
   return `\x1b[${y + 1};${x + 1}H`;

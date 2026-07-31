@@ -20,6 +20,9 @@ export function detectTerminalInputEnvironment(
     isProcessStdin:
       overrides.isProcessStdin ??
       options.stdin === processStdin,
+    isProcessStdout:
+      overrides.isProcessStdout ??
+      options.stdout === process.stdout,
     windowsTerminal:
       overrides.windowsTerminal ??
       process.env.WT_SESSION !== undefined,

@@ -1,10 +1,17 @@
 import type { LayoutNode } from "@bindtty/layout";
-import { encodeAnsiPatch } from "./ansi.js";
+import { encodeAnsiPatch, encodeSequentialFrame } from "./ansi.js";
 import { diffFrames } from "./diff.js";
 import { paintLayout } from "./paint.js";
-import type { Frame, RenderOptions, TerminalRenderer } from "./types.js";
+import type {
+  Frame,
+  RenderOptions,
+  TerminalRenderer,
+  TerminalRendererOptions
+} from "./types.js";
 
-export function createTerminalRenderer(): TerminalRenderer {
+export function createTerminalRenderer(
+  rendererOptions: TerminalRendererOptions = {}
+): TerminalRenderer {
   let previousFrame: Frame | null = null;
 
   function prepare(
@@ -13,6 +20,18 @@ export function createTerminalRenderer(): TerminalRenderer {
     resetBaseline = false
   ) {
     const nextFrame = paintLayout(root, options);
+    if (rendererOptions.strategy === "sequential") {
+      const unchanged =
+        !resetBaseline &&
+        previousFrame !== null &&
+        diffFrames(previousFrame, nextFrame).changes.length === 0;
+      return {
+        patch: unchanged ? "" : encodeSequentialFrame(nextFrame),
+        commit() {
+          previousFrame = nextFrame;
+        }
+      };
+    }
     const patch = diffFrames(resetBaseline ? null : previousFrame, nextFrame);
     const ansi = encodeAnsiPatch(patch);
 

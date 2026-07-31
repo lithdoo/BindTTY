@@ -139,7 +139,11 @@ export function createApp(
   options: CreateAppOptions
 ): BindTTYApp {
   const diagnostic = createDiagnosticLogger("bindtty-app");
-  const renderer = createTerminalRenderer();
+  const frameStrategy =
+    options.terminal?.outputCapabilities?.absoluteCursorAddressing === false
+      ? "sequential"
+      : "diff";
+  const renderer = createTerminalRenderer({ strategy: frameStrategy });
   const interaction = createInteractionController();
   const terminal = options.terminal;
   const sink: FrameSink = terminal
@@ -160,6 +164,7 @@ export function createApp(
 
   diagnostic.log("created", {
     terminalMode: terminal !== undefined,
+    frameStrategy,
     frameIntervalMs: options.frameIntervalMs ?? (terminal ? 16 : 0),
     maxStabilizationPasses: options.maxStabilizationPasses ?? 2,
     clearOnResize: options.clearOnResize !== false
@@ -281,7 +286,8 @@ export function createApp(
     if (
       intent.kind === "viewport" &&
       patch !== "" &&
-      options.clearOnResize !== false
+      options.clearOnResize !== false &&
+      frameStrategy === "diff"
     ) {
       patch = ANSI.eraseDisplay + ANSI.cursorHome + patch;
     }

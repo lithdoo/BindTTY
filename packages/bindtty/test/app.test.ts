@@ -525,6 +525,20 @@ test("same-tick signal updates are coalesced by the runtime scheduler", async ()
   assert.doesNotMatch(stdout.writes[1], /B/);
 });
 
+test("terminal capability selects sequential rendering for CJK output", () => {
+  const terminal = Object.assign(createMockTerminal(6, 2), {
+    outputCapabilities: {
+      absoluteCursorAddressing: false
+    }
+  });
+  const app = createApp(elementTemplate("text", { value: "中文" }), { terminal });
+
+  app.start();
+
+  assert.match(terminal.writes[0] ?? "", /^\x1b\[\?7l\x1b\[2J\x1b\[H/);
+  assert.doesNotMatch(terminal.writes[0] ?? "", /\x1b\[\d+;\d+H/);
+});
+
 test("terminal frame budget keeps the latest runtime and viewport state", async () => {
   const terminal = createMockTerminal(20, 4);
   const clock = createTestFrameClock();

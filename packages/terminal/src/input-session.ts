@@ -277,7 +277,8 @@ export function createInputSession(
           ...options,
           inputTrace: trace ?? false
         }, {
-          responseRouter
+          responseRouter,
+          inputBackend: profile.inputBackend
         });
         activeKind = backend.kind;
         traceBackendSelection(

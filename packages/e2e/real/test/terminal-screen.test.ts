@@ -3,12 +3,16 @@ import test from "node:test";
 
 import { TerminalScreen } from "../src/terminal-screen.js";
 
-test("TerminalScreen exposes Win32-style bottom-right scrolling", () => {
+test("TerminalScreen defers bottom-right scrolling until more text arrives", () => {
   const screen = new TerminalScreen(3, 2);
 
   screen.write("\x1b[1;1Htop\x1b[2;1Hbot");
 
-  assert.deepEqual(screen.lines(), ["bot", "   "]);
+  assert.deepEqual(screen.lines(), ["top", "bot"]);
+
+  screen.write("!");
+
+  assert.deepEqual(screen.lines(), ["bot", "!  "]);
 });
 
 test("TerminalScreen keeps final coordinates while autowrap is disabled", () => {
@@ -38,4 +42,30 @@ test("TerminalScreen replays split ANSI and wide graphemes after resize", () => 
   screen.write("\x1b[1;4HB\x1b[2;1H🙂C\x1b[?7h");
 
   assert.deepEqual(screen.lines(), ["中AB ", "🙂C  "]);
+});
+
+test("TerminalScreen skips split OSC titles before rendering", () => {
+  const screen = new TerminalScreen(5, 2);
+
+  screen.write("\x1b]0;node");
+  screen.write(".exe\x07\x1b[Hhello");
+
+  assert.deepEqual(screen.lines(), ["hello", "     "]);
+});
+
+test("TerminalScreen treats CRLF as cursor controls, not a grapheme", () => {
+  const screen = new TerminalScreen(5, 2);
+
+  screen.write("one\r\n");
+  screen.write("two");
+
+  assert.deepEqual(screen.lines(), ["one  ", "two  "]);
+});
+
+test("TerminalScreen applies erase-line sequences from ConPTY", () => {
+  const screen = new TerminalScreen(5, 2);
+
+  screen.write("stale\x1b[1;3H\x1b[K");
+
+  assert.deepEqual(screen.lines(), ["st   ", "     "]);
 });

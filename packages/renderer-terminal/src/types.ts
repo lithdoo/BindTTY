@@ -53,6 +53,14 @@ export interface TerminalRenderer {
   reset(): void;
 }
 
+export interface TerminalRendererOptions {
+  /**
+   * `sequential` repaints complete rows from the home position without
+   * absolute row/column addressing. Intended for fragile legacy hosts.
+   */
+  strategy?: "diff" | "sequential";
+}
+
 export interface PreparedTerminalRender {
   readonly patch: string;
   commit(): void;

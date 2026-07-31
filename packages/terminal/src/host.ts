@@ -21,7 +21,9 @@ export function createNodeTerminal(
   initialOptions: CreateNodeTerminalOptions
 ): TerminalHost {
   let options = initialOptions;
-  if (!options.win32InputProvider) {
+  const detectedPlatform =
+    options.terminalEnvironment?.platform ?? process.platform;
+  if (detectedPlatform === "win32" && !options.win32InputProvider) {
     const nativeProvider = discoverNativeWin32InputProvider();
     if (nativeProvider) {
       options = { ...options, win32InputProvider: nativeProvider };
@@ -31,7 +33,15 @@ export function createNodeTerminal(
   let started = false;
   let disposed = false;
   let releaseStdioResizeGuard: Dispose | undefined;
-  const profile = resolveTerminalProfile(options);
+  const profile = resolveTerminalProfile(
+    options,
+    options.terminalEnvironment
+  );
+  const useAltScreen =
+    options.useAltScreen === true && profile.host !== "classic-windows-console";
+  const frameStrategy = profile.output.absoluteCursorAddressing
+    ? "diff" as const
+    : "sequential" as const;
   const diagnostic = createDiagnosticLogger("bindtty-terminal");
   const output = createTerminalOutput({
     stdout: options.stdout,
@@ -114,6 +124,11 @@ export function createNodeTerminal(
     stdoutIsTTY: options.stdout.isTTY === true,
     inputBackend: profile.inputBackend.stdinAdapter,
     inputBackendReason: profile.inputBackend.reason,
+    terminalHost: profile.host,
+    requestedAltScreen: options.useAltScreen === true,
+    effectiveAltScreen: useAltScreen,
+    frameStrategy,
+    synchronizedOutput: profile.output.synchronizedOutput,
     queryXtermViewport: profile.resize.queryXtermViewport,
     pollIntervalMs: profile.resize.pollIntervalMs,
     settleDelayMs: profile.resize.settleDelayMs,
@@ -130,6 +145,9 @@ export function createNodeTerminal(
   }
 
   terminal = {
+    outputCapabilities: {
+      absoluteCursorAddressing: profile.output.absoluteCursorAddressing
+    },
     get viewport(): TerminalViewport {
       return resize.viewport;
     },
@@ -152,7 +170,7 @@ export function createNodeTerminal(
           releaseStdioResizeGuard = acquireWindowsStdioResizeGuard();
         }
         output.start();
-        if (options.useAltScreen === true) {
+        if (useAltScreen) {
           writeRaw(ANSI.enterAltScreen);
         }
         input.start();
@@ -261,7 +279,7 @@ export function createNodeTerminal(
         }
       },
       () => {
-        if (options.useAltScreen === true) {
+        if (useAltScreen) {
           writeRaw(ANSI.exitAltScreen);
         }
       },
