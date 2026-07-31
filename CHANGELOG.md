@@ -21,6 +21,9 @@ BindTTY 当前处于 `0.1.0-beta` 阶段。本文记录公开包与用户可见�
   viewport responses on the shared raw VT stream, so Cursor resize reports
   continue after the first response without leaking fragments into F-keys or
   text input.
+- Classic Windows Console Host now disables synchronized output and alt screen
+  automatically, reports no absolute cursor-addressing capability, and uses a
+  sequential full-row repaint strategy to avoid resize/CJK/emoji cursor drift.
 
 ## 0.1.0-beta.5
 

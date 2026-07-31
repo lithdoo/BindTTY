@@ -258,10 +258,11 @@ export interface CreateNodeTerminalOptions {
   stdout: TerminalStdout;
   stdin?: TerminalStdin;
   fallbackViewport?: TerminalViewport;
+  terminalEnvironment?: Partial<TerminalInputEnvironment>;
   useAltScreen?: boolean;
   hideCursor?: boolean;
   rawMode?: boolean;
-  /** Win32 TTY 默认使用 DEC 2026，使每次应用 frame 原子呈现 */
+  /** 支持的 TTY host 默认使用 DEC 2026，使每次应用 frame 原子呈现 */
   synchronizedOutput?: boolean;
   exitOnCtrlC?: boolean;
   /** Win32 TTY：stdout resize 不可靠时轮询 columns/rows；默认 win32 50ms，0 关闭 */
@@ -270,6 +271,9 @@ export interface CreateNodeTerminalOptions {
 
 export interface TerminalHost {
   readonly viewport: TerminalViewport;
+  readonly outputCapabilities?: {
+    readonly absoluteCursorAddressing: boolean;
+  };
 
   start(): void;
   stop(): void;
@@ -288,10 +292,11 @@ export function createNodeTerminal(options: CreateNodeTerminalOptions): Terminal
 
 ```text
 fallbackViewport = { width: 80, height: 24 }
-useAltScreen = false
+useAltScreen = false；classic Windows Console Host 中即使请求 true 也会忽略
 hideCursor = false
 rawMode = false
-synchronizedOutput = win32 且 stdout.isTTY 时为 true，否则 false
+synchronizedOutput = Windows Terminal / VS Code 等支持 host 的 TTY 默认为 true；
+classic Windows Console Host、重定向 stdout 和未知非 Windows host 默认为 false
 exitOnCtrlC = true
 resizePollIntervalMs = win32 且 stdout.isTTY 时为 50，否则 0（不轮询）
 resizeMinFrameIntervalMs = win32 时为 80，否则 0
@@ -316,11 +321,21 @@ export const ANSI = {
 };
 ```
 
-Windows TTY 上，公开的 `TerminalHost.write(frame)` 默认在同一次 stdout write
-中加入 DEC 2026 synchronized-output 起止边界，支持该模式的宿主只呈现完整
-frame，降低 resize 全帧重绘时的 tearing。未知的 DEC private mode 会被旧宿主
-忽略；重定向 stdout 不添加边界，也可用 `synchronizedOutput: false` 显式关闭。
-alt-screen、光标和键盘协议等 terminal lifecycle 序列始终写在 frame 边界外。
+Windows Terminal 与 VS Code-family TTY 上，公开的 `TerminalHost.write(frame)`
+默认在同一次 stdout write 中加入 DEC 2026 synchronized-output 起止边界，支持
+该模式的宿主只呈现完整 frame，降低 resize 全帧重绘时的 tearing。classic
+Windows Console Host 不默认启用 DEC 2026；重定向 stdout 也不添加边界，也可用
+`synchronizedOutput: false` 显式关闭。alt-screen、光标和键盘协议等 terminal
+lifecycle 序列始终写在 frame 边界外。
+
+classic Windows Console Host 会被识别为 `classic-windows-console`，并通过
+`TerminalHost.outputCapabilities.absoluteCursorAddressing = false` 暴露给
+`bindtty` app 层。app 层据此使用 sequential 全行重绘，而不是依赖绝对
+row/column cursor addressing 的 diff patch。这样可以避免 classic conhost 在
+resize、CJK、emoji 场景中出现 cursor drift、错位和旧 cell 残留。
+
+classic Windows Console Host 中 `useAltScreen: true` 会被安全降级为不进入
+alternate screen，因为部分 conhost 构建在 resize VT alternate buffer 时可能崩溃。
 
 普通帧、启动和退出仍不默认 clear screen。viewport resize 的第一帧会在同一次
 frame write 中发送 `CSI 2J` + cursor home 后再完整重绘，以清除 Windows
@@ -362,7 +377,7 @@ if started or disposed:
 
 started = true
 
-if useAltScreen:
+if useAltScreen and effective host supports alternate screen:
   stdout.write(ANSI.enterAltScreen)
 
 if hideCursor:
@@ -403,7 +418,7 @@ if rawMode and stdin.setRawMode:
 if hideCursor:
   stdout.write(ANSI.showCursor)
 
-if useAltScreen:
+if effective host entered alternate screen:
   stdout.write(ANSI.exitAltScreen)
 
 started = false
@@ -867,7 +882,8 @@ createNodeTerminal:
   不立即 setRawMode
 
 start:
-  useAltScreen 写 enterAltScreen
+  useAltScreen 且 host 支持时写 enterAltScreen
+  classic Windows Console Host 忽略 useAltScreen 请求
   hideCursor 写 hideCursor
   rawMode true 调 setRawMode(true)
   注册 resize / keypress listener

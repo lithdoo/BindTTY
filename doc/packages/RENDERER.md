@@ -164,10 +164,21 @@ export interface RenderOptions {
 
 export interface TerminalRenderer {
   render(root: LayoutNode | null, options: RenderOptions): string;
+  prepare(
+    root: LayoutNode | null,
+    options: RenderOptions,
+    resetBaseline?: boolean
+  ): PreparedTerminalRender;
   reset(): void;
 }
 
-export function createTerminalRenderer(): TerminalRenderer;
+export interface TerminalRendererOptions {
+  strategy?: "diff" | "sequential";
+}
+
+export function createTerminalRenderer(
+  options?: TerminalRendererOptions
+): TerminalRenderer;
 ```
 
 使用方式：
@@ -778,16 +789,19 @@ inverse
 
 ### 7.7 ANSI 输出策略
 
-MVP 不做相邻 cell 合并，逐 cell 输出即可。
+默认 `diff` 策略输出 `FramePatch` 对应的 ANSI patch。它会排序 change、合并连续
+cell run、在全帧 repaint 时临时关闭 autowrap，并在遇到宽字符后重新锚定下一次
+cursor move，避免宽度模型误差累积。
 
 规则：
 
 ```text
-1. 每个 change 输出一次 cursor move。
-2. 每个 change 输出完整 style 序列。
+1. patch.changes 为空时返回 ""。
+2. 非连续位置输出 cursor move。
 3. 然后输出 cell.char。
-4. patch.changes 为空时返回 ""。
+4. style 变化时先 reset，再输出新 style。
 5. patch.changes 非空时末尾输出 "\x1b[0m"。
+6. full patch 外层关闭/恢复 autowrap。
 ```
 
 完整 style 序列表示：
@@ -797,9 +811,14 @@ MVP 不做相邻 cell 合并，逐 cell 输出即可。
 再输出 cell.style 需要启用的样式
 ```
 
-这样每个 cell 都不依赖前一个 cell 的样式状态。后续做 run 合并时，可以把 reset / style 切换优化掉。
+`sequential` 策略不输出绝对 row/column cursor addressing。它会清屏、回到 home，
+逐行从左到右输出 frame 中有意义的 cell，并用 `\r\n` 进入下一行。这一策略用于
+classic Windows Console Host 等 fragile legacy host，避免 resize、CJK、emoji
+场景下绝对定位与宿主 cursor advance 不一致造成错位。
 
-这样输出不一定最短，但行为最容易测试。后续可以在不改变 `FramePatch` 类型的前提下做 run 合并。
+`bindtty` app 层会根据 `TerminalHost.outputCapabilities.absoluteCursorAddressing`
+自动选择策略；直接使用 `@bindtty/renderer-terminal` 的调用方也可以显式传入
+`createTerminalRenderer({ strategy: "sequential" })`。
 
 ### 7.8 颜色支持范围
 
@@ -996,7 +1015,9 @@ terminal.write(ansiPatch)
 5. style state machine
 ```
 
-这些优化不改变 `createTerminalRenderer().render()` 的对外接口。
+这些优化不改变 `createTerminalRenderer().render()` 的对外接口。需要兼容 fragile
+legacy host 时，可以通过 `createTerminalRenderer({ strategy: "sequential" })`
+切换到完整行顺序 repaint。
 
 ## 11. Terminal 边界
 

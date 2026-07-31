@@ -409,6 +409,13 @@ layout/render/write 异常。事件包含 `phase`、原始 `error`、`viewport`�
 cursor home。嵌入非全屏终端且必须保留已有屏幕内容的应用可以显式设为
 `false`，回退到仅覆盖 viewport cell 的旧行为。
 
+terminal 模式会读取 `TerminalHost.outputCapabilities.absoluteCursorAddressing`。
+当该能力为 `false` 时，app 使用 renderer 的 sequential 策略：每帧从 home
+位置顺序输出完整行，而不是写入绝对 row/column cursor addressing 的 diff
+patch。classic Windows Console Host 会走这个路径，以规避 resize、CJK 与 emoji
+输出期间的 cursor drift。sequential 策略自带清屏和 home，因此 `clearOnResize`
+不会再额外叠加 ED2。
+
 terminal 模式的异步 runtime/resize frame 默认使用 16ms 最小间隔，burst 的第一帧
 立即执行并保留最新 trailing frame。`frameIntervalMs` 可调整这一预算；stdout
 模式默认不限帧。用户输入、手动 `render()`、`resize()` 和 `focus()` 仍立即执行。

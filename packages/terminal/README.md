@@ -5,7 +5,7 @@ Terminal lifecycle and input host package for BindTTY.
 Responsibilities:
 
 - stdout write / viewport / resize
-- automatic synchronized frame output on Windows TTYs
+- automatic synchronized frame output on terminal hosts that support it
 - alt screen and cursor lifecycle
 - stdin raw mode lifecycle
 - negotiated keyboard protocol setup / restore and capability reporting
@@ -68,11 +68,20 @@ authoritative while retaining stdout resize events as activity signals.
 If the optional addon is absent, cannot be built, or stdin is redirected,
 terminal safely continues through the raw VT and readline fallback chain.
 
-On Windows TTY stdout, public `TerminalHost.write()` calls are wrapped in
-DEC 2026 synchronized-output boundaries by default. Supporting hosts present
-each frame atomically during resize; older hosts ignore the private mode.
-Redirected output is left untouched, and `synchronizedOutput: false` disables
-the behavior explicitly. Terminal lifecycle sequences are never frame-wrapped.
+On Windows Terminal and VS Code-family TTY stdout, public
+`TerminalHost.write()` calls are wrapped in DEC 2026 synchronized-output
+boundaries by default. Supporting hosts present each frame atomically during
+resize; redirected output is left untouched, and `synchronizedOutput: false`
+disables the behavior explicitly. Classic Windows Console Host uses ordinary
+writes because its VT private-mode and resize behavior is fragile.
+Terminal lifecycle sequences are never frame-wrapped.
+
+Classic Windows Console Host is also reported with
+`outputCapabilities.absoluteCursorAddressing: false`. `bindtty` uses that
+capability to select a sequential full-row repaint strategy instead of
+absolute cursor-addressed diffs, which avoids resize/CJK/emoji cursor drift in
+legacy conhost. `useAltScreen: true` is ignored in this host because resizing
+the VT alternate buffer can crash affected conhost builds.
 
 Backend selection belongs to `@bindtty/terminal`. With the default
 `inputBackend: "auto"` policy, Windows prefers an available native provider in
